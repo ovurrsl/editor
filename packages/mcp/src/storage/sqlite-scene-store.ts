@@ -9,6 +9,7 @@ import {
   hashGraphJson,
   parseGraph,
   resolveMaxSceneBytes,
+  SCENE_REVISION_HISTORY,
   serializeGraph,
 } from './scene-store-shared'
 import { generateSlug, isValidSlug, sanitizeSlug } from './slug'
@@ -188,6 +189,35 @@ function rowToSceneEvent(row: SceneEventRow): SceneEvent {
 }
 
 /**
+ * Drop every revision of this scene older than the newest
+ * {@link SCENE_REVISION_HISTORY}.
+ *
+ * Mirrors `MysqlSceneStore.trimRevisions` deliberately: the two stores are
+ * asserted to behave identically by `store.test.ts`, and a retention policy
+ * that held on only one of them would be a policy nobody could rely on.
+ * Called inside the caller's write transaction, so the insert and the eviction
+ * commit together.
+ */
+function trimRevisions(db: SqliteDatabase, sceneId: string): void {
+  const oldestKept = db
+    .query(
+      `SELECT version FROM scene_revisions
+         WHERE scene_id = ?
+         ORDER BY version DESC
+         LIMIT 1 OFFSET ?`,
+    )
+    .get(sceneId, SCENE_REVISION_HISTORY - 1) as { version: number } | null | undefined
+
+  // Fewer revisions than the window: nothing has been pushed out yet.
+  if (!oldestKept) return
+
+  db.query('DELETE FROM scene_revisions WHERE scene_id = ? AND version < ?').run(
+    sceneId,
+    oldestKept.version,
+  )
+}
+
+/**
  * SQLite-backed implementation of `SceneStore`.
  *
  * Uses one local database file, WAL mode, and transaction-scoped version checks
@@ -342,6 +372,7 @@ export class SqliteSceneStore implements SceneStore {
            scene_id, version, graph_json, author_kind, author_id, created_at
          ) VALUES (?, ?, ?, ?, ?, ?)`,
       ).run(id, version, graphJson, 'mcp', ownerId, now)
+      trimRevisions(db, id)
 
       db.query('DELETE FROM project_placeholders WHERE id = ?').run(id)
 
@@ -450,6 +481,7 @@ export class SqliteSceneStore implements SceneStore {
              scene_id, version, graph_json, author_kind, author_id, created_at
            ) VALUES (?, ?, ?, ?, ?, ?)`,
       ).run(safeId, nextVersion, existing.graph_json, 'mcp', existing.owner_id, now)
+      trimRevisions(db, safeId)
 
       return {
         ...rowToMeta(existing),

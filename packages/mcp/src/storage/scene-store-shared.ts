@@ -10,6 +10,25 @@ export const MAX_NAME_LENGTH = 200
 export const MIN_NAME_LENGTH = 1
 
 /**
+ * How many past versions of a scene are kept. The newest write pushes the
+ * oldest out.
+ *
+ * ## Why there is a limit at all
+ *
+ * A revision row holds the WHOLE graph, and one was written on every save —
+ * including every autosave, which fires on a debounce while you draw. There
+ * was no pruning of any kind. On 2026-08-12 that table reached 3.1 GiB across
+ * 2 256 rows (~1.4 MB each) and filled the production database's 3 GB quota;
+ * the host answered by refusing DDL, the app self-migrates at boot, and the
+ * whole site went to 503 over a table **nothing in the application reads**.
+ *
+ * Five is the operator's number, and the shape of the feature is theirs too:
+ * a rolling window, not a growing log. Keep it small — the cost of one extra
+ * kept revision is the size of an entire scene.
+ */
+export const SCENE_REVISION_HISTORY = 5
+
+/**
  * `z.object()` strips every key it does not name, so this list IS the set of
  * fields that survive a save → load round trip. A field missing here is not a
  * validation error — it is silent deletion, discovered only when a user

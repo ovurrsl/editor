@@ -262,6 +262,67 @@ describe('SqliteSceneStore', () => {
     }
   })
 
+  /**
+   * GUARD: revision history is a rolling window, not a growing log.
+   *
+   * A revision row carries the WHOLE graph and one was written on every save —
+   * autosave included, which fires on a debounce while you draw. Nothing pruned
+   * them and nothing in the application reads them. In production that table
+   * reached 3.1 GiB over 2 256 rows, filled the database's quota, and the host
+   * answered by refusing DDL; the app self-migrates at boot, so the entire site
+   * went to 503 over a write-only table.
+   *
+   * The assertion is not "some rows were deleted" — it is WHICH rows survive.
+   * A prune that kept the OLDEST five would also shrink the table, and would
+   * also pass a count-only test, while throwing away every recent version.
+   */
+  test('keeps only the newest five revisions, evicting the oldest', async () => {
+    await store.save({ id: 'roll', name: 'Roll', graph: makeGraph() })
+    for (let version = 1; version <= 9; version += 1) {
+      await store.rename('roll', `Roll ${version}`, { expectedVersion: version })
+    }
+
+    const db = new Database(path.join(rootDir, 'pascal.db'))
+    try {
+      const kept = db
+        .query('SELECT version FROM scene_revisions WHERE scene_id = ? ORDER BY version')
+        .all('roll') as Array<{ version: number }>
+
+      // Ten saves in total; versions 1–5 are gone, 6–10 remain.
+      expect(kept.map((row) => row.version)).toEqual([6, 7, 8, 9, 10])
+    } finally {
+      db.close()
+    }
+  })
+
+  /**
+   * The window is per scene. A shared cutoff would let a busy scene evict a
+   * quiet one's entire history — the quiet scene would silently lose every
+   * version it had without anyone touching it.
+   */
+  test('the window is counted per scene', async () => {
+    await store.save({ id: 'busy', name: 'Busy', graph: makeGraph() })
+    await store.save({ id: 'quiet', name: 'Quiet', graph: makeGraph() })
+    for (let version = 1; version <= 9; version += 1) {
+      await store.rename('busy', `Busy ${version}`, { expectedVersion: version })
+    }
+
+    const db = new Database(path.join(rootDir, 'pascal.db'))
+    try {
+      const count = (id: string) =>
+        (
+          db.query('SELECT COUNT(*) AS count FROM scene_revisions WHERE scene_id = ?').get(id) as {
+            count: number
+          }
+        ).count
+
+      expect(count('busy')).toBe(5)
+      expect(count('quiet')).toBe(1)
+    } finally {
+      db.close()
+    }
+  })
+
   test('appends and lists scene events in order', async () => {
     const graph = makeGraph()
     const meta = await store.save({ id: 'live', name: 'Live', graph })
