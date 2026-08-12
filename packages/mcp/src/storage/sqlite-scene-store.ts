@@ -9,6 +9,7 @@ import {
   hashGraphJson,
   parseGraph,
   resolveMaxSceneBytes,
+  SCENE_EVENT_HISTORY,
   SCENE_REVISION_HISTORY,
   serializeGraph,
 } from './scene-store-shared'
@@ -214,6 +215,32 @@ function trimRevisions(db: SqliteDatabase, sceneId: string): void {
   db.query('DELETE FROM scene_revisions WHERE scene_id = ? AND version < ?').run(
     sceneId,
     oldestKept.version,
+  )
+}
+
+/**
+ * Drop every live-sync event of this scene older than the newest
+ * {@link SCENE_EVENT_HISTORY}.
+ *
+ * Ordered by `event_id`, not `version`: several events can share a version, and
+ * `event_id` is the column the SSE cursor advances through — the only ordering
+ * that matches what a client considers "newer".
+ */
+function trimSceneEvents(db: SqliteDatabase, sceneId: string): void {
+  const oldestKept = db
+    .query(
+      `SELECT event_id FROM scene_events
+         WHERE scene_id = ?
+         ORDER BY event_id DESC
+         LIMIT 1 OFFSET ?`,
+    )
+    .get(sceneId, SCENE_EVENT_HISTORY - 1) as { event_id: number } | null | undefined
+
+  if (!oldestKept) return
+
+  db.query('DELETE FROM scene_events WHERE scene_id = ? AND event_id < ?').run(
+    sceneId,
+    oldestKept.event_id,
   )
 }
 
@@ -509,6 +536,7 @@ export class SqliteSceneStore implements SceneStore {
            ) VALUES (?, ?, ?, ?, ?)`,
         )
         .run(safeId, opts.version, opts.kind, now, graphJson)
+      trimSceneEvents(db, safeId)
 
       return {
         eventId: Number(result.lastInsertRowid),

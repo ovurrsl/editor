@@ -323,6 +323,51 @@ describe('SqliteSceneStore', () => {
     }
   })
 
+  /**
+   * GUARD: the live-sync log is a window, not a log.
+   *
+   * `scene_events` has the same shape as the revisions table — a whole graph
+   * per row — but unlike revisions something reads it: the SSE route polls
+   * `afterEventId` every 250 ms. So it cannot simply be dropped, only bounded.
+   *
+   * Ten is safe precisely because every event carries the entire graph: a
+   * client that misses events does not desynchronise, the next event it
+   * receives replaces its scene wholesale. The window only has to span the gap
+   * between polls.
+   *
+   * Which ten survive is the whole assertion. Keeping the OLDEST ten would
+   * shrink the table just as well and pass a count-only test, while feeding
+   * every client a scene from minutes ago — live sync would run backwards.
+   */
+  test('keeps only the newest ten live-sync events', async () => {
+    const graph = makeGraph()
+    const meta = await store.save({ id: 'stream', name: 'Stream', graph })
+
+    const appended: number[] = []
+    for (let i = 0; i < 14; i += 1) {
+      const event = await store.appendSceneEvent({
+        sceneId: meta.id,
+        version: meta.version,
+        kind: 'save_scene',
+        graph,
+      })
+      appended.push(event.eventId)
+    }
+
+    const db = new Database(path.join(rootDir, 'pascal.db'))
+    try {
+      const kept = (
+        db
+          .query('SELECT event_id FROM scene_events WHERE scene_id = ? ORDER BY event_id')
+          .all('stream') as Array<{ event_id: number }>
+      ).map((row) => Number(row.event_id))
+
+      expect(kept).toEqual(appended.slice(-10))
+    } finally {
+      db.close()
+    }
+  })
+
   test('appends and lists scene events in order', async () => {
     const graph = makeGraph()
     const meta = await store.save({ id: 'live', name: 'Live', graph })

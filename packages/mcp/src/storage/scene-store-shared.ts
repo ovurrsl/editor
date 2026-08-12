@@ -29,6 +29,30 @@ export const MIN_NAME_LENGTH = 1
 export const SCENE_REVISION_HISTORY = 5
 
 /**
+ * How many live-sync events are kept per scene.
+ *
+ * Unlike revisions, something DOES read this table: the SSE route polls it
+ * every 250 ms with `afterEventId`, up to 50 events a poll. But an event is
+ * dead the moment every connected client has polled past it — a quarter of a
+ * second after it was written.
+ *
+ * Ten is small on purpose, and it is safe because **every event carries the
+ * whole graph**. A client that misses events does not desynchronise; the next
+ * event it does receive replaces its scene wholesale. So the window only has
+ * to cover the gap between polls, not the history of the session.
+ *
+ * The arithmetic is the constraint. At ~1.4 MB an event — the size measured on
+ * the warehouse scene that filled production — ten events is ~14 MB per scene.
+ * Fifty would be 70 MB per scene, which on a 3 GB database is a handful of
+ * scenes away from the outage this is here to prevent.
+ *
+ * A smaller window also makes a FRESH connection cheaper: it starts at cursor
+ * 0 and replays whatever is left, so the shorter the tail, the fewer whole
+ * graphs it applies before reaching the current one.
+ */
+export const SCENE_EVENT_HISTORY = 10
+
+/**
  * `z.object()` strips every key it does not name, so this list IS the set of
  * fields that survive a save → load round trip. A field missing here is not a
  * validation error — it is silent deletion, discovered only when a user

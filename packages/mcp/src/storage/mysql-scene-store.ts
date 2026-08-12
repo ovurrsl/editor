@@ -7,6 +7,7 @@ import {
   hashGraphJson,
   parseGraph,
   resolveMaxSceneBytes,
+  SCENE_EVENT_HISTORY,
   SCENE_REVISION_HISTORY,
   serializeGraph,
 } from './scene-store-shared'
@@ -545,6 +546,7 @@ export class MysqlSceneStore implements SceneStore {
          ) VALUES (?, ?, ?, ?, ?)`,
         [safeId, opts.version, opts.kind, now, graphJson],
       )
+      await this.trimSceneEvents(conn, safeId)
 
       return {
         eventId: Number((result as { insertId?: number })?.insertId ?? 0),
@@ -635,6 +637,33 @@ export class MysqlSceneStore implements SceneStore {
     await conn.execute('DELETE FROM scene_revisions WHERE scene_id = ? AND version < ?', [
       sceneId,
       oldestKept.version,
+    ])
+  }
+
+  /**
+   * Drop every live-sync event of this scene older than the newest
+   * {@link SCENE_EVENT_HISTORY}.
+   *
+   * Ordered by `event_id`, not `version`: several events can share a version
+   * (a save and the thumbnail that follows it), and `event_id` is the column
+   * the SSE cursor actually advances through, so it is the only ordering that
+   * matches what a client considers "newer".
+   */
+  private async trimSceneEvents(conn: MysqlConnection, sceneId: string): Promise<void> {
+    const [result] = await conn.execute(
+      `SELECT event_id FROM scene_events
+         WHERE scene_id = ?
+         ORDER BY event_id DESC
+         LIMIT 1 OFFSET ${SCENE_EVENT_HISTORY - 1}`,
+      [sceneId],
+    )
+
+    const oldestKept = firstRow<{ event_id: number }>(result)
+    if (!oldestKept) return
+
+    await conn.execute('DELETE FROM scene_events WHERE scene_id = ? AND event_id < ?', [
+      sceneId,
+      oldestKept.event_id,
     ])
   }
 
