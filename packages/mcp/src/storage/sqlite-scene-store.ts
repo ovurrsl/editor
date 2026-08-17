@@ -27,6 +27,8 @@ import {
   type SceneMutateOptions,
   SceneNotFoundError,
   type SceneSaveOptions,
+  type SceneShare,
+  type SceneShareRole,
   type SceneStore,
   SceneTooLargeError,
   SceneVersionConflictError,
@@ -443,6 +445,11 @@ export class SqliteSceneStore implements SceneStore {
     if (opts.ownerId !== undefined) {
       clauses.push('owner_id = ?')
       bindings.push(opts.ownerId)
+    } else if (opts.viewerId !== undefined) {
+      // Owned by the viewer OR shared with them. `ownerId` wins when both are
+      // set (an explicit owner query), so this branch is `else if`.
+      clauses.push('(owner_id = ? OR id IN (SELECT scene_id FROM scene_shares WHERE user_id = ?))')
+      bindings.push(opts.viewerId, opts.viewerId)
     }
 
     const requestedLimit = opts.limit ?? DEFAULT_LIST_LIMIT
@@ -568,6 +575,41 @@ export class SqliteSceneStore implements SceneStore {
     return rows.map((row) => rowToSceneEvent(row as SceneEventRow))
   }
 
+  async listSceneShares(sceneId: string): Promise<SceneShare[]> {
+    const db = await this.database()
+    const rows = db
+      .query('SELECT user_id, role FROM scene_shares WHERE scene_id = ? ORDER BY granted_at ASC')
+      .all(sanitizeSlug(sceneId)) as Array<{ user_id: string; role: string }>
+    return rows.map((r) => ({ userId: r.user_id, role: r.role as SceneShareRole }))
+  }
+
+  async setSceneShares(
+    sceneId: string,
+    shares: SceneShare[],
+    grantedBy: string | null = null,
+  ): Promise<void> {
+    const safeId = sanitizeSlug(sceneId)
+    const now = new Date().toISOString()
+    await this.withWriteTransaction((db) => {
+      db.query('DELETE FROM scene_shares WHERE scene_id = ?').run(safeId)
+      const insert = db.query(
+        `INSERT INTO scene_shares (scene_id, user_id, role, granted_by, granted_at)
+         VALUES (?, ?, ?, ?, ?)`,
+      )
+      for (const share of shares) {
+        insert.run(safeId, share.userId, share.role, grantedBy, now)
+      }
+    })
+  }
+
+  async getSceneShareRole(sceneId: string, userId: string): Promise<SceneShareRole | null> {
+    const db = await this.database()
+    const row = db
+      .query('SELECT role FROM scene_shares WHERE scene_id = ? AND user_id = ?')
+      .get(sanitizeSlug(sceneId), userId) as { role: string } | null | undefined
+    return row ? (row.role as SceneShareRole) : null
+  }
+
   close(): void {
     this.db?.close()
     this.db = null
@@ -645,6 +687,19 @@ export class SqliteSceneStore implements SceneStore {
 
       CREATE INDEX IF NOT EXISTS scene_events_scene_event_idx
         ON scene_events(scene_id, event_id);
+
+      CREATE TABLE IF NOT EXISTS scene_shares (
+        scene_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'viewer' CHECK (role IN ('viewer', 'editor')),
+        granted_by TEXT,
+        granted_at TEXT NOT NULL,
+        PRIMARY KEY (scene_id, user_id),
+        FOREIGN KEY (scene_id) REFERENCES scenes(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS scene_shares_user_idx
+        ON scene_shares(user_id);
     `)
   }
 

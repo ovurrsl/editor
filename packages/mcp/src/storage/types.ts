@@ -67,9 +67,23 @@ export interface SceneSaveOptions {
 
 export type SceneSaveMode = 'draft' | 'checkpoint'
 
+/** The access a shared user has on a scene. `editor` implies `viewer`. */
+export type SceneShareRole = 'viewer' | 'editor'
+
+export interface SceneShare {
+  userId: string
+  role: SceneShareRole
+}
+
 export interface SceneListOptions {
   projectId?: string
   ownerId?: string
+  /**
+   * Scenes this user may see: owned by them OR shared with them. Distinct from
+   * `ownerId` (owned only), which the admin console still uses. When both are
+   * set, `ownerId` wins — the caller asked for a specific owner's scenes.
+   */
+  viewerId?: string
   limit?: number
 }
 
@@ -129,6 +143,12 @@ export interface SceneStore {
   rename(id: SceneId, newName: string, opts?: SceneMutateOptions): Promise<SceneMeta>
   appendSceneEvent?(opts: SceneEventAppendOptions): Promise<SceneEvent>
   listSceneEvents?(sceneId: SceneId, opts?: SceneEventListOptions): Promise<SceneEvent[]>
+  /** Every user a scene is shared with, and at what access. */
+  listSceneShares?(sceneId: SceneId): Promise<SceneShare[]>
+  /** Replaces the whole share set for a scene. `grantedBy` is the acting user. */
+  setSceneShares?(sceneId: SceneId, shares: SceneShare[], grantedBy?: string | null): Promise<void>
+  /** The share access one user holds on a scene, or null if none. */
+  getSceneShareRole?(sceneId: SceneId, userId: string): Promise<SceneShareRole | null>
 }
 
 export class SceneNotFoundError extends Error {
