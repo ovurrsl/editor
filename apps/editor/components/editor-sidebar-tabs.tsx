@@ -53,11 +53,10 @@ export const EDITOR_SIDEBAR_TABS: (SidebarTab & { component: React.ComponentType
     component: ScenesTab,
     mobileDefaultSnap: 0.6,
     mobileIcon: <FolderOpen className="h-5 w-5" />,
-    // `collection.webp` is a byte-for-byte copy of `zone.webp` (the floorplan
-    // zone tool), so it would silently wear the zone icon — `blueprint.webp`
-    // reads as a saved plan/scene and keeps the rail illustrated like its
+    // `files.webp` — the icon the reference deployment uses for the scenes rail;
+    // reads as a stack of saved projects and keeps the rail illustrated like its
     // siblings. The mobile rail stays on Lucide's folder like the other tabs.
-    icon: railIcon('/icons/blueprint.webp'),
+    icon: railIcon('/icons/files.webp'),
   },
   {
     id: 'settings',
