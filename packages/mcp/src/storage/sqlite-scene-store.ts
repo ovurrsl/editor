@@ -1,9 +1,11 @@
 import { mkdirSync } from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import type { SceneGraph } from '@pascal-app/core/clone-scene-graph'
 import { readEnv } from '../lib/env'
 import {
   assertValidName,
+  countGraphNodes,
   DEFAULT_LIST_LIMIT,
   editorUrlForScene,
   hashGraphJson,
@@ -26,6 +28,7 @@ import {
   type SceneMeta,
   type SceneMutateOptions,
   SceneNotFoundError,
+  type SceneRevisionMeta,
   type SceneSaveOptions,
   type SceneShare,
   type SceneShareRole,
@@ -608,6 +611,47 @@ export class SqliteSceneStore implements SceneStore {
       .query('SELECT role FROM scene_shares WHERE scene_id = ? AND user_id = ?')
       .get(sanitizeSlug(sceneId), userId) as { role: string } | null | undefined
     return row ? (row.role as SceneShareRole) : null
+  }
+
+  async listSceneRevisions(sceneId: string): Promise<SceneRevisionMeta[]> {
+    const db = await this.database()
+    const rows = db
+      .query(
+        `SELECT version, author_kind, created_at, graph_json
+           FROM scene_revisions
+          WHERE scene_id = ?
+          ORDER BY version DESC`,
+      )
+      .all(sanitizeSlug(sceneId)) as Array<{
+      version: number
+      author_kind: string
+      created_at: string
+      graph_json: string
+    }>
+    return rows.map((r) => ({
+      version: Number(r.version),
+      createdAt: r.created_at,
+      authorKind: r.author_kind,
+      nodeCount: countGraphNodes(r.graph_json),
+      sizeBytes: Buffer.byteLength(r.graph_json, 'utf8'),
+    }))
+  }
+
+  async loadSceneRevision(sceneId: string, version: number): Promise<SceneGraph | null> {
+    const db = await this.database()
+    const row = db
+      .query('SELECT graph_json FROM scene_revisions WHERE scene_id = ? AND version = ?')
+      .get(sanitizeSlug(sceneId), version) as { graph_json: string } | null | undefined
+    if (!row) return null
+    return parseGraph(row.graph_json, `${sceneId}@${version}`)
+  }
+
+  async updateThumbnail(sceneId: string, thumbnailUrl: string | null): Promise<void> {
+    const db = await this.database()
+    db.query('UPDATE scenes SET thumbnail_url = ? WHERE id = ?').run(
+      thumbnailUrl,
+      sanitizeSlug(sceneId),
+    )
   }
 
   close(): void {

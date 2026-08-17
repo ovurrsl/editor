@@ -528,3 +528,54 @@ describe('SqliteSceneStore scene sharing', () => {
     expect(await store.listSceneShares('proj')).toEqual([])
   })
 })
+
+describe('SqliteSceneStore revisions and thumbnail', () => {
+  let rootDir: string
+  let store: SqliteSceneStore
+
+  beforeEach(async () => {
+    rootDir = await mkTmpRoot()
+    store = createStore(rootDir)
+  })
+
+  afterEach(async () => {
+    store.close()
+    await rmrf(rootDir)
+  })
+
+  test('checkpoint saves accumulate restorable revisions', async () => {
+    const v1 = await store.save({
+      id: 'proj',
+      name: 'Proj',
+      graph: makeGraph(),
+      saveMode: 'checkpoint',
+    })
+    await store.save({
+      id: 'proj',
+      name: 'Proj',
+      graph: makeGraph(),
+      saveMode: 'checkpoint',
+      expectedVersion: v1.version,
+    })
+
+    const revs = await store.listSceneRevisions('proj')
+    expect(revs.length).toBeGreaterThanOrEqual(2)
+    // Newest first, and each carries a usable node count.
+    expect(revs[0]!.version).toBeGreaterThan(revs[1]!.version)
+    expect(revs[0]!.nodeCount).toBe(2)
+
+    const graph = await store.loadSceneRevision('proj', revs[revs.length - 1]!.version)
+    expect(graph).not.toBeNull()
+    expect(Object.keys(graph!.nodes).length).toBe(2)
+    expect(await store.loadSceneRevision('proj', 9999)).toBeNull()
+  })
+
+  test('updateThumbnail sets the preview without bumping the version', async () => {
+    const saved = await store.save({ id: 'proj', name: 'Proj', graph: makeGraph() })
+    await store.updateThumbnail('proj', 'data:image/jpeg;base64,AAAA')
+
+    const loaded = await store.load('proj')
+    expect(loaded!.thumbnailUrl).toBe('data:image/jpeg;base64,AAAA')
+    expect(loaded!.version).toBe(saved.version)
+  })
+})

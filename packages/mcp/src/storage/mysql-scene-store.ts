@@ -2,6 +2,7 @@ import type { SceneGraph } from '@pascal-app/core/clone-scene-graph'
 import { readEnv } from '../lib/env'
 import {
   assertValidName,
+  countGraphNodes,
   DEFAULT_LIST_LIMIT,
   editorUrlForScene,
   hashGraphJson,
@@ -23,6 +24,7 @@ import {
   type SceneMeta,
   type SceneMutateOptions,
   SceneNotFoundError,
+  type SceneRevisionMeta,
   type SceneSaveOptions,
   type SceneShare,
   type SceneShareRole,
@@ -622,6 +624,51 @@ export class MysqlSceneStore implements SceneStore {
     )
     const row = firstRow<{ role: string }>(result)
     return row ? (row.role as SceneShareRole) : null
+  }
+
+  async listSceneRevisions(sceneId: string): Promise<SceneRevisionMeta[]> {
+    const pool = await this.database()
+    const [result] = await pool.execute(
+      `SELECT version, author_kind, created_at, graph_json
+         FROM scene_revisions
+        WHERE scene_id = ?
+        ORDER BY version DESC`,
+      [sanitizeSlug(sceneId)],
+    )
+    return rows(result).map((row) => {
+      const r = row as unknown as {
+        version: number
+        author_kind: string
+        created_at: string
+        graph_json: string
+      }
+      return {
+        version: Number(r.version),
+        createdAt: r.created_at,
+        authorKind: r.author_kind,
+        nodeCount: countGraphNodes(r.graph_json),
+        sizeBytes: Buffer.byteLength(r.graph_json, 'utf8'),
+      }
+    })
+  }
+
+  async loadSceneRevision(sceneId: string, version: number): Promise<SceneGraph | null> {
+    const pool = await this.database()
+    const [result] = await pool.execute(
+      'SELECT graph_json FROM scene_revisions WHERE scene_id = ? AND version = ?',
+      [sanitizeSlug(sceneId), version],
+    )
+    const row = firstRow<{ graph_json: string }>(result)
+    if (!row) return null
+    return parseGraph(row.graph_json, `${sceneId}@${version}`)
+  }
+
+  async updateThumbnail(sceneId: string, thumbnailUrl: string | null): Promise<void> {
+    const pool = await this.database()
+    await pool.execute('UPDATE scenes SET thumbnail_url = ? WHERE id = ?', [
+      thumbnailUrl,
+      sanitizeSlug(sceneId),
+    ])
   }
 
   async close(): Promise<void> {
