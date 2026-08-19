@@ -201,9 +201,15 @@ function rowToSceneEvent(row: SceneEventRow): SceneEvent {
  * Drop every revision of this scene older than the newest
  * {@link SCENE_REVISION_HISTORY}.
  *
- * Mirrors `MysqlSceneStore.trimRevisions` deliberately: the two stores are
- * asserted to behave identically by `store.test.ts`, and a retention policy
- * that held on only one of them would be a policy nobody could rely on.
+ * Mirrors `MysqlSceneStore.trimRevisions` deliberately: a retention policy that
+ * held on only one store would be a policy nobody could rely on.
+ *
+ * ⚠️ That mirroring is maintained BY HAND. An earlier version of this comment
+ * claimed `store.test.ts` asserts the two stores behave identically; it does
+ * not — that file is entirely slug tests and never constructs a MySQL store.
+ * The MySQL store has no behavioural coverage at all, so nothing here fails if
+ * the two implementations drift. Changing one store means changing the other
+ * and verifying by reading, until a shared parity suite exists.
  * Called inside the caller's write transaction, so the insert and the eviction
  * commit together.
  */

@@ -1,7 +1,8 @@
 // @ts-expect-error — bun:test is provided by the Bun runtime; viewer does not
 // include Bun ambient types in its production declaration build.
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { type AnyNodeDefinition, categoryOf, nodeRegistry, registerNode } from '@pascal-app/core'
+import { type AnyNodeDefinition, nodeRegistry, registerNode } from '@pascal-app/core'
+import { isHiddenByCategory as shippedIsHiddenByCategory } from '../lib/category-visibility'
 import useViewer from './use-viewer'
 
 // Minimal definitions — categoryOf reads only kind / category / presentation, so
@@ -26,10 +27,12 @@ function def(
   } as AnyNodeDefinition
 }
 
-// Mirrors the gate in node-renderer.tsx exactly.
+// The SHIPPED predicate, not a copy of it. `node-renderer.tsx` calls this same
+// function, so if the renderer ever loses the gate in an upstream merge, this
+// file stops describing reality — which is the point: a copy would have stayed
+// green while the feature quietly died.
 function isHiddenByCategory(kind: string): boolean {
-  const category = categoryOf(kind)
-  return category !== null && useViewer.getState().hiddenCategories.has(category)
+  return shippedIsHiddenByCategory(kind, useViewer.getState().hiddenCategories)
 }
 
 beforeEach(() => {
@@ -78,5 +81,28 @@ describe('hiddenCategories render predicate', () => {
     const before = useViewer.getState().hiddenCategories
     useViewer.getState().setCategoryHidden('furnish', false) // already absent → no-op
     expect(useViewer.getState().hiddenCategories).toBe(before)
+  })
+})
+
+/**
+ * BEKÇİ: renderer geçidi GERÇEKTEN çağırıyor mu?
+ *
+ * Yukarıdaki testler predikatın doğruluğunu koruyor ama çağrıldığını değil.
+ * Bir upstream merge'i `node-renderer.tsx`'i toptan alırsa çağrı düşer,
+ * predikat testleri yeşil kalır ve kategori gizleme sessizce ölür — kullanıcı
+ * Layers'tan gizler, hiçbir şey olmaz, hiçbir test kırılmaz.
+ *
+ * Bu paket aynı sınıf için (ölçek tavanları, walkthrough hızı) kaynak metnini
+ * okuyan bekçiler kullanıyor; bağlantı da öyle korunuyor.
+ */
+describe('geçit renderer’a bağlı kalıyor', () => {
+  test('node-renderer.tsx isHiddenByCategory çağırıyor', async () => {
+    const source = await Bun.file(
+      new URL('../components/renderers/node-renderer.tsx', import.meta.url).pathname,
+    ).text()
+    expect(
+      source.includes('isHiddenByCategory('),
+      'node-renderer.tsx artık kategori geçidini çağırmıyor: kategori gizleme özelliği ölü, ama predikat testleri hâlâ yeşil',
+    ).toBe(true)
   })
 })
