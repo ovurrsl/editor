@@ -7,6 +7,7 @@ import {
   collectAlignmentAnchors,
   emitter,
   type GridEvent,
+  getFloorStackedPosition,
   getScaledDimensions,
   type ItemEvent,
   movingFootprintAnchors,
@@ -434,6 +435,31 @@ export function usePlacementCoordinator(config: PlacementCoordinatorConfig): Rea
         rotation: previewNode.rotation,
         maxElevation: pointerSupportCapRef.current,
       })
+    },
+    [asset?.attachTo, draftNode],
+  )
+
+  /**
+   * The same stack, in the draft's OWN frame.
+   *
+   * `getFloorVisualPosition` answers in `ToolManager`'s building-local group —
+   * the frame the cursor chrome is drawn in — which on a storey above 0 is the
+   * level-local Y plus the storey elevation. The draft's mesh is not chrome: it
+   * is registered under the level, so it already gets that elevation from its
+   * parent and would be lifted twice.
+   */
+  const getFloorMeshY = useCallback(
+    (position: [number, number, number]): number => {
+      const draft = draftNode.current
+      if (!(draft && !asset?.attachTo)) return position[1]
+      const previewNode = getGridAlignedPreviewNode(draft as ItemNode)
+      return getFloorStackedPosition({
+        node: previewNode,
+        nodes: useScene.getState().nodes,
+        position,
+        rotation: previewNode.rotation,
+        maxElevation: pointerSupportCapRef.current,
+      })[1]
     },
     [asset?.attachTo, draftNode],
   )
@@ -2086,7 +2112,7 @@ export function usePlacementCoordinator(config: PlacementCoordinatorConfig): Rea
             mesh.position.x = x
             mesh.position.z = z
             if (surface === 'floor') {
-              mesh.position.y = getFloorVisualPosition([x, gridPosition.current.y, z])[1]
+              mesh.position.y = getFloorMeshY([x, gridPosition.current.y, z])
             }
           }
         } else if (surface === 'item-surface' && placementState.current.surfaceItemId) {
@@ -2508,13 +2534,13 @@ export function usePlacementCoordinator(config: PlacementCoordinatorConfig): Rea
 
       // Adjust Y for slab elevation (floor items on top of slabs)
       if (!asset.attachTo) {
-        const visualPosition = getFloorVisualPosition([
+        const stacked: [number, number, number] = [
           gridPosition.current.x,
           gridPosition.current.y,
           gridPosition.current.z,
-        ])
-        mesh.position.y = visualPosition[1]
-        cursorGroupRef.current.position.y = visualPosition[1]
+        ]
+        mesh.position.y = getFloorMeshY(stacked)
+        cursorGroupRef.current.position.y = getFloorVisualPosition(stacked)[1]
       }
     }
   })

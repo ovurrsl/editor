@@ -4,6 +4,7 @@ import {
   emitter,
   type FenceNode,
   type GridEvent,
+  getFloorStackedPosition,
   type LevelNode,
   movingAlignmentAnchors,
   nodeRegistry,
@@ -193,6 +194,26 @@ export const MoveRoofTool: React.FC<{
 
     const levelId = resolveLevelId()
     const isFloorPlaced = nodeRegistry.get(movingNode.type)?.capabilities?.floorPlaced !== undefined
+    // Two frames, one stack. The node's own mesh is registered under the level
+    // and inherits the storey elevation from its parent, so it takes the
+    // level-local answer; the cursor chrome is drawn in `ToolManager`'s
+    // building-local group, which is what `getFloorStackPreviewPosition` adds
+    // the storey elevation for. Feeding one to the other puts the ghost a
+    // storey off — the same conversion the `!isFloorPlaced` branch already
+    // spells out as `localPositionToToolLocal`.
+    const getStackedPosition = (
+      position: [number, number, number],
+      rotation = pendingRotation,
+    ): [number, number, number] => {
+      if (!isFloorPlaced) return position
+      return getFloorStackedPosition({
+        node: movingNode,
+        position,
+        rotation,
+        levelId,
+        nodes: useScene.getState().nodes,
+      })
+    }
     const getPreviewPosition = (
       position: [number, number, number],
       rotation = pendingRotation,
@@ -368,16 +389,17 @@ export const MoveRoofTool: React.FC<{
       previousGridPosRef.current = [localX, localZ]
 
       lastLocalPosition = [localX, movingNode.position[1], localZ]
-      const previewPosition = getPreviewPosition(lastLocalPosition)
       setCursorWorldPos(
-        isFloorPlaced ? previewPosition : localPositionToToolLocal(lastLocalPosition),
+        isFloorPlaced
+          ? getPreviewPosition(lastLocalPosition)
+          : localPositionToToolLocal(lastLocalPosition),
       )
 
       // Directly update the Three.js mesh — no store update during drag
       const mesh = sceneRegistry.nodes.get(movingNode.id)
       if (mesh) {
         if (isFloorPlaced) {
-          mesh.position.set(...previewPosition)
+          mesh.position.set(...getStackedPosition(lastLocalPosition))
         } else {
           mesh.position.x = localX
           mesh.position.z = localZ
@@ -495,9 +517,8 @@ export const MoveRoofTool: React.FC<{
         if (mesh) {
           mesh.rotation.y = pendingRotation
           if (isFloorPlaced) {
-            const previewPosition = getPreviewPosition(lastLocalPosition, pendingRotation)
-            mesh.position.set(...previewPosition)
-            setCursorWorldPos(previewPosition)
+            mesh.position.set(...getStackedPosition(lastLocalPosition, pendingRotation))
+            setCursorWorldPos(getPreviewPosition(lastLocalPosition, pendingRotation))
           }
         }
 

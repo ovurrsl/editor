@@ -53,7 +53,7 @@ import useFacingPose from '../../../store/use-facing-pose'
 import { swallowNextClick } from '../../editor/node-arrow-handles'
 import { CursorSphere } from '../shared/cursor-sphere'
 import { DragBoundingBox } from '../shared/drag-bounding-box'
-import { getFloorStackPreviewPosition } from '../shared/floor-stack-preview'
+import { getFloorStackPreviewPosition, getStoreyPreviewLift } from '../shared/floor-stack-preview'
 import { useFreshPlacementVisibility } from '../shared/fresh-placement-visibility'
 import { PlacementBox } from '../shared/placement-box'
 import { resolvePointerSupportSurface } from '../shared/pointer-support-cap'
@@ -357,7 +357,12 @@ export function MoveRegistryNodeTool({ node }: { node: AnyNode }) {
   const visualPositionFor = useCallback(
     (position: [number, number, number], rotationY = rotationRef.current) => {
       if (parentFrame && frameParent) {
-        return parentFrame.localToPlan(frameParent, position, useScene.getState().nodes)
+        // `localToPlan` answers in the storey's plan frame; the cursor renders
+        // in the building-local tool group. Same lift `getFloorStackPreviewPosition`
+        // applies on the other branch — without it a nested run's ghost sits one
+        // storey elevation below the cursor.
+        const plan = parentFrame.localToPlan(frameParent, position, useScene.getState().nodes)
+        return [plan[0], plan[1] + getStoreyPreviewLift(), plan[2]] as [number, number, number]
       }
       return getFloorStackPreviewPosition({
         node,
