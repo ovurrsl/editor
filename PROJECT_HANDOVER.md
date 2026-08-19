@@ -21,6 +21,13 @@
 > sunucusu ve 30+ aracı · §3.1.2 `apps/ifc-converter` · §5.2 bilinen hataların
 > dosya:satır kanıtlı, önceliklendirilmiş tam dökümü (üç kod incelemesinden) ·
 > Ek A mimari wiki sayfaları + skills · panelin kendi CI'ı olmadığı notu.
+>
+> **v3'te eklenenler (kod yazmaya hemen başlayabilmek için):** §9 UI bileşenleri
+> ve stil standartları (shadcn/ui deseni, `cva` + `cn()`, yeni buton/panel
+> reçetesi, eklentide Tailwind yasağı) · §10 dört depo için eksiksiz `.env`
+> şablonları (sırlar placeholder) · §11 sunucu/dağıtım (süreç yöneticisi,
+> hPanel ayarları, restart ve log okuma) · §12 test mimarisi (E2E YOK; depo depo
+> tam komut dizileri).
 
 ---
 
@@ -1003,6 +1010,352 @@ doğrular (`"backend":"mysql","db":"ok"`).
   sessiz veri kaybı.
 - 🟢 Değişiklikten önce ilgili `wiki/architecture/` sayfasını oku; PR incelemede
   `review-architecture` skill'ini çağır.
+
+---
+
+---
+
+## 9. UI Bileşenleri ve Stil Standartları (Design System & Styling)
+
+### 9.1 Hangi kütüphane? — shadcn/ui **deseni**, CLI'siz
+
+Editör **shadcn/ui'nin tam olarak aynı reçetesini** kullanıyor ama paket ya da
+CLI olarak değil: bileşenler depoya elle kopyalanmış ve elle bakılıyor.
+Kanıt: `components.json` **yok** (yani `npx shadcn add` kullanılmıyor), ama
+üçlü imza tam: **Radix primitives + `cva` + `cn()`**.
+
+Yığın:
+
+| Katman | Ne | Nerede |
+|---|---|---|
+| Erişilebilir davranış | **Radix UI** (14 paket: dialog, dropdown-menu, popover, select, slider, switch, tabs, tooltip, context-menu, alert-dialog, separator, slot…) | `packages/editor/package.json` |
+| Varyant yönetimi | **`class-variance-authority` (cva)** | primitive dosyalarının içinde |
+| Sınıf birleştirme | **`cn()`** = `clsx` + `tailwind-merge` | `packages/editor/src/lib/utils.ts`, `apps/editor/lib/utils.ts`, `apps/editor/panel/lib/cn.ts` |
+| Stil | **Tailwind CSS v4** (`@theme` + semantik token'lar) | `styles/`, `apps/editor/panel/globals.css` |
+| İkonlar | **`lucide-react`** + **`@iconify/react`** + `public/icons/*.webp` | — |
+| Diğer | `cmdk` (komut paleti), `@dnd-kit/*` (sürükle-bırak), `motion` (animasyon) | `packages/editor` |
+
+**Taban bileşenler (primitives) — 19 adet**, `packages/editor/src/components/ui/primitives/`:
+`button` · `card` · `input` · `number-input` · `dialog` · `sheet` · `popover` ·
+`dropdown-menu` · `context-menu` · `tooltip` · `select` (yok — Radix doğrudan) ·
+`slider` · `switch` · `separator` · `skeleton` · `sidebar` · `color-dot` ·
+`opacity-control` · `shortcut-token` · `error-boundary`
+
+### 9.2 Yeni bir buton/panel eklerken izlenecek format
+
+**Kural: Tailwind utility sınıfları + `cn()`. CSS Modules YOK, styled-components
+YOK, inline stil YOK** (tek istisna §9.3'te).
+
+Kanonik desen (`primitives/button.tsx`'ten birebir):
+
+```tsx
+import { Slot } from '@radix-ui/react-slot'
+import { cva, type VariantProps } from 'class-variance-authority'
+import { cn } from '../../../lib/utils'
+
+const buttonVariants = cva(
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md font-medium text-sm outline-none transition-all focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        default: 'bg-primary text-primary-foreground hover:bg-primary/90',
+        destructive: 'bg-destructive text-white hover:bg-destructive/90',
+        outline: 'border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground',
+        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+        ghost: 'hover:bg-accent hover:text-accent-foreground',
+        link: 'text-primary underline-offset-4 hover:underline',
+      },
+      size: { default: 'h-9 px-4 py-2', sm: 'h-8 px-3', lg: 'h-10 px-6', icon: 'size-9' },
+    },
+    defaultVariants: { variant: 'default', size: 'default' },
+  },
+)
+```
+
+Uyulacak beş nokta:
+
+1. **Ham renk yazma — semantik token kullan.** `bg-primary`,
+   `text-primary-foreground`, `bg-destructive`, `border-ring`, `bg-accent`,
+   `bg-background`, `text-muted-foreground`. `bg-[#1e40af]` gibi bir literal
+   temayı (açık/koyu) kırar.
+2. **Varyantlar `cva` ile**, prop'ta `if/else` ile değil.
+3. **`className` prop'u her zaman `cn(...)`'in SONUNA** ver ki çağıran ezebilsin:
+   `cn(buttonVariants({ variant, size }), className)`.
+4. **Kompozisyon için `asChild` + Radix `Slot`.**
+5. **Koyu tema `dark:` ile aynı dosyada** — ayrı tema dosyası yok.
+
+Yeni bir panel ekliyorsan: mevcut primitive'leri besteler, yenisini
+`primitives/`'e yalnızca gerçekten yeniden kullanılacaksa koy. Panel yerleşimi
+için `packages/editor/src/components/ui/panels/` içindeki komşularına bak.
+
+### 9.3 ⚠️ Tek istisna: `plugin-warehouse` panellerinde Tailwind YASAK
+
+Eklenti panellerinde Tailwind sınıfı **derlenmez ve hatasız şekilde stilsiz
+çıkar**. Sebep: Tailwind v4 symlink'li dizinleri taramaz, git bağımlılığı ise
+her zaman bun store'una bir symlink'tir. Orada iki seçenek var:
+
+- Host CSS değişkenlerini çözen **inline stil** — `plugin-warehouse/src/panels/styles.ts`
+- Ya da **host bileşenini beste** — onlar sınıflarını host'un kendi stylesheet'inden taşır.
+
+(Bu, eklentinin "sessizce başarısız olan dört kural"ından biri; §3.2'ye bakın.)
+
+### 9.4 Konsol (`ovurrsl/panel`) tarafı
+
+Aynı felsefe, ayrı uygulama: Tailwind v4 `@theme` + **`--dt-*` design token'ları**
+(`panel/src/app/globals.css`), `lucide-react`, `clsx` + `tailwind-merge`
+(`panel/src/lib/cn.ts`). Ortak bileşenler `panel/src/components/ui/`
+(`controls.tsx`, `feedback.tsx`, `caps.tsx`, `backdrop.tsx`).
+**Konsol bileşenlerini `ovurrsl/panel`'de düzenle**, editördeki vendor kopyada değil.
+
+---
+
+## 10. Eksiksiz `.env` Şablonları (4 depo)
+
+> Gerçek sırlar **asla** buraya yazılmaz; hepsi placeholder. Üretim değerleri
+> için §5.2-A'daki güvenlik maddesini okuyun.
+
+### 10.1 `ovurrsl/editor` — geliştirme
+
+Dev için **zorunlu env yok**. Depoda `.env.example` (opsiyoneller) ve
+`.env.defaults` (committed, en son yüklenir; `PORT=3002`) var.
+`.env` ve `.env.local` gitignore'lu. Öncelik: kabuk > `.env.local` > `.env.defaults`.
+
+```bash
+# .env.local — opsiyonel
+PORT=3002                                  # apps/editor dev portu
+# MINT_PASCAL_HOST_ORIGIN=https://pascal.example.com
+# NEXT_PUBLIC_ASSETS_CDN_URL=              # env.mjs doğruluyor
+# SKIP_ENV_VALIDATION=1                    # doğrulamayı atla
+
+# Sahneleri MySQL'e yazmak istersen (üretim davranışı):
+DIGITALTWIN_MYSQL_HOST=127.0.0.1
+DIGITALTWIN_MYSQL_PORT=3306
+DIGITALTWIN_MYSQL_USER=YOUR_DB_USER
+DIGITALTWIN_MYSQL_PASSWORD=YOUR_DB_PASSWORD
+DIGITALTWIN_MYSQL_DATABASE=digitaltwin
+# veya tek satır (paroladaki @ : / ? # [ ] % yüzde-kodlanmalı):
+# DIGITALTWIN_MYSQL_URL=mysql://YOUR_DB_USER:YOUR_DB_PASSWORD@127.0.0.1:3306/digitaltwin
+
+# Yerel SQLite (yalnız dev; üretimde fallback YOK):
+# DIGITALTWIN_DB_PATH=./.data/scenes.sqlite
+# DIGITALTWIN_DATA_DIR=./.data
+```
+
+### 10.2 `ovurrsl/panel` — konsol
+
+```bash
+# MySQL 8 (InnoDB, utf8mb4)
+DATABASE_HOST=127.0.0.1
+DATABASE_PORT=3306
+DATABASE_USER=YOUR_DB_USER
+DATABASE_PASSWORD=YOUR_DB_PASSWORD
+DATABASE_NAME=digitaltwin
+
+# ZORUNLU — 32 bayt base64. TOTP ve webhook sırlarını şifreler.
+# Üret: node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+# ⚠️ Değiştirirsen mevcut tüm 2FA gizli anahtarları okunamaz hâle gelir.
+SECRET_ENCRYPTION_KEY=YOUR_32_BYTE_BASE64_KEY
+
+SESSION_COOKIE_SECURE=0        # TLS arkasında 1
+NEXT_PUBLIC_EDITOR_URL=        # boşsa giriş ekranındaki editör bağlantıları gizlenir
+
+# Mail: "console" linkleri terminale basar, "smtp" gerçekten gönderir
+MAIL_TRANSPORT=console
+MAIL_FROM=DigitalTwin <no-reply@example.com>
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASSWORD=YOUR_SMTP_PASSWORD
+SMTP_SECURE=                   # 1 = implicit TLS; boş = 465'te implicit, diğerinde STARTTLS
+
+# Opsiyonel
+APP_URL=http://localhost:3000  # e-postalardaki bağlantı tabanı
+GITHUB_TOKEN=YOUR_GITHUB_TOKEN # Updates sekmesi için (anon 60/saat limitini kaldırır)
+SEED_ADMIN_USERNAME=Admin
+SEED_ADMIN_EMAIL=admin@example.com
+SEED_ADMIN_PASSWORD=YOUR_TEMP_PASSWORD
+```
+
+> `panel/src/lib/db.ts` env öncelik zinciri: `DIGITALTWIN_MYSQL_*` →
+> `PASCAL_MYSQL_*` → `DATABASE_*` (+ tekil URL). Ama `scripts/migrate.ts` ve
+> `scripts/seed.ts` **yalnız `DATABASE_*`** okur — migration koşarken bunları ver.
+
+### 10.3 `ovurrsl/plugin-warehouse`
+
+Env **gerekmiyor**. Yalnız `NODE_ENV` davranışı değiştirir: yinelenen kind
+kaydı dev'de uyarır, **üretimde fırlatır**.
+
+### 10.4 `ovurrsl/Digitaltwin` — üretim
+
+Yükleme sırası: gerçek env > `server.js` yanındaki `.env` (her sürümde
+değişir) > `~/.digitaltwin.env` (sürümler arası kalır — **tercih edilen**).
+`DIGITALTWIN_ENV_FILE` yolu ezer. Her `DIGITALTWIN_*` bir `PASCAL_*` takma
+adıyla da okunur.
+
+```bash
+# ~/.digitaltwin.env
+DIGITALTWIN_MYSQL_HOST=localhost
+DIGITALTWIN_MYSQL_PORT=3306
+DIGITALTWIN_MYSQL_USER=YOUR_DB_USER
+DIGITALTWIN_MYSQL_PASSWORD=YOUR_DB_PASSWORD
+DIGITALTWIN_MYSQL_DATABASE=YOUR_DB_NAME
+# DIGITALTWIN_MYSQL_URL=mysql://user:pass@localhost:3306/db
+
+SECRET_ENCRYPTION_KEY=YOUR_32_BYTE_BASE64_KEY
+SESSION_COOKIE_SECURE=1
+APP_URL=https://opex.help
+NEXT_PUBLIC_APP_URL=https://opex.help
+DIGITALTWIN_ADMIN_EMAIL=admin@example.com
+SEED_ADMIN_USERNAME=Admin
+
+MAIL_TRANSPORT=smtp
+MAIL_FROM=DigitalTwin <no-reply@example.com>
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=YOUR_SMTP_USER
+SMTP_PASSWORD=YOUR_SMTP_PASSWORD
+SMTP_SECURE=
+
+# Opsiyonel
+# DIGITALTWIN_MAX_SCENE_BYTES=            # sahne başına boyut tavanı
+# DIGITALTWIN_ALLOW_SQLITE=1              # ⚠️ ÜRETİMDE ASLA — dosya her sürümde silinir
+# GITHUB_TOKEN=YOUR_GITHUB_TOKEN
+# PORT=3000 / HOSTNAME=0.0.0.0 / KEEP_ALIVE_TIMEOUT=
+```
+
+---
+
+## 11. Sunucu ve Dağıtım Detayları (Deployment)
+
+### 11.1 Süreç yöneticisi: **hiçbiri — Hostinger'ın kendi Node.js koşucusu**
+
+Depolarda **PM2 yok, Docker yok, systemd unit yok, Procfile yok** (doğrulandı:
+`ecosystem.config*`, `Dockerfile*`, `docker-compose*`, `*.service`, `Procfile`
+hiçbiri mevcut değil). Docker, SETUP.md'de anlatıldığı gibi bu forkta **bilerek
+silindi** — SQLite depolamayı ima ediyordu, oysa fork MySQL zorunlu kılıyor.
+
+Uygulama, **Hostinger hPanel'in Node.js uygulama yöneticisi** tarafından
+koşturuluyor. Tek süreç, tek giriş noktası:
+
+```
+npm install  →  npm run build  →  npm start
+                (setup-native.mjs)  (node server.js)
+```
+
+`server.js` standalone Next bootstrap'ı; `PORT` (vars. 3000) ve `HOSTNAME`
+(vars. 0.0.0.0) okur. Editör UI, 3B viewer, konsol, tüm `/api/*` ve `public/`
+**aynı süreçten** servis edilir.
+
+### 11.2 hPanel ayarları (referans)
+
+| Alan | Değer |
+|---|---|
+| Repository | `ovurrsl/digitaltwin` |
+| Branch | `main` |
+| Framework preset | Other |
+| Root directory | `./` |
+| Node.js version | **22.x** |
+| Package manager | npm |
+| Build command | `npm run build` |
+| Output directory | `./` |
+| Entry file | `server.js` |
+
+### 11.3 Restart ve log okuma
+
+**CLI yok.** Yeniden başlatma ve çalışma zamanı logları **hPanel arayüzünden**
+yapılır (Node.js uygulaması → Restart / Runtime log). Bir SSH oturumun varsa
+`npm start`'ı elle koşabilirsin, ama kalıcı süreç hPanel'e aittir.
+
+Pratikte gereken tek şey genelde şu tek komut:
+
+```bash
+curl -s https://opex.help/api/health
+# {"status":"ok","app":"digitaltwin","backend":"mysql","db":"ok","auth":"ok", ...}
+```
+
+- `"backend"` `mysql` değilse env okunmamış demektir.
+- `"db"` `ok` değilse veritabanı cevap vermiyor.
+- **MySQL zorunlu:** yapılandırma yoksa sunucu **açılmayı reddeder** — sebebi
+  runtime log'unda yazar. Tablolar ilk bağlantıda oluşturulur.
+
+### 11.4 Yeni sürüm nasıl çıkar (elle adım yok)
+
+`integration`'a her yazım → `deploy-bundle` → derleme + **iki duman testi**
+(DB'siz açılmayı reddediyor mu; gerçek MySQL'e karşı `/api/health` cevap
+veriyor mu) → geçerse bundle `ovurrsl/digitaltwin`'e force-push → Hostinger
+alır. Biri geçmezse **yayın durur ve canlıdaki çalışan sürüm yerinde kalır**.
+
+---
+
+## 12. Testleri Çalıştırma (Test Mimarisi)
+
+### 12.1 E2E testi **YOK**
+
+Doğrulandı: dört deponun hiçbirinde Playwright, Cypress ya da başka bir E2E
+koşucusu **yok** — `playwright.config*`, `cypress.config*`, `e2e/` dizini
+hiçbirinde mevcut değil, `package.json`'larda bağımlılık yok. (Arama
+`node_modules` içindeki geçişli bağımlılıklara takılabilir; proje
+yapılandırması olarak yoktur.)
+
+Uçtan uca doğrulama bugün iki şeye dayanıyor: **`deploy-bundle`'ın iki duman
+testi** (§11.4) ve **elle test**. Bir E2E katmanı eklenecekse Playwright doğal
+seçim — konteynerde Chromium zaten kurulu.
+
+### 12.2 Depo depo tam komutlar
+
+```bash
+# ── ovurrsl/editor (bun + turbo) ─────────────────────────────
+cd editor
+bun install
+bun run test          # turbo run test → paket başına `bun test`
+bun check-types       # next typegen && tsc --noEmit
+bun check             # biome check   (bun check:fix düzeltir)
+bun lint / bun format
+# tek paket:
+cd packages/mcp && bun test
+bunx tsc --noEmit -p packages/editor/tsconfig.json
+
+# ── ovurrsl/plugin-warehouse (bun) ───────────────────────────
+cd plugin-warehouse
+bun install
+bun run verify        # ⭐ CI'nin tam üçlüsü: check-types && biome ci . && bun test
+bun run check-types
+bunx biome check .    # --write düzeltir
+bun test              # ~2680 test, ~10 sn
+bun test src/placement.test.ts             # tek dosya
+bun test -t "tek tıklama tek yerleştirme"  # ada göre
+
+# ── ovurrsl/panel (npm + vitest) ─────────────────────────────
+cd panel
+npm install
+npm run test          # vitest run — 59 test / 7 dosya
+npm run typecheck     # ⚠️ panelin kendi CI'ı YOK, bunu elle koş
+npm run build
+npm run db:migrate    # DATABASE_* gerekir
+npm run db:seed       # + --dev ile geliştirici hesapları
+
+# ── ovurrsl/Digitaltwin (derlenmiş artefakt) ─────────────────
+# Test yok — kaynak değil, build çıktısı.
+cd digitaltwin && npm install && npm run build && npm start
+```
+
+### 12.3 Bilinmesi gerekenler
+
+- **Editör ve eklenti `bun test` kullanır, panel `vitest`.** Vendoring
+  motoru testleri iki yön arasında **hiç taşımaz** (`sync-panel.mjs`) — tam da
+  bu yüzden.
+- **`bun run verify` eklentide CI ile birebir aynı.** Yerelde geçen bir şey
+  CI'da düşüyorsa neredeyse her zaman **biçimlendirmedir**: `biome check`
+  (rapor) ile `biome ci .` (sıkı) farklı davranır — `bunx biome check --write .`
+  koşun.
+- **Panelin CI'ı yok:** tip güvenliği tamamen editördeki `pull-panel`'in
+  `check-types` kapısına bağlı. Panelde bozuk kod yazılırsa hata **editör
+  tarafında** patlar ve saatlik vendor akışı sessizce durur.
+- **Anlamlı test yazma ölçütü** (eklentinin kendi kuralı): doğru kodun doğru
+  olduğunu değil, **makul görünen YANLIŞ bir cevabın üretilmediğini** iddia et.
+  İç içe geçmiş çelik, olduğundan az/çok rapor eden cache anahtarı, yanlış
+  koordinat çerçevesinde okunan tıklama.
+
 
 ---
 

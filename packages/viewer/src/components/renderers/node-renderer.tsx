@@ -2,13 +2,13 @@
 
 import {
   type AnyNode,
-  categoryOf,
   isNodeKindEnabled,
   nodeRegistry,
   type RendererSource,
   useScene,
 } from '@pascal-app/core'
 import { type ComponentType, lazy, Suspense } from 'react'
+import { isHiddenByCategory } from '../../lib/category-visibility'
 import useViewer from '../../store/use-viewer'
 import { ParametricNodeRenderer } from './parametric-node-renderer'
 
@@ -35,11 +35,7 @@ export const NodeRenderer = ({ nodeId }: { nodeId: AnyNode['id'] }) => {
   const hiddenCategories = useViewer((state) => state.hiddenCategories)
   if (!node) return null
   if (!isNodeKindEnabled(node.type, installedPlugins)) return null
-  // Non-destructive category visibility. Containers (site/building/level) map to
-  // `null` so hiding a category never removes the hierarchy that hosts the rest
-  // of the scene — only genuine content nodes are gated here.
-  const category = categoryOf(node.type)
-  if (category !== null && hiddenCategories.has(category)) return null
+  if (isHiddenByCategory(node.type, hiddenCategories)) return null
   const def = nodeRegistry.get(node.type)
   if (!def) return null
   // Two-checkbox dispatch (see wiki/architecture/node-definitions.md):
