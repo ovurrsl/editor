@@ -62,10 +62,7 @@ export function ActionMenu({ className }: { className?: string }) {
     rectTop: number
     width: number
     height: number
-    minLeft: number
-    maxLeft: number
     minTop: number
-    maxTop: number
   } | null>(null)
 
   const handlePointerDown = useCallback(
@@ -86,10 +83,7 @@ export function ActionMenu({ className }: { className?: string }) {
         rectTop: rect.top,
         width: rect.width,
         height: rect.height,
-        minLeft: bounds.left + DRAG_MARGIN,
-        maxLeft: bounds.right - rect.width - DRAG_MARGIN,
         minTop: bounds.top + DRAG_MARGIN,
-        maxTop: bounds.bottom - rect.height - DRAG_MARGIN,
       }
       dragOffsetRef.current = base
       setIsDragging(true)
@@ -120,26 +114,9 @@ export function ActionMenu({ className }: { className?: string }) {
     const currentWidth = liveRect?.width ?? drag.width
     const currentHeight = liveRect?.height ?? drag.height
 
-    // Query toolbar boundaries
-    const leftToolbar = document.querySelector('[data-viewer-toolbar-left]')
-    const rightToolbar = document.querySelector('[data-viewer-toolbar-right]')
-    const leftRect = leftToolbar?.getBoundingClientRect()
-    const rightRect = rightToolbar?.getBoundingClientRect()
-
     const targetLeft = drag.rectLeft + dx
-    let minLeft = bounds.left + DRAG_MARGIN
-    let maxLeft = bounds.right - currentWidth - DRAG_MARGIN
-
-    // Only apply horizontal toolbar restrictions when snapped (or in snapping range)
-    if (snapped) {
-      if (leftRect) {
-        minLeft = Math.max(minLeft, leftRect.right + DRAG_MARGIN)
-      }
-      if (rightRect) {
-        maxLeft = Math.min(maxLeft, rightRect.left - currentWidth - DRAG_MARGIN)
-      }
-      maxLeft = Math.max(minLeft, maxLeft)
-    }
+    const minLeft = bounds.left + DRAG_MARGIN
+    const maxLeft = bounds.right - currentWidth - DRAG_MARGIN
 
     const SNAP_CENTER_X = bounds.left + (bounds.right - bounds.left - currentWidth) / 2
     const SNAP_BOTTOM_Y = bounds.bottom - currentHeight - 24
@@ -209,27 +186,11 @@ export function ActionMenu({ className }: { className?: string }) {
     const SNAP_TOP_Y = bounds.top + 12
     const isCurrentlySnapped = Math.abs(rect.top - SNAP_TOP_Y) < 5
 
-    const leftRect = document
-      .querySelector('[data-viewer-toolbar-left]')
-      ?.getBoundingClientRect()
-    const rightRect = document
-      .querySelector('[data-viewer-toolbar-right]')
-      ?.getBoundingClientRect()
-
-    let minLeft = bounds.left + DRAG_MARGIN
-    let maxLeft = bounds.right - rect.width - DRAG_MARGIN
-
-    if (isCurrentlySnapped) {
-      if (leftRect) {
-        minLeft = Math.max(minLeft, leftRect.right + DRAG_MARGIN)
-      }
-      if (rightRect) {
-        maxLeft = Math.min(maxLeft, rightRect.left - rect.width - DRAG_MARGIN)
-      }
-      maxLeft = Math.max(minLeft, maxLeft)
-    }
-
-    const left = clamp(rect.left, minLeft, maxLeft)
+    const left = clamp(
+      rect.left,
+      bounds.left + DRAG_MARGIN,
+      bounds.right - rect.width - DRAG_MARGIN,
+    )
     const top = isCurrentlySnapped
       ? SNAP_TOP_Y
       : clamp(rect.top, bounds.top + DRAG_MARGIN, bounds.bottom - rect.height - DRAG_MARGIN)
@@ -256,7 +217,7 @@ export function ActionMenu({ className }: { className?: string }) {
   }, [clampIntoBounds, isMobile])
 
   // On mobile, defer the bottom rail to the selection bar when something
-  // is selected â€” the contextual actions take priority over mode controls.
+  // is selected — the contextual actions take priority over mode controls.
   // Also hide on Chat / Items / Studio tabs; those are contextual workflows
   // (composing / picking furniture / generating renders) where the build
   // menu is irrelevant.
