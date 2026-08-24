@@ -262,6 +262,9 @@ type ThumbnailEvents = {
 
 type SnapshotEvents = {
   'snapshot:saved': undefined
+  /** The capture did not produce an image. Paired with `snapshot:saved` so a UI
+   *  waiting on the capture has an exit on both outcomes, not just the happy one. */
+  'snapshot:failed': undefined
   'camera:go-to-position': { position: [number, number, number]; target: [number, number, number] }
 }
 

@@ -179,17 +179,25 @@ export function SnapshotCaptureOverlay({ projectId }: { projectId: string }) {
     }
   }, [isCaptureMode, isPreset, requestedCrop, requestedAspect])
 
-  // Listen for snapshot saved to show feedback then exit
+  // Leave 'capturing' when the generator reports back — on either outcome.
   useEffect(() => {
-    const handler = () => {
+    const onSaved = () => {
       setCaptureState('saved')
       setTimeout(() => {
         setCaptureMode(false)
         setCaptureState('idle')
       }, 1500)
     }
-    emitter.on('snapshot:saved', handler)
-    return () => emitter.off('snapshot:saved', handler)
+    // A failed capture returns to 'idle' and stays in capture mode, so the
+    // framing the user set up is still there to retry from. Closing the overlay
+    // would throw that away and read as if something had been saved.
+    const onFailed = () => setCaptureState('idle')
+    emitter.on('snapshot:saved', onSaved)
+    emitter.on('snapshot:failed', onFailed)
+    return () => {
+      emitter.off('snapshot:saved', onSaved)
+      emitter.off('snapshot:failed', onFailed)
+    }
   }, [setCaptureMode])
 
   const dismiss = useCallback(() => setCaptureMode(false), [setCaptureMode])

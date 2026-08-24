@@ -314,8 +314,20 @@ export const ThumbnailGenerator = ({ onThumbnailCapture }: ThumbnailGeneratorPro
         }
 
         onThumbnailCaptureRef.current?.(blob, cameraData)
+        // Announce the outcome. `SnapshotCaptureOverlay` sits in 'capturing'
+        // from the moment it asks for a thumbnail and leaves it only on one of
+        // these two events — without them its spinner never stops, whether the
+        // capture worked or not.
+        //
+        // Emitted after the hand-off rather than after the consumer finishes:
+        // `onThumbnailCapture` is fire-and-forget by contract (the app's handler
+        // is async and best-effort, and drops an oversized image without
+        // complaint), so "the capture produced an image and it has been handed
+        // over" is the strongest claim this point can honestly make.
+        emitter.emit('snapshot:saved')
       } catch (error) {
         console.error('❌ Failed to generate thumbnail:', error)
+        emitter.emit('snapshot:failed')
       } finally {
         isGenerating.current = false
       }
