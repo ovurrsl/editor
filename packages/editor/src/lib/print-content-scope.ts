@@ -17,7 +17,10 @@ function identityId(object: THREE.Object3D): string | null {
 function structureIds(nodes: Record<string, AnyNode>): Set<string> {
   return new Set(
     Object.values(nodes)
-      .filter((node) => nodeRegistry.get(node.type)?.category === 'structure')
+      .filter(
+        (node) =>
+          nodeRegistry.get(node.type)?.category === 'structure' && node.type !== 'ceiling',
+      )
       .map((node) => node.id),
   )
 }
