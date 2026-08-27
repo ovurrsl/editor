@@ -161,12 +161,14 @@ function LeftColumn({
 
 function RightColumn({
   toolbarLeft,
+  toolbarCenter,
   toolbarRight,
   children,
   overlays,
   stageOverlay,
 }: {
   toolbarLeft?: ReactNode
+  toolbarCenter?: ReactNode
   toolbarRight?: ReactNode
   children: ReactNode
   overlays?: ReactNode
@@ -189,9 +191,14 @@ function RightColumn({
       }
     >
       {/* Viewer toolbar */}
-      {(toolbarLeft || toolbarRight) && (
+      {(toolbarLeft || toolbarCenter || toolbarRight) && (
         <div className="pointer-events-none absolute top-3 right-3 left-3 z-20 flex items-center justify-between gap-2">
           <div className="pointer-events-auto flex items-center gap-2">{toolbarLeft}</div>
+          {toolbarCenter && (
+            <div className="pointer-events-auto absolute left-1/2 -translate-x-1/2 flex items-center justify-center gap-2">
+              {toolbarCenter}
+            </div>
+          )}
           <div className="pointer-events-auto flex items-center gap-2">{toolbarRight}</div>
         </div>
       )}
@@ -224,6 +231,7 @@ export interface EditorLayoutV2Props {
   renderTabContent: (tabId: string) => ReactNode
   sidebarOverlay?: ReactNode
   viewerToolbarLeft?: ReactNode
+  viewerToolbarCenter?: ReactNode
   viewerToolbarRight?: ReactNode
   viewerContent: ReactNode
   overlays?: ReactNode
@@ -237,6 +245,7 @@ export function EditorLayoutV2({
   renderTabContent,
   sidebarOverlay,
   viewerToolbarLeft,
+  viewerToolbarCenter,
   viewerToolbarRight,
   viewerContent,
   overlays,
@@ -258,8 +267,9 @@ export function EditorLayoutV2({
         sidebarOverlay={sidebarOverlay}
         sidebarTabs={sidebarTabs.filter((t) => !t.noPanel)}
         viewerContent={viewerContent}
-        viewerToolbarLeft={isPreviewMode ? undefined : viewerToolbarLeft}
-        viewerToolbarRight={isPreviewMode ? undefined : viewerToolbarRight}
+        viewerToolbarCenter={isCaptureMode ? undefined : viewerToolbarCenter}
+        viewerToolbarLeft={isCaptureMode ? undefined : viewerToolbarLeft}
+        viewerToolbarRight={isCaptureMode ? undefined : viewerToolbarRight}
       />
     )
   }
@@ -281,8 +291,9 @@ export function EditorLayoutV2({
         <RightColumn
           overlays={!isPreviewMode ? overlays : undefined}
           stageOverlay={stageOverlay}
-          toolbarLeft={isCaptureMode || isPreviewMode ? undefined : viewerToolbarLeft}
-          toolbarRight={isCaptureMode || isPreviewMode ? undefined : viewerToolbarRight}
+          toolbarCenter={isCaptureMode ? undefined : viewerToolbarCenter}
+          toolbarLeft={isCaptureMode ? undefined : viewerToolbarLeft}
+          toolbarRight={isCaptureMode ? undefined : viewerToolbarRight}
         >
           {viewerContent}
         </RightColumn>

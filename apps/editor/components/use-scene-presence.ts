@@ -24,6 +24,7 @@ export interface ScenePresence {
   editor: { userId: string; email: string | null } | null
   takeOver: () => void
   passControl: (targetUserId: string) => Promise<void>
+  refresh: () => Promise<void>
 }
 
 const IDLE: ScenePresence = {
@@ -34,6 +35,7 @@ const IDLE: ScenePresence = {
   editor: null,
   takeOver: () => {},
   passControl: async () => {},
+  refresh: async () => {},
 }
 
 const HEARTBEAT_MS = 10_000
@@ -49,7 +51,7 @@ export function useScenePresence(sceneId: string, enabled: boolean): ScenePresen
 
   // Initialized true so the first opener auto-claims the free lease.
   const wantsEditRef = useRef(true)
-  const [state, setState] = useState<Omit<ScenePresence, 'takeOver' | 'passControl'>>({
+  const [state, setState] = useState<Omit<ScenePresence, 'takeOver' | 'passControl' | 'refresh'>>({
     loaded: false,
     present: [],
     isEditor: false,
@@ -127,6 +129,14 @@ export function useScenePresence(sceneId: string, enabled: boolean): ScenePresen
     void beat()
     const interval = setInterval(() => void beat(), HEARTBEAT_MS)
 
+    const onVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        void beat()
+      }
+    }
+    window.addEventListener('visibilitychange', onVisibilityOrFocus)
+    window.addEventListener('focus', onVisibilityOrFocus)
+
     const leave = () => {
       try {
         void fetch(`/api/scenes/${sceneId}/presence`, {
@@ -142,6 +152,8 @@ export function useScenePresence(sceneId: string, enabled: boolean): ScenePresen
     return () => {
       aliveRef.current = false
       clearInterval(interval)
+      window.removeEventListener('visibilitychange', onVisibilityOrFocus)
+      window.removeEventListener('focus', onVisibilityOrFocus)
       window.removeEventListener('pagehide', leave)
       leave()
     }
@@ -154,5 +166,5 @@ export function useScenePresence(sceneId: string, enabled: boolean): ScenePresen
 
   if (!active) return IDLE
 
-  return { ...state, takeOver, passControl }
+  return { ...state, takeOver, passControl, refresh: beat }
 }

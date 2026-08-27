@@ -58,6 +58,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       publish: scene.published !== false,
       expectedVersion: scene.version,
     })
+    if (operations.canAppendSceneEvents) {
+      await operations.appendSceneEvent({
+        sceneId: id,
+        version: meta.version,
+        kind: 'restore_revision',
+        graph: graph as never,
+      })
+    }
     return sceneApiJson(request, { ok: true, version: meta.version })
   } catch (error) {
     if ((error as { code?: string })?.code === 'version_conflict') {

@@ -37,6 +37,7 @@ export interface EditorLayoutMobileProps {
   renderTabContent: (tabId: string) => ReactNode
   sidebarOverlay?: ReactNode
   viewerToolbarLeft?: ReactNode
+  viewerToolbarCenter?: ReactNode
   viewerToolbarRight?: ReactNode
   viewerContent: ReactNode
   overlays?: ReactNode
@@ -49,6 +50,7 @@ export function EditorLayoutMobile({
   renderTabContent,
   sidebarOverlay,
   viewerToolbarLeft,
+  viewerToolbarCenter,
   viewerToolbarRight,
   viewerContent,
   overlays,
@@ -228,11 +230,16 @@ export function EditorLayoutMobile({
         {/* Viewer column: sized by committed sheet height */}
         <div className="absolute inset-x-0 top-0 overflow-hidden" style={{ height: viewerHeight }}>
           <div className="relative h-full w-full">
-            {(viewerToolbarLeft || viewerToolbarRight) && !isCaptureMode && !isPreviewMode && (
+            {(viewerToolbarLeft || viewerToolbarCenter || viewerToolbarRight) && !isCaptureMode && (
               <div className="pointer-events-none absolute top-3 right-3 left-3 z-20 flex items-center justify-between gap-2">
                 <div className="pointer-events-auto flex items-center gap-2">
                   {viewerToolbarLeft}
                 </div>
+                {viewerToolbarCenter && (
+                  <div className="pointer-events-auto absolute left-1/2 -translate-x-1/2 flex items-center justify-center gap-2">
+                    {viewerToolbarCenter}
+                  </div>
+                )}
                 <div className="pointer-events-auto flex items-center gap-2">
                   {viewerToolbarRight}
                 </div>

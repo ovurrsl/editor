@@ -149,6 +149,7 @@ export interface EditorProps {
   navbarSlot?: ReactNode
   sidebarTabs?: (SidebarTab & { component: React.ComponentType })[]
   viewerToolbarLeft?: ReactNode
+  viewerToolbarCenter?: ReactNode
   viewerToolbarRight?: ReactNode
   /**
    * Full-bleed surface swapped in over the 3D canvas (v2) — e.g. the studio
@@ -1225,6 +1226,7 @@ export default function Editor({
   navbarSlot,
   sidebarTabs,
   viewerToolbarLeft,
+  viewerToolbarCenter,
   viewerToolbarRight,
   stageOverlay,
   inspectorFooter,
@@ -1554,6 +1556,7 @@ export default function Editor({
           sidebarTabs={tabBarTabs}
           stageOverlay={stageOverlay}
           viewerContent={viewerCanvas}
+          viewerToolbarCenter={viewerToolbarCenter}
           viewerToolbarLeft={viewerToolbarLeft}
           viewerToolbarRight={viewerToolbarRight}
         />

@@ -3,9 +3,17 @@
 // Node registry bootstrap is loaded once at the root via
 // `<ClientBootstrap>` in `app/layout.tsx` — no per-page side-effect
 // import here.
-import { applySceneGraphToEditor, Editor, type SceneGraph, useEditor } from '@pascal-app/editor'
+import {
+  applySceneGraphToEditor,
+  Editor,
+  type SceneGraph,
+  useEditor,
+  useInteractionScope,
+  useScene,
+  useViewer,
+} from '@pascal-app/editor'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState, startTransition } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AccountSettingsSection } from '@/components/account-settings-section'
 import { useSession } from '@/components/auth/session-provider'
 import { countGraphNodes, isEmptyGraphOverwrite } from '@/lib/empty-graph-guard'
@@ -13,7 +21,11 @@ import { type PersistedSceneGraph, sceneGraphSignature } from '@/lib/scene-signa
 import { usePluginManager } from '@/lib/plugins/use-plugin-manager'
 import { EDITOR_SIDEBAR_TABS } from './editor-sidebar-tabs'
 import { useScenePresence } from './use-scene-presence'
-import { CommunityViewerToolbarLeft, CommunityViewerToolbarRight } from './viewer-toolbar'
+import {
+  CommunityViewerToolbarCenter,
+  CommunityViewerToolbarLeft,
+  CommunityViewerToolbarRight,
+} from './viewer-toolbar'
 
 export interface SceneMeta {
   id: string
@@ -123,10 +135,29 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
       })
       return unsub
     }
-    // Leverage React Concurrent Mode transition for smooth role handoff
-    startTransition(() => {
-      useEditor.getState().setPreviewMode(false)
-    })
+    // Seamless Role Transfer & Lock Elimination (M2)
+    forcedReadOnlyRef.current = false
+    useEditor.getState().setPreviewMode(false)
+    useInteractionScope.getState().end()
+    useViewer.getState().setInputDragging(false)
+    useViewer.getState().setCameraDragging(false)
+
+    // Auto-recover active building and level selection if null
+    const viewer = useViewer.getState()
+    if (!viewer.selection.levelId) {
+      const nodes = useScene.getState().nodes
+      const firstBuilding = Object.values(nodes).find((n) => n.type === 'building')
+      const firstLevel = Object.values(nodes).find((n) => n.type === 'level')
+      if (firstBuilding && firstLevel) {
+        viewer.setSelection({
+          buildingId: firstBuilding.id,
+          levelId: firstLevel.id,
+          selectedIds: [],
+          zoneId: null,
+        })
+      }
+    }
+    useViewer.getState().setSceneLocked(false)
   }, [forcedReadOnly])
 
   useEffect(() => {
@@ -234,6 +265,9 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
       lastRemoteGraphJsonRef.current = sceneGraphSignature(payload.graph)
       suppressRemoteSaveUntilRef.current = Date.now() + 2500
       applySceneGraphToEditor(payload.graph)
+      if (payload.graph.installedPlugins && payload.graph.installedPlugins.length > 0) {
+        void usePluginManager.getState().syncWithScene(payload.graph.installedPlugins)
+      }
       setConflict(false)
       setSaveError(null)
     })
@@ -320,6 +354,7 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
         projectId={meta.projectId ?? 'default'}
         settingsPanelProps={{ accountSection: <AccountSettingsSection /> }}
         sidebarTabs={EDITOR_SIDEBAR_TABS}
+        viewerToolbarCenter={<CommunityViewerToolbarCenter />}
         viewerToolbarLeft={
           <CommunityViewerToolbarLeft
             currentUserId={user?.id}
