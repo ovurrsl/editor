@@ -11,7 +11,6 @@ import { useSession } from '@/components/auth/session-provider'
 import { countGraphNodes, isEmptyGraphOverwrite } from '@/lib/empty-graph-guard'
 import { type PersistedSceneGraph, sceneGraphSignature } from '@/lib/scene-signature'
 import { usePluginManager } from '@/lib/plugins/use-plugin-manager'
-import { PluginManagerModal } from '@/components/plugin-manager/PluginManagerModal'
 import { EDITOR_SIDEBAR_TABS } from './editor-sidebar-tabs'
 import { useScenePresence } from './use-scene-presence'
 import { CommunityViewerToolbarLeft, CommunityViewerToolbarRight } from './viewer-toolbar'
@@ -329,7 +328,6 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
         }
         viewerToolbarRight={<CommunityViewerToolbarRight />}
       />
-      <PluginManagerModal />
     </div>
   )
 }

@@ -63,7 +63,6 @@ import { type ReactNode, useCallback } from 'react'
 import { flushSync } from 'react-dom'
 import { cn } from '@/lib/utils'
 import { PresencePopover } from './presence-popover'
-import { PluginManagerButton } from '@/components/plugin-manager/PluginManagerButton'
 import { Tooltip, TooltipContent, TooltipTrigger } from './toolbar-tooltip'
 import type { ScenePresence } from './use-scene-presence'
 
@@ -891,8 +890,6 @@ export function CommunityViewerToolbarRight() {
         <div className="my-1.5 w-px bg-border/50" />
         <CategoriesMenu />
         <DisplayMenu />
-        <div className="my-1.5 w-px bg-border/50" />
-        <PluginManagerButton />
         <div className="my-1.5 w-px bg-border/50" />
         <WalkthroughButton />
         <ScreenshotButton />

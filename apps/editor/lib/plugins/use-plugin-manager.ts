@@ -4,28 +4,7 @@ import { create } from 'zustand'
 import { pluginManager, useScene } from '@pascal-app/core'
 import { PLUGIN_CATALOG, getPluginDescriptor } from './catalog'
 
-export type PluginCategory =
-  | 'all'
-  | 'environment'
-  | 'engineering'
-  | 'assets'
-  | 'logistics'
-  | 'simulation'
-  | 'infrastructure'
-
 export interface PluginManagerState {
-  searchQuery: string
-  selectedCategory: PluginCategory
-  isModalOpen: boolean
-  activeDetailPluginId: string | null
-
-  // Actions
-  setModalOpen: (open: boolean) => void
-  openDetail: (pluginId: string) => void
-  closeDetail: () => void
-  setSearchQuery: (query: string) => void
-  setSelectedCategory: (category: PluginCategory) => void
-
   // Lifecycle operations
   installPlugin: (pluginId: string) => Promise<boolean>
   uninstallPlugin: (pluginId: string) => Promise<boolean>
@@ -34,16 +13,6 @@ export interface PluginManagerState {
 }
 
 export const usePluginManager = create<PluginManagerState>((set, get) => ({
-  searchQuery: '',
-  selectedCategory: 'all',
-  isModalOpen: false,
-  activeDetailPluginId: null,
-
-  setModalOpen: (open) => set({ isModalOpen: open }),
-  openDetail: (pluginId) => set({ activeDetailPluginId: pluginId }),
-  closeDetail: () => set({ activeDetailPluginId: null }),
-  setSearchQuery: (query) => set({ searchQuery: query }),
-  setSelectedCategory: (category) => set({ selectedCategory: category }),
 
   installPlugin: async (pluginId: string): Promise<boolean> => {
     const descriptor = getPluginDescriptor(pluginId)

@@ -1,9 +1,9 @@
-﻿/**
+/**
  * Dynamic Plugin Activation & Zero-Reload End-to-End Test Suite
  * 
  * Tests the entire user-facing workflow:
  * 1. Initial editor startup loads with 0 external plugins in main bundle.
- * 2. User opens the Plugin Manager dialog.
+ * 2. User opens the native sidebar Plugins panel.
  * 3. User dynamically installs "PascalOrg Boots" and "Nature & Trees".
  * 4. Verifies dynamic chunk network fetch, node registry registration, host panel activation,
  *    and zero page reload across the full session.
@@ -43,16 +43,15 @@ test.describe('E2E: Zero-Reload Dynamic Plugin Manager & Activation', () => {
     expect(pluginChunkFetched).toBe(false)
   })
 
-  test('E2E-2: Plugin Manager Modal lists all available plugins with correct unloaded state', async ({ page }) => {
-    // Open Plugin Manager
-    const pluginButton = page.locator('button[aria-label="Eklenti Yöneticisi"]')
-    await expect(pluginButton).toBeVisible()
-    await pluginButton.click()
+  test('E2E-2: Sidebar Plugins panel lists all available plugins with correct unloaded state', async ({ page }) => {
+    // Open Plugins Sidebar Panel
+    const pluginTabButton = page.locator('button[data-testid="sidebar-tab-plugins"], button[aria-label="Plugins"]').first()
+    await expect(pluginTabButton).toBeVisible()
+    await pluginTabButton.click()
 
-    // Modal should be visible
-    const modal = page.locator('[role="dialog"]')
-    await expect(modal).toBeVisible()
-    await expect(modal).toContainText('Eklenti Yöneticisi')
+    // Panel should be visible with title
+    const pluginsPanel = page.locator('h2:has-text("Plugins")')
+    await expect(pluginsPanel).toBeVisible()
 
     // Verify all 7 plugins are present
     const expectedPlugins = [
@@ -66,7 +65,7 @@ test.describe('E2E: Zero-Reload Dynamic Plugin Manager & Activation', () => {
     ]
 
     for (const name of expectedPlugins) {
-      await expect(modal.locator(`text="${name}"`)).toBeVisible()
+      await expect(page.locator(`text="${name}"`).first()).toBeVisible()
     }
   })
 
@@ -84,26 +83,33 @@ test.describe('E2E: Zero-Reload Dynamic Plugin Manager & Activation', () => {
       }
     })
 
-    // Open Plugin Manager
-    await page.locator('button[aria-label="Eklenti Yöneticisi"]').click()
+    // Open Plugins Sidebar Panel
+    const pluginTabButton = page.locator('button[data-testid="sidebar-tab-plugins"], button[aria-label="Plugins"]').first()
+    await pluginTabButton.click()
 
-    // Locate Boots card
-    const bootsCard = page.locator('div').filter({ hasText: 'PascalOrg Boots' }).last()
-    const installButton = bootsCard.locator('button', { hasText: 'Yükle' })
+    // Locate Boots item in list and open its detail view
+    const bootsCard = page.locator('button', { hasText: 'PascalOrg Boots' }).first()
+    await expect(bootsCard).toBeVisible()
+    await bootsCard.click()
 
+    // Locate and click Install button
+    const installButton = page.locator('button', { hasText: 'Install' }).first()
     await expect(installButton).toBeVisible()
     await installButton.click()
 
-    // Button should briefly show loading state or transition to "Kaldır"
-    const uninstallButton = bootsCard.locator('button', { hasText: 'Kaldır' })
+    // Button should transition to "Uninstall"
+    const uninstallButton = page.locator('button', { hasText: 'Uninstall' }).first()
     await expect(uninstallButton).toBeVisible({ timeout: 10000 })
 
     // Verify zero page reload
     const marker = await page.evaluate(() => (window as any).__E2E_ZERO_RELOAD_MARKER)
     expect(marker).toBe('session_active_v1')
 
-    // Close modal
-    await page.keyboard.press('Escape')
+    // Navigate back to All plugins list
+    const backButton = page.locator('button', { hasText: 'All plugins' })
+    if (await backButton.isVisible()) {
+      await backButton.click()
+    }
 
     // Verify node registry now contains boots:job in window state
     const hasBootsNode = await page.evaluate(() => {
@@ -114,18 +120,22 @@ test.describe('E2E: Zero-Reload Dynamic Plugin Manager & Activation', () => {
   })
 
   test('E2E-4: Dynamic installation of Nature & Trees activates trees:tree, trees:flower, trees:grass', async ({ page }) => {
-    // Open Plugin Manager
-    await page.locator('button[aria-label="Eklenti Yöneticisi"]').click()
+    // Open Plugins Sidebar Panel
+    const pluginTabButton = page.locator('button[data-testid="sidebar-tab-plugins"], button[aria-label="Plugins"]').first()
+    await pluginTabButton.click()
 
-    // Locate Trees card
-    const treesCard = page.locator('div').filter({ hasText: 'Nature & Trees' }).last()
-    const installButton = treesCard.locator('button', { hasText: 'Yükle' })
+    // Locate Trees item and click to enter detail view
+    const treesCard = page.locator('button', { hasText: 'Nature & Trees' }).first()
+    await expect(treesCard).toBeVisible()
+    await treesCard.click()
 
+    // Click Install button
+    const installButton = page.locator('button', { hasText: 'Install' }).first()
     await expect(installButton).toBeVisible()
     await installButton.click()
 
-    // Status transitions to installed
-    const uninstallButton = treesCard.locator('button', { hasText: 'Kaldır' })
+    // Status transitions to installed (Uninstall button visible)
+    const uninstallButton = page.locator('button', { hasText: 'Uninstall' }).first()
     await expect(uninstallButton).toBeVisible({ timeout: 10000 })
 
     // Verify trees nodes are accessible
@@ -141,20 +151,30 @@ test.describe('E2E: Zero-Reload Dynamic Plugin Manager & Activation', () => {
     expect(hasTreesNodes).toBe(true)
   })
 
-  test('E2E-5: Search and category filtering inside Plugin Manager', async ({ page }) => {
-    await page.locator('button[aria-label="Eklenti Yöneticisi"]').click()
-    const modal = page.locator('[role="dialog"]')
+  test('E2E-5: Sidebar plugin list navigation and detail view inspection without search/filter tabs', async ({ page }) => {
+    // Open Plugins Sidebar Panel
+    const pluginTabButton = page.locator('button[data-testid="sidebar-tab-plugins"], button[aria-label="Plugins"]').first()
+    await pluginTabButton.click()
 
-    // Search filter
-    const searchInput = modal.locator('input[placeholder*="Eklenti"]')
-    if (await searchInput.isVisible()) {
-      await searchInput.fill('Boots')
-      await expect(modal.locator('text="PascalOrg Boots"')).toBeVisible()
-      await expect(modal.locator('text="Nature & Trees"')).not.toBeVisible()
+    // Verify no search input and no category filter tabs exist in native sidebar design
+    const searchInput = page.locator('input[placeholder*="Search"], input[placeholder*="Eklenti"]')
+    await expect(searchInput).toHaveCount(0)
 
-      // Clear search
-      await searchInput.fill('')
-      await expect(modal.locator('text="Nature & Trees"')).toBeVisible()
-    }
+    const categoryTabs = page.locator('[role="tablist"]')
+    await expect(categoryTabs).toHaveCount(0)
+
+    // Verify navigation into and out of detail view
+    const articraftCard = page.locator('button', { hasText: 'Articraft 3D & AI' }).first()
+    await expect(articraftCard).toBeVisible()
+    await articraftCard.click()
+
+    // Detail view should display plugin ID and Creator info
+    await expect(page.locator('text="pascal:articraft"')).toBeVisible()
+    await expect(page.locator('button', { hasText: 'All plugins' })).toBeVisible()
+
+    // Return to list view
+    await page.locator('button', { hasText: 'All plugins' }).click()
+    await expect(page.locator('button', { hasText: 'Articraft 3D & AI' }).first()).toBeVisible()
   })
 })
+
