@@ -22,6 +22,7 @@ export interface ScenePresence {
   isEditor: boolean
   canEdit: boolean
   editor: { userId: string; email: string | null } | null
+  connected: boolean
   takeOver: () => void
   passControl: (targetUserId: string) => Promise<void>
   refresh: () => Promise<void>
@@ -33,6 +34,7 @@ const IDLE: ScenePresence = {
   isEditor: false,
   canEdit: false,
   editor: null,
+  connected: true,
   takeOver: () => {},
   passControl: async () => {},
   refresh: async () => {},
@@ -57,6 +59,7 @@ export function useScenePresence(sceneId: string, enabled: boolean): ScenePresen
     isEditor: false,
     canEdit: false,
     editor: null,
+    connected: true,
   })
 
   const aliveRef = useRef(false)

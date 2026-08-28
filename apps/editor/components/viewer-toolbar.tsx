@@ -867,7 +867,11 @@ export function CommunityViewerToolbarLeft({
   const editorName = activeEditor ? displayName(activeEditor.email, activeEditor.userId) : null
   const editorInitials = editorName ? editorName.slice(0, 2).toUpperCase() : ''
 
-  if (isEditor && !isPreviewMode) {
+  if (isPreviewMode) {
+    return null
+  }
+
+  if (isEditor) {
     // EDITOR MODE
     return (
       <div className="flex items-center gap-2">
@@ -878,7 +882,10 @@ export function CommunityViewerToolbarLeft({
         {presence?.loaded && (
           <div
             aria-label="Editor"
-            className="inline-flex h-8 items-center gap-2 rounded-xl border border-border bg-muted/50 px-2 py-1 shadow-2xl backdrop-blur-md"
+            className={cn(
+              "inline-flex h-8 items-center gap-2 rounded-xl border px-2 py-1 shadow-2xl backdrop-blur-md",
+              presence.connected ? "border-green-500/50 bg-green-500/20 text-green-700" : "border-red-500/50 bg-red-500/20 text-red-700"
+            )}
             data-testid="active-editor-badge"
           >
             <span
@@ -887,7 +894,7 @@ export function CommunityViewerToolbarLeft({
             >
               {editorInitials || 'ME'}
             </span>
-            <span className="font-medium text-foreground text-xs pr-1">
+            <span className="font-medium text-xs pr-1">
               Editor
             </span>
           </div>
@@ -896,7 +903,7 @@ export function CommunityViewerToolbarLeft({
     )
   }
 
-  // VIEWER MODE & PREVIEW MODE
+  // VIEWER MODE
   return (
     <div className="flex items-center gap-2">
       <CollapseSidebarButton />
