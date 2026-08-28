@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { useSession } from '@/components/auth/session-provider'
 import type { SceneMeta } from '@/components/scene-loader'
-import { IfcImportButton } from '@/components/ifc-import-button'
 import { cn } from '@/lib/utils'
 
 /**
@@ -130,9 +129,6 @@ export function ScenesTab() {
           >
             {busy ? 'Creating…' : 'New project'}
           </button>
-          <div className="flex items-center justify-end">
-            <IfcImportButton />
-          </div>
         </div>
       )}
 

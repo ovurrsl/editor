@@ -69,7 +69,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${GeistPixelSquare.variable} ${barlow.variable}`}
       lang="en"
     >
-      <body className="font-sans">
+      <body className="font-sans select-none">
         <ClientBootstrap enableDevDiagnostics={enableDevDiagnostics}>{children}</ClientBootstrap>
         {enableDevDiagnostics && <Agentation />}
         {/* Runs after the theme wrappers are parsed and before React hydrates,
