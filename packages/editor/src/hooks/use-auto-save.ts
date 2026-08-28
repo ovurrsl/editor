@@ -4,7 +4,7 @@ import { useScene } from '@pascal-app/core'
 import { type MutableRefObject, useCallback, useEffect, useRef } from 'react'
 import { type SceneGraph, saveSceneToLocalStorage } from '../lib/scene'
 
-const AUTOSAVE_DEBOUNCE_MS = 1000
+const AUTOSAVE_DEBOUNCE_MS = 250
 const STRUCTURAL_NODE_COUNT = 4
 
 export function isSuspiciousNodeDrop(previousNodeCount: number, currentNodeCount: number) {

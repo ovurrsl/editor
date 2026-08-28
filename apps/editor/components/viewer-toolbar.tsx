@@ -877,8 +877,6 @@ export function CommunityViewerToolbarLeft({
       <div className="flex items-center gap-2">
         <CollapseSidebarButton />
         <HistoryLockControls />
-        <ViewModeControl />
-        
         {presence?.loaded && (
           <div
             aria-label="Editor"
@@ -906,7 +904,7 @@ export function CommunityViewerToolbarLeft({
   // VIEWER MODE
   return (
     <div className="flex items-center gap-2">
-      <CollapseSidebarButton />
+      {/* The user requested we REMOVE the Collapse Sidebar button from Viewer Mode to keep it clean */}
     </div>
   )
 }
@@ -918,19 +916,16 @@ export function CommunityViewerToolbarCenter({
   const isEditor = presence?.isEditor ?? false
   const isPreviewMode = useEditor((s) => s.isPreviewMode)
 
-  if (isEditor && !isPreviewMode) {
-    // EDITOR MODE: Center is empty
-    return null
-  }
-
   if (isPreviewMode) {
     // PREVIEW MODE: Center is empty because ViewerStageSwitcher handles the center natively
     return null
   }
 
-  // VIEWER MODE
+  // BOTH EDITOR AND VIEWER MODE
   return (
     <div className="flex items-center justify-center gap-2 w-full">
+      <ViewModeControl />
+      
       {presence?.loaded && presence.present.length > 0 ? (
         <PresencePopover
           canEdit={presence.canEdit}
@@ -942,8 +937,6 @@ export function CommunityViewerToolbarCenter({
           present={presence.present}
         />
       ) : null}
-      
-      {!isPreviewMode && <ViewModeControl />}
     </div>
   )
 }
@@ -954,12 +947,25 @@ export function CommunityViewerToolbarRight({
   const isEditor = presence?.isEditor ?? false
   const isPreviewMode = useEditor((s) => s.isPreviewMode)
 
-  if (!isEditor || isPreviewMode) {
-    // VIEWER MODE & PREVIEW MODE: Hide all editor tools, keep only essentials
+  if (isPreviewMode) {
+    // PREVIEW MODE: Hide all editor tools, keep only essentials
     return (
       <div className={TOOLBAR_CONTAINER}>
-        {!isPreviewMode && <ScreenshotButton />}
-        {!isPreviewMode && <PreviewButton />}
+        <ScreenshotButton />
+        <PreviewButton />
+      </div>
+    )
+  }
+
+  if (!isEditor) {
+    // VIEWER MODE: They need LevelModeToggle and WallModeToggle
+    return (
+      <div className={TOOLBAR_CONTAINER}>
+        <LevelModeToggle />
+        <WallModeToggle />
+        <div className="my-1.5 w-px bg-border/50" />
+        <ScreenshotButton />
+        <PreviewButton />
       </div>
     )
   }
