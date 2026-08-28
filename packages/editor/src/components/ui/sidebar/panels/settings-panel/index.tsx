@@ -366,7 +366,7 @@ export function SettingsPanel({
   }
 
   return (
-    <div className="flex flex-col gap-6 p-3">
+    <div className="flex flex-col gap-6 p-3 overflow-y-auto subtle-scrollbar">
       {accountSection}
 
       {projectId && (

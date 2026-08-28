@@ -329,7 +329,7 @@ function SidebarSlot({ children }: { children: ReactNode }) {
       {/* Handle: extends into the gap, centered on the gap midpoint */}
       {!isCollapsed && (
         <div
-          className="group absolute inset-y-0 -right-3.5 z-10 flex w-4 cursor-col-resize items-stretch justify-center py-4"
+          className="group absolute inset-y-0 -right-4 z-10 flex w-4 cursor-col-resize items-stretch justify-center py-4"
           onPointerDown={handleResizerDown}
         >
           <div className="w-px self-stretch rounded-full bg-transparent transition-colors group-hover:bg-neutral-300" />
