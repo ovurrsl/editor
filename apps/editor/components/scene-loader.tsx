@@ -354,14 +354,24 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
         projectId={meta.projectId ?? 'default'}
         settingsPanelProps={{ accountSection: <AccountSettingsSection /> }}
         sidebarTabs={EDITOR_SIDEBAR_TABS}
-        viewerToolbarCenter={<CommunityViewerToolbarCenter />}
+        viewerToolbarCenter={
+          <CommunityViewerToolbarCenter
+            currentUserId={user?.id}
+            presence={presence}
+          />
+        }
         viewerToolbarLeft={
           <CommunityViewerToolbarLeft
             currentUserId={user?.id}
             presence={presence}
           />
         }
-        viewerToolbarRight={<CommunityViewerToolbarRight />}
+        viewerToolbarRight={
+          <CommunityViewerToolbarRight
+            currentUserId={user?.id}
+            presence={presence}
+          />
+        }
       />
     </div>
   )

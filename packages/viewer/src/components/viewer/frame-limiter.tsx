@@ -51,8 +51,9 @@ export function createFrameClock(initialTime = 0): FrameClock {
 // setInterval instead of rAF when nothing is drawn.
 const DRAW_DISABLED =
   typeof window !== 'undefined' &&
+  typeof window.location !== 'undefined' &&
   new Set(
-    (new URLSearchParams(window.location.search).get('disable') ?? '')
+    (new URLSearchParams(window.location.search ?? '').get('disable') ?? '')
       .split(',')
       .map((s) => s.trim()),
   ).has('draw')

@@ -8,7 +8,9 @@
 // regardless of which render path produced it.
 
 export const PERF_OVERLAY_ENABLED =
-  typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('perf')
+  typeof window !== 'undefined' &&
+  typeof window.location !== 'undefined' &&
+  new URLSearchParams(window.location.search ?? '').has('perf')
 
 const MAX_SAMPLES = 256
 const samples: number[] = []

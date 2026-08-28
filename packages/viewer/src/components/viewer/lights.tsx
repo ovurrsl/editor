@@ -17,8 +17,9 @@ import useViewer from '../../store/use-viewer'
 // isolate how much of the baseline GPU cost is shadows vs. raw geometry.
 const SHADOWS_DISABLED =
   typeof window !== 'undefined' &&
+  typeof window.location !== 'undefined' &&
   new Set(
-    (new URLSearchParams(window.location.search).get('disable') ?? '')
+    (new URLSearchParams(window.location.search ?? '').get('disable') ?? '')
       .split(',')
       .map((s) => s.trim()),
   ).has('shadows')
@@ -28,8 +29,9 @@ const SHADOWS_DISABLED =
 // can be inspected while tuning margins/bias.
 const SHADOW_CAMERA_DEBUG =
   typeof window !== 'undefined' &&
+  typeof window.location !== 'undefined' &&
   new Set(
-    (new URLSearchParams(window.location.search).get('debug') ?? '')
+    (new URLSearchParams(window.location.search ?? '').get('debug') ?? '')
       .split(',')
       .map((s) => s.trim()),
   ).has('shadowcamera')

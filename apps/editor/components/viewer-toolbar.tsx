@@ -757,7 +757,7 @@ function HistoryLockControls() {
         <button
           aria-label={sceneLocked ? 'Unlock project' : 'Lock project'}
           aria-pressed={sceneLocked}
-          className={cn(TOOLBAR_BTN, sceneLocked && 'bg-amber-500/15 text-amber-400')}
+          className={cn(TOOLBAR_BTN, sceneLocked && 'bg-red-500/15 text-red-500')}
           onClick={() => setSceneLocked(!sceneLocked)}
           type="button"
         >
@@ -864,36 +864,59 @@ export function CommunityViewerToolbarLeft({
   const isEditor = presence?.isEditor ?? false
   const activeEditor = presence?.editor
   const editorName = activeEditor ? displayName(activeEditor.email, activeEditor.userId) : null
+  const editorInitials = editorName ? editorName.slice(0, 2).toUpperCase() : ''
 
+  if (isEditor) {
+    // EDITOR MODE
+    return (
+      <div className="flex items-center gap-2">
+        <CollapseSidebarButton />
+        <HistoryLockControls />
+        <ViewModeControl />
+        
+        {presence?.loaded && (
+          <div
+            aria-label="Editor"
+            className="inline-flex h-8 items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 shadow-2xl backdrop-blur-md"
+            data-testid="active-editor-badge"
+          >
+            <span
+              className="flex h-5 w-5 items-center justify-center rounded-full border border-background bg-emerald-500 font-medium text-[9px] text-white shadow-sm"
+              title={activeEditor?.email ?? activeEditor?.userId ?? 'You'}
+            >
+              {editorInitials || 'ME'}
+            </span>
+            <span className="font-medium text-emerald-600 dark:text-emerald-400 text-xs pr-1">
+              Editor
+            </span>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // VIEWER MODE
   return (
     <div className="flex items-center gap-2">
       <CollapseSidebarButton />
-      {presence?.loaded && activeEditor && !isEditor && (
-        <div
-          aria-label={`Düzenleyen: ${editorName}`}
-          className="inline-flex h-8 items-center gap-2 rounded-xl border border-border bg-background/90 px-3 shadow-2xl backdrop-blur-md"
-          data-testid="active-editor-badge"
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-          </span>
-          <span className="font-medium text-muted-foreground text-xs">Düzenleyen:</span>
-          <span className="font-semibold text-foreground text-xs">{editorName}</span>
-        </div>
-      )}
-      {presence?.loaded && isEditor && (
-        <div
-          aria-label="Düzenliyorsunuz (Aktif Editör)"
-          className="inline-flex h-8 items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 shadow-2xl backdrop-blur-md"
-          data-testid="active-editor-badge"
-        >
-          <span className="h-2 w-2 rounded-full bg-emerald-500" />
-          <span className="font-medium text-emerald-600 dark:text-emerald-400 text-xs">
-            Düzenliyorsunuz (Aktif Editör)
-          </span>
-        </div>
-      )}
+    </div>
+  )
+}
+
+export function CommunityViewerToolbarCenter({
+  presence,
+  currentUserId,
+}: CommunityViewerToolbarLeftProps = {}) {
+  const isEditor = presence?.isEditor ?? false
+
+  if (isEditor) {
+    // EDITOR MODE: Center is empty
+    return null
+  }
+
+  // VIEWER MODE
+  return (
+    <div className="flex items-center justify-center gap-2 w-full">
       {presence?.loaded && presence.present.length > 0 ? (
         <PresencePopover
           canEdit={presence.canEdit}
@@ -905,29 +928,39 @@ export function CommunityViewerToolbarLeft({
           present={presence.present}
         />
       ) : null}
+      
+      <ViewModeControl />
     </div>
   )
 }
 
-export function CommunityViewerToolbarCenter() {
-  return <ViewModeControl />
-}
+export function CommunityViewerToolbarRight({
+  presence,
+}: CommunityViewerToolbarLeftProps = {}) {
+  const isEditor = presence?.isEditor ?? false
 
-export function CommunityViewerToolbarRight() {
-  return (
-    <>
-      <HistoryLockControls />
+  if (!isEditor) {
+    // VIEWER MODE: Hide all editor tools, keep only essentials
+    return (
       <div className={TOOLBAR_CONTAINER}>
-        <LevelModeToggle />
-        <WallModeToggle />
-        <div className="my-1.5 w-px bg-border/50" />
-        <CategoriesMenu />
-        <DisplayMenu />
-        <div className="my-1.5 w-px bg-border/50" />
-        <WalkthroughButton />
         <ScreenshotButton />
         <PreviewButton />
       </div>
-    </>
+    )
+  }
+
+  // EDITOR MODE
+  return (
+    <div className={TOOLBAR_CONTAINER}>
+      <LevelModeToggle />
+      <WallModeToggle />
+      <div className="my-1.5 w-px bg-border/50" />
+      <CategoriesMenu />
+      <DisplayMenu />
+      <div className="my-1.5 w-px bg-border/50" />
+      <WalkthroughButton />
+      <ScreenshotButton />
+      <PreviewButton />
+    </div>
   )
 }
