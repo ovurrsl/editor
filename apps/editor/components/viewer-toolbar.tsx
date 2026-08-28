@@ -862,11 +862,12 @@ export function CommunityViewerToolbarLeft({
   currentUserId,
 }: CommunityViewerToolbarLeftProps = {}) {
   const isEditor = presence?.isEditor ?? false
+  const isPreviewMode = useEditor((s) => s.isPreviewMode)
   const activeEditor = presence?.editor
   const editorName = activeEditor ? displayName(activeEditor.email, activeEditor.userId) : null
   const editorInitials = editorName ? editorName.slice(0, 2).toUpperCase() : ''
 
-  if (isEditor) {
+  if (isEditor && !isPreviewMode) {
     // EDITOR MODE
     return (
       <div className="flex items-center gap-2">
@@ -877,16 +878,16 @@ export function CommunityViewerToolbarLeft({
         {presence?.loaded && (
           <div
             aria-label="Editor"
-            className="inline-flex h-8 items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 shadow-2xl backdrop-blur-md"
+            className="inline-flex h-8 items-center gap-2 rounded-xl border border-border bg-muted/50 px-2 py-1 shadow-2xl backdrop-blur-md"
             data-testid="active-editor-badge"
           >
             <span
-              className="flex h-5 w-5 items-center justify-center rounded-full border border-background bg-emerald-500 font-medium text-[9px] text-white shadow-sm"
+              className="flex h-5 w-5 items-center justify-center rounded-full border border-background bg-muted-foreground font-medium text-[9px] text-background shadow-sm"
               title={activeEditor?.email ?? activeEditor?.userId ?? 'You'}
             >
               {editorInitials || 'ME'}
             </span>
-            <span className="font-medium text-emerald-600 dark:text-emerald-400 text-xs pr-1">
+            <span className="font-medium text-foreground text-xs pr-1">
               Editor
             </span>
           </div>
@@ -895,7 +896,7 @@ export function CommunityViewerToolbarLeft({
     )
   }
 
-  // VIEWER MODE
+  // VIEWER MODE & PREVIEW MODE
   return (
     <div className="flex items-center gap-2">
       <CollapseSidebarButton />
@@ -908,9 +909,15 @@ export function CommunityViewerToolbarCenter({
   currentUserId,
 }: CommunityViewerToolbarLeftProps = {}) {
   const isEditor = presence?.isEditor ?? false
+  const isPreviewMode = useEditor((s) => s.isPreviewMode)
 
-  if (isEditor) {
+  if (isEditor && !isPreviewMode) {
     // EDITOR MODE: Center is empty
+    return null
+  }
+
+  if (isPreviewMode) {
+    // PREVIEW MODE: Center is empty because ViewerStageSwitcher handles the center natively
     return null
   }
 
@@ -929,7 +936,7 @@ export function CommunityViewerToolbarCenter({
         />
       ) : null}
       
-      <ViewModeControl />
+      {!isPreviewMode && <ViewModeControl />}
     </div>
   )
 }
@@ -938,13 +945,14 @@ export function CommunityViewerToolbarRight({
   presence,
 }: CommunityViewerToolbarLeftProps = {}) {
   const isEditor = presence?.isEditor ?? false
+  const isPreviewMode = useEditor((s) => s.isPreviewMode)
 
-  if (!isEditor) {
-    // VIEWER MODE: Hide all editor tools, keep only essentials
+  if (!isEditor || isPreviewMode) {
+    // VIEWER MODE & PREVIEW MODE: Hide all editor tools, keep only essentials
     return (
       <div className={TOOLBAR_CONTAINER}>
-        <ScreenshotButton />
-        <PreviewButton />
+        {!isPreviewMode && <ScreenshotButton />}
+        {!isPreviewMode && <PreviewButton />}
       </div>
     )
   }

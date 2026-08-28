@@ -8,28 +8,30 @@ import { ViewerStageSwitcher } from './viewer-stage-switcher'
 const level = LevelNode.parse({ id: 'level_stress', type: 'level' })
 const testScene: FloorplanPreviewScene = { nodes: { [level.id]: level } }
 
-const PREVIEW_STAGE_SWITCHER_POSITION = 'top-4 right-4 left-auto translate-x-0'
+const PREVIEW_STAGE_SWITCHER_POSITION = 'top-3 left-1/2 -translate-x-1/2'
 
-describe('Viewer Stage Layout & Right-Alignment Stress Suite (R1)', () => {
+describe('Viewer Stage Layout & Center-Alignment Stress Suite (R1)', () => {
   // ── 1. Positioning & Collision Avoidance Assertions ────────────────────────
-  describe('Right-Alignment & Non-Colliding CSS Positioning', () => {
-    it('applies top-right positioning classes (top-4 right-4) and overrides top-center (left-auto translate-x-0)', () => {
+  describe('Center-Alignment & Non-Colliding CSS Positioning', () => {
+    it('applies top-center positioning classes (left-1/2 -translate-x-1/2)', () => {
       const markup = renderToStaticMarkup(
-        <ViewerStageSwitcher
-          className={PREVIEW_STAGE_SWITCHER_POSITION}
+        <ViewerStage
           mode="3d"
           modes={['3d', '2d', 'split']}
-          onChange={() => {}}
-        />,
+          scene={testScene}
+          showLevelSelector={false}
+          switcherClassName={PREVIEW_STAGE_SWITCHER_POSITION}
+        >
+          <div data-canvas="" />
+        </ViewerStage>,
       )
-
-      expect(markup).toContain('top-4')
-      expect(markup).toContain('right-4')
-      expect(markup).toContain('left-auto')
-      expect(markup).toContain('translate-x-0')
+      // Assert presence of the top-center positioning classes
+      expect(markup).toContain('left-1/2')
+      expect(markup).toContain('-translate-x-1/2')
+      expect(markup).toContain('top-3')
     })
 
-    it('asserts ViewerStage root with PREVIEW_STAGE_SWITCHER_POSITION places switcher on the right', () => {
+    it('asserts ViewerStage root with PREVIEW_STAGE_SWITCHER_POSITION places switcher correctly', () => {
       const markup = renderToStaticMarkup(
         <ViewerStage
           mode="3d"
@@ -42,13 +44,21 @@ describe('Viewer Stage Layout & Right-Alignment Stress Suite (R1)', () => {
         </ViewerStage>,
       )
 
-      expect(markup).toContain('top-4')
-      expect(markup).toContain('right-4')
-      expect(markup).toContain('left-auto')
-      expect(markup).toContain('translate-x-0')
+      // Verify that the switcher has the correct classes
+      expect(markup).toContain('left-1/2')
+      expect(markup).toContain('-translate-x-1/2')
     })
 
-    it('verifies that in right-aligned viewer mode, no element retains un-overridden left-1/2 centering', () => {
+    it('asserts that without PREVIEW_STAGE_SWITCHER_POSITION, it lacks center positioning classes', () => {
+      const markup = renderToStaticMarkup(
+        <ViewerStage mode="3d" modes={['3d', '2d', 'split']} scene={testScene} showLevelSelector={false}>
+          <div data-canvas="" />
+        </ViewerStage>,
+      )
+      expect(markup).not.toContain('left-1/2')
+    })
+
+    it('verifies that in center-aligned viewer mode, no element retains unwanted left-aligned overrides', () => {
       const markup = renderToStaticMarkup(
         <div className="viewer-container relative h-screen w-screen">
           <ViewerStage

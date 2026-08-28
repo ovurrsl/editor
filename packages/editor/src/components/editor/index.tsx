@@ -90,7 +90,7 @@ import { WallMoveSideHandles } from './wall-move-side-handles'
 import { WallOpeningHighlights } from './wall-opening-highlights'
 
 const CAMERA_CONTROLS_HINT_DISMISSED_STORAGE_KEY = 'editor-camera-controls-hint-dismissed:v1'
-const PREVIEW_STAGE_SWITCHER_POSITION = 'top-4 right-4 left-auto translate-x-0'
+const PREVIEW_STAGE_SWITCHER_POSITION = 'top-3 left-1/2 -translate-x-1/2'
 const DELETE_CURSOR_BADGE_COLOR = '#ef4444'
 const DELETE_CURSOR_BADGE_OFFSET_X = 14
 const DELETE_CURSOR_BADGE_OFFSET_Y = 14
