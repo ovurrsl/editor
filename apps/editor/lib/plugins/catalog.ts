@@ -78,7 +78,7 @@ export const PLUGIN_CATALOG: LazyPluginDescriptor[] = [
       'bones:lumber, bones:framing Düğümleri',
       'Inspector Mühendislik Kartı',
     ],
-    nodeKinds: ['bones:lumber', 'bones:service', 'bones:device'],
+    nodeKinds: ['bones:framing', 'bones:lumber', 'bones:service', 'bones:device'],
     loadPlugin: async () => {
       const { bonesPlugin, bonesHostPanel } = await import('@pascal-app/plugin-bones')
       return {

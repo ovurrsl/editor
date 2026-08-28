@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { useSession } from '@/components/auth/session-provider'
 import type { SceneMeta } from '@/components/scene-loader'
+import { IfcImportButton } from '@/components/ifc-import-button'
 import { cn } from '@/lib/utils'
 
 /**
@@ -120,14 +121,19 @@ export function ScenesTab() {
       </div>
 
       {canEdit && (
-        <button
-          className="flex items-center justify-center rounded-lg bg-muted/40 px-3 py-2 font-medium text-sm transition-colors hover:bg-muted disabled:opacity-50"
-          disabled={busy}
-          onClick={() => void create()}
-          type="button"
-        >
-          {busy ? 'Creating…' : 'New project'}
-        </button>
+        <div className="flex flex-col gap-2">
+          <button
+            className="flex items-center justify-center rounded-lg bg-muted/40 px-3 py-2 font-medium text-sm transition-colors hover:bg-muted disabled:opacity-50"
+            disabled={busy}
+            onClick={() => void create()}
+            type="button"
+          >
+            {busy ? 'Creating…' : 'New project'}
+          </button>
+          <div className="flex items-center justify-end">
+            <IfcImportButton />
+          </div>
+        </div>
       )}
 
       {error && <p className="text-destructive text-xs">{error}</p>}
