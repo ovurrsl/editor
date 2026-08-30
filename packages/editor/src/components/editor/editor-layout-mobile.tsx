@@ -37,9 +37,11 @@ export interface EditorLayoutMobileProps {
   renderTabContent: (tabId: string) => ReactNode
   sidebarOverlay?: ReactNode
   viewerToolbarLeft?: ReactNode
+  viewerToolbarCenter?: ReactNode
   viewerToolbarRight?: ReactNode
   viewerContent: ReactNode
   overlays?: ReactNode
+  isPreviewMode?: boolean
 }
 
 export function EditorLayoutMobile({
@@ -48,10 +50,14 @@ export function EditorLayoutMobile({
   renderTabContent,
   sidebarOverlay,
   viewerToolbarLeft,
+  viewerToolbarCenter,
   viewerToolbarRight,
   viewerContent,
   overlays,
+  isPreviewMode: propIsPreviewMode,
 }: EditorLayoutMobileProps) {
+  const storeIsPreviewMode = useEditor((s) => s.isPreviewMode)
+  const isPreviewMode = propIsPreviewMode ?? storeIsPreviewMode
   const isCaptureMode = useEditor((s) => s.isCaptureMode)
   const activePanel = useEditor((s) => s.activeSidebarPanel)
   const setActivePanel = useEditor((s) => s.setActiveSidebarPanel)
@@ -184,16 +190,17 @@ export function EditorLayoutMobile({
   // the primary sidebar sheet and the secondary panel sheet's penetration.
   const effectiveSheetH = Math.max(committedSheetH, panelPenetrationInMiddle)
 
-  // In capture mode the sheet and tab bar are hidden — the viewer should fill
+  // In capture or preview mode the sheet and tab bar are hidden — the viewer should fill
   // the entire middle area regardless of the stored sheet height.
   // Otherwise, the viewer extends SHEET_OVERLAP_PX behind the sheet's rounded
   // corners so the curve reveals viewer content underneath.
   const baseViewerHeight = Math.max(0, middleH - effectiveSheetH)
-  const viewerHeight = isCaptureMode
-    ? middleH
-    : baseViewerHeight === 0
-      ? 0
-      : Math.min(middleH, baseViewerHeight + SHEET_OVERLAP_PX)
+  const viewerHeight =
+    isCaptureMode || isPreviewMode
+      ? middleH
+      : baseViewerHeight === 0
+        ? 0
+        : Math.min(middleH, baseViewerHeight + SHEET_OVERLAP_PX)
 
   // While the panel sheet is open, collapse the primary sheet to its handle so
   // it doesn't peek above. Remember the previous height and restore it on close.
@@ -213,7 +220,7 @@ export function EditorLayoutMobile({
 
   return (
     <div className="dark flex h-full w-full flex-col bg-sidebar text-foreground">
-      {navbarSlot}
+      {!isPreviewMode && navbarSlot}
 
       <div
         className="relative flex min-h-0 flex-1"
@@ -223,11 +230,16 @@ export function EditorLayoutMobile({
         {/* Viewer column: sized by committed sheet height */}
         <div className="absolute inset-x-0 top-0 overflow-hidden" style={{ height: viewerHeight }}>
           <div className="relative h-full w-full">
-            {(viewerToolbarLeft || viewerToolbarRight) && !isCaptureMode && (
+            {(viewerToolbarLeft || viewerToolbarCenter || viewerToolbarRight) && !isCaptureMode && (
               <div className="pointer-events-none absolute top-3 right-3 left-3 z-20 flex items-center justify-between gap-2">
                 <div className="pointer-events-auto flex items-center gap-2">
                   {viewerToolbarLeft}
                 </div>
+                {viewerToolbarCenter && (
+                  <div className="pointer-events-auto absolute left-1/2 -translate-x-1/2 flex items-center justify-center gap-2">
+                    {viewerToolbarCenter}
+                  </div>
+                )}
                 <div className="pointer-events-auto flex items-center gap-2">
                   {viewerToolbarRight}
                 </div>
@@ -246,7 +258,7 @@ export function EditorLayoutMobile({
         </div>
 
         {/* Bottom sheet: overlays the lower part of the middle area */}
-        {!isCaptureMode && sidebarTabs.length > 0 && (
+        {!isCaptureMode && !isPreviewMode && sidebarTabs.length > 0 && (
           <BottomSheet
             initialHeightPx={SHEET_HANDLE_PX}
             onCommit={setCommittedSheetH}
@@ -261,7 +273,7 @@ export function EditorLayoutMobile({
         )}
       </div>
 
-      {!isCaptureMode && sidebarTabs.length > 0 && (
+      {!isCaptureMode && !isPreviewMode && sidebarTabs.length > 0 && (
         <MobileTabBar activeTab={activePanel} onTabPress={handleTabPress} tabs={sidebarTabs} />
       )}
     </div>

@@ -18,17 +18,19 @@
     "@mint/pascal-plugin": "github:mintdotgg/mint-pascal-plugin#902c546dbaece6b31455c0dc394afe6b9cd136fe",
     "@node-rs/argon2": "^2.0.2",
     "@number-flow/react": "^0.6.0",
-    "@ovurrsl/plugin-warehouse": "git+https://github.com/ovurrsl/plugin-warehouse.git#119716b748326eb05d4096a6c8828663b0dc4116",
+    "@ovurrsl/plugin-warehouse": "git+https://github.com/ovurrsl/plugin-warehouse.git#7ebc4afc2bfb2bcf8d464d2214f9db2835404b2d",
     "@pascal-app/core": "*",
     "@pascal-app/editor": "*",
     "@pascal-app/ifc-converter": "*",
     "@pascal-app/mcp": "*",
     "@pascal-app/nodes": "*",
     "@pascal-app/plugin-articraft": "workspace:*",
-    "@pascal-app/plugin-bones": "github:pascalorg/plugin-bones#85238a8eb4e221cc1f779f47fb8aa8ef6922627c",
+    "@pascal-app/plugin-bones": "github:pascalorg/plugin-bones#5679260261ee1c733656ff6dfb99e30bb24b58a7",
+    "@pascal-app/plugin-boots": "github:pascalorg/plugin-boots",
     "@pascal-app/plugin-streetscape": "github:sudhir9297/streetscape-pascal-plugin#1c04ec9ccb3fa8124ec56dfc1026567cbbc51aef",
     "@pascal-app/plugin-trees": "workspace:*",
     "@pascal-app/viewer": "*",
+    "@radix-ui/react-popover": "^1.1.6",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
@@ -47,9 +49,15 @@
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.1",
     "three": "^0.185.0",
+    "three-mesh-bvh": "~0.9.8",
     "ulid": "^3.0.2",
     "web-ifc": "^0.0.77",
-    "zod": "^4.3.5"
+    "lib0": "^0.2.117",
+    "y-protocols": "^1.0.7",
+    "y-websocket": "^2.1.0",
+    "yjs": "^13.6.32",
+    "zod": "^4.3.5",
+    "zustand": "^5"
   },
   "devDependencies": {
     "@pascal/typescript-config": "*",
@@ -66,3 +74,5 @@
     "typescript": "7.0.2"
   }
 }
+
+

@@ -5,6 +5,7 @@ import type {
   InspectorExtension,
   NodeRegistry,
   Plugin,
+  ZoneTakeoffExtension,
 } from './types'
 
 const HOST_API_VERSION = 1 as const
@@ -17,6 +18,10 @@ const pluginIdsByKind = new Map<string, string>()
 // test reset alongside `pluginIdsByKind`. Consumers re-derive on the
 // registry-version bump — plugins load asynchronously, after first mount.
 const inspectorExtensionsByKind = new Map<string, InspectorExtension[]>()
+
+// Zone takeoff extensions contributed by plugins (`Plugin.zoneTakeoffExtensions`).
+// Filled by `loadPlugin`, cleared by the test reset alongside `pluginIdsByKind`.
+const zoneTakeoffExtensions: ZoneTakeoffExtension[] = []
 
 // ---------------------------------------------------------------------------
 // Registry change notification. Plugin kinds register ASYNCHRONOUSLY (app
@@ -129,13 +134,40 @@ class NodeRegistryImpl implements NodeRegistry {
     this.defs.clear()
     pluginIdsByKind.clear()
     inspectorExtensionsByKind.clear()
+    zoneTakeoffExtensions.length = 0
     notifyRegistryChanged()
+  }
+
+  // Test-only — captures the registry (definitions + plugin bookkeeping) and
+  // returns a restore function. The registry is a module singleton and bun
+  // runs a package's test files sequentially in ONE process, so a test that
+  // registers a throwaway kind (or `_reset()`s) without restoring leaks that
+  // state into every later test FILE — and file order varies by platform
+  // (macOS vs CI Linux), which turns the leak into an order-dependent flake.
+  // Wrap registry mutations in `const restore = nodeRegistry._snapshot()`
+  // + `restore()` in `afterEach`/`finally`.
+  _snapshot(): () => void {
+    const defs = new Map(this.defs)
+    const pluginIds = new Map(pluginIdsByKind)
+    const extensions = new Map(
+      Array.from(inspectorExtensionsByKind, ([kind, list]) => [kind, [...list]] as const),
+    )
+    return () => {
+      this.defs.clear()
+      for (const [kind, def] of defs) this.defs.set(kind, def)
+      pluginIdsByKind.clear()
+      for (const [kind, id] of pluginIds) pluginIdsByKind.set(kind, id)
+      inspectorExtensionsByKind.clear()
+      for (const [kind, list] of extensions) inspectorExtensionsByKind.set(kind, [...list])
+      notifyRegistryChanged()
+    }
   }
 }
 
 export const nodeRegistry: NodeRegistry & {
   _register: (def: AnyNodeDefinition) => void
   _reset: () => void
+  _snapshot: () => () => void
 } = new NodeRegistryImpl()
 
 export function registerNode(def: AnyNodeDefinition): void {
@@ -156,6 +188,27 @@ export function getNodePluginId(kind: string): string | undefined {
  */
 export function getInspectorExtensions(kind: string): InspectorExtension[] {
   return inspectorExtensionsByKind.get(kind) ?? []
+}
+
+/**
+ * Register a zone takeoff extension directly.
+ * Replaces existing extension with the same ID, or appends.
+ */
+export function registerZoneTakeoffExtension(extension: ZoneTakeoffExtension): void {
+  const existing = zoneTakeoffExtensions.findIndex((e) => e.id === extension.id)
+  if (existing >= 0) {
+    zoneTakeoffExtensions[existing] = extension
+  } else {
+    zoneTakeoffExtensions.push(extension)
+  }
+  notifyRegistryChanged()
+}
+
+/**
+ * Zone takeoff extensions registered across all loaded plugins, in load order.
+ */
+export function getZoneTakeoffExtensions(): readonly ZoneTakeoffExtension[] {
+  return zoneTakeoffExtensions
 }
 
 /**
@@ -403,8 +456,17 @@ export async function loadPlugin(plugin: Plugin): Promise<void> {
       extensionsChanged = true
     }
   }
+  for (const extension of plugin.zoneTakeoffExtensions ?? []) {
+    const existing = zoneTakeoffExtensions.findIndex((e) => e.id === extension.id)
+    if (existing >= 0) {
+      zoneTakeoffExtensions[existing] = extension
+    } else {
+      zoneTakeoffExtensions.push(extension)
+    }
+    extensionsChanged = true
+  }
   // Nodes already notified per `registerNode`; bump once more so a plugin
-  // that only contributes inspector extensions still re-renders consumers.
+  // that only contributes inspector/takeoff extensions still re-renders consumers.
   if (extensionsChanged) notifyRegistryChanged()
 }
 

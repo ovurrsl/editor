@@ -331,12 +331,12 @@ export default function WallPanel() {
         )}
         <SliderControl
           label="Thickness"
-          max={metersToLinearUnit(1, unit)}
+          max={metersToLinearUnit(1000, unit)}
           min={metersToLinearUnit(0.05, unit)}
           onChange={(v) =>
             handleUpdate({
               thickness: linearControlValueToMeters(v, unit, {
-                maxMeters: 1,
+                maxMeters: 1000,
                 minMeters: 0.05,
               }),
             })

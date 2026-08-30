@@ -138,6 +138,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         parsed.data.thumbnailUrl === undefined ? existing.thumbnailUrl : parsed.data.thumbnailUrl,
       expectedVersion: expectedVersion ?? existing.version,
     })
+    if (operations.canAppendSceneEvents) {
+      await operations.appendSceneEvent({
+        sceneId: id,
+        version: meta.version,
+        kind: 'save_scene',
+        graph: parsed.data.graph as never,
+      })
+    }
     return sceneApiJson(request, meta, {
       headers: { ETag: `"${meta.version}"` },
     })

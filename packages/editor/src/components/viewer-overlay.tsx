@@ -50,18 +50,22 @@ export const ViewerOverlay = ({
   canShowGuides = true,
   hideBottomBar = false,
   onBack,
-}: ViewerOverlayProps) => (
-  <>
-    <ViewerSceneHeader onBack={onBack} owner={owner} projectName={projectName} />
-    {!hideBottomBar ? (
-      <ViewerControlsBar
-        canShowGuides={canShowGuides}
-        canShowScans={canShowScans}
-        onWalkthroughToggle={() => {
-          flushSync(() => useEditor.getState().setFirstPersonMode(true))
-          requestWalkthroughPointerLock()
-        }}
-      />
-    ) : null}
-  </>
-)
+}: ViewerOverlayProps) => {
+  const isPreviewMode = useEditor((s) => s.isPreviewMode)
+
+  return (
+    <>
+      {!isPreviewMode && <ViewerSceneHeader onBack={onBack} owner={owner} projectName={projectName} />}
+      {!hideBottomBar ? (
+        <ViewerControlsBar
+          canShowGuides={canShowGuides}
+          canShowScans={canShowScans}
+          onWalkthroughToggle={() => {
+            flushSync(() => useEditor.getState().setFirstPersonMode(true))
+            requestWalkthroughPointerLock()
+          }}
+        />
+      ) : null}
+    </>
+  )
+}

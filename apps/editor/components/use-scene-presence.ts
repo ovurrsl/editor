@@ -18,20 +18,26 @@ interface PresenceResponse {
 
 export interface ScenePresence {
   loaded: boolean
-  canEdit: boolean
-  isEditor: boolean
-  editor: { userId: string; email: string | null } | null
   present: Person[]
+  isEditor: boolean
+  canEdit: boolean
+  editor: { userId: string; email: string | null } | null
+  connected: boolean
   takeOver: () => void
+  passControl: (targetUserId: string) => Promise<void>
+  refresh: () => Promise<void>
 }
 
 const IDLE: ScenePresence = {
   loaded: false,
-  canEdit: false,
-  isEditor: false,
-  editor: null,
   present: [],
+  isEditor: false,
+  canEdit: false,
+  editor: null,
+  connected: true,
   takeOver: () => {},
+  passControl: async () => {},
+  refresh: async () => {},
 }
 
 const HEARTBEAT_MS = 10_000
@@ -47,12 +53,13 @@ export function useScenePresence(sceneId: string, enabled: boolean): ScenePresen
 
   // Initialized true so the first opener auto-claims the free lease.
   const wantsEditRef = useRef(true)
-  const [state, setState] = useState<Omit<ScenePresence, 'takeOver'>>({
+  const [state, setState] = useState<Omit<ScenePresence, 'takeOver' | 'passControl' | 'refresh'>>({
     loaded: false,
-    canEdit: false,
-    isEditor: false,
-    editor: null,
     present: [],
+    isEditor: false,
+    canEdit: false,
+    editor: null,
+    connected: true,
   })
 
   const aliveRef = useRef(false)
@@ -73,10 +80,10 @@ export function useScenePresence(sceneId: string, enabled: boolean): ScenePresen
       if (!aliveRef.current) return
       setState({
         loaded: true,
-        canEdit: data.canEdit,
-        isEditor: data.isEditor,
-        editor: data.editor,
         present: data.present,
+        isEditor: data.isEditor,
+        canEdit: data.canEdit,
+        editor: data.editor,
       })
     } catch {
       // A dropped heartbeat is transient; the next interval retries.
@@ -85,12 +92,53 @@ export function useScenePresence(sceneId: string, enabled: boolean): ScenePresen
 
   beatRef.current = beat
 
+  const passControl = useCallback(
+    async (targetUserId: string) => {
+      wantsEditRef.current = false
+      try {
+        const response = await fetch(`/api/scenes/${sceneId}/presence`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            wantsEdit: false,
+            transferToUserId: targetUserId,
+          }),
+        })
+        if (!response.ok) {
+          await beatRef.current()
+          return
+        }
+        const data = (await response.json()) as PresenceResponse
+        wantsEditRef.current = data.isEditor
+        if (!aliveRef.current) return
+        setState({
+          loaded: true,
+          present: data.present,
+          isEditor: data.isEditor,
+          canEdit: data.canEdit,
+          editor: data.editor,
+        })
+      } catch {
+        await beatRef.current()
+      }
+    },
+    [sceneId],
+  )
+
   useEffect(() => {
     if (!active) return
 
     aliveRef.current = true
     void beat()
     const interval = setInterval(() => void beat(), HEARTBEAT_MS)
+
+    const onVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        void beat()
+      }
+    }
+    window.addEventListener('visibilitychange', onVisibilityOrFocus)
+    window.addEventListener('focus', onVisibilityOrFocus)
 
     const leave = () => {
       try {
@@ -107,6 +155,8 @@ export function useScenePresence(sceneId: string, enabled: boolean): ScenePresen
     return () => {
       aliveRef.current = false
       clearInterval(interval)
+      window.removeEventListener('visibilitychange', onVisibilityOrFocus)
+      window.removeEventListener('focus', onVisibilityOrFocus)
       window.removeEventListener('pagehide', leave)
       leave()
     }
@@ -119,5 +169,5 @@ export function useScenePresence(sceneId: string, enabled: boolean): ScenePresen
 
   if (!active) return IDLE
 
-  return { ...state, takeOver }
+  return { ...state, takeOver, passControl, refresh: beat }
 }

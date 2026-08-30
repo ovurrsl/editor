@@ -75,10 +75,10 @@ export const SSGI_PARAMS = {
 //              the headless bake worker renders on SwiftShader (CPU), where
 //              per-frame vertex/draw cost dominates the whole capture.
 function readPerfDisableFlags() {
-  if (typeof window === 'undefined') {
+  if (typeof window === 'undefined' || typeof window.location === 'undefined') {
     return { ao: false, denoise: false, outline: false, postFx: false }
   }
-  const raw = new URLSearchParams(window.location.search).get('disable') ?? ''
+  const raw = new URLSearchParams(window.location.search ?? '').get('disable') ?? ''
   const set = new Set(
     raw
       .split(',')
@@ -95,16 +95,18 @@ function readPerfDisableFlags() {
 
 const PERF_POST_FX_DISABLED =
   typeof window !== 'undefined' &&
+  typeof window.location !== 'undefined' &&
   new Set(
-    (new URLSearchParams(window.location.search).get('disable') ?? '')
+    (new URLSearchParams(window.location.search ?? '').get('disable') ?? '')
       .split(',')
       .map((s) => s.trim()),
   ).has('postFx')
 
 const PERF_DRAW_DISABLED =
   typeof window !== 'undefined' &&
+  typeof window.location !== 'undefined' &&
   new Set(
-    (new URLSearchParams(window.location.search).get('disable') ?? '')
+    (new URLSearchParams(window.location.search ?? '').get('disable') ?? '')
       .split(',')
       .map((s) => s.trim()),
   ).has('draw')

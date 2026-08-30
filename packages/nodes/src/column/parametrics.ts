@@ -15,8 +15,8 @@ export const columnParametrics: ParametricDescriptor<ColumnNode> = {
       label: 'Dimensions',
       fields: [
         { key: 'height', kind: 'number', unit: 'm', min: 0.5, step: 0.05 },
-        { key: 'width', kind: 'number', unit: 'm', min: 0.1, max: 2, step: 0.01 },
-        { key: 'depth', kind: 'number', unit: 'm', min: 0.1, max: 2, step: 0.01 },
+        { key: 'width', kind: 'number', unit: 'm', min: 0.1, max: 1000, step: 0.01 },
+        { key: 'depth', kind: 'number', unit: 'm', min: 0.1, max: 1000, step: 0.01 },
       ],
     },
   ],

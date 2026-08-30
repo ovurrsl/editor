@@ -2,10 +2,12 @@
 // include Bun ambient types in its production declaration build.
 import { describe, expect, mock, test } from 'bun:test'
 import {
+  detectRendererCapability,
   initializeGpuRenderer,
   type RendererBackendParameters,
   type RendererCapabilityCanvas,
 } from './renderer-capability'
+import { UnsupportedGpuViewerFallback } from '../components/viewer/unsupported-gpu-fallback'
 
 function canvasWithContexts(contexts: Partial<Record<'webgl2', unknown>>) {
   return {
@@ -321,5 +323,53 @@ describe('GPU renderer capability and initialization', () => {
     expect(result.status).toBe('unsupported')
     if (result.status === 'unsupported') expect(result.error).toBeInstanceOf(TypeError)
     expect(dispose).toHaveBeenCalledTimes(1)
+  })
+
+  test('detectRendererCapability detects WebGPU when available', async () => {
+    const fakeDevice = {}
+    const capability = await detectRendererCapability({
+      gpu: {
+        requestAdapter: async () => ({
+          requestDevice: async () => fakeDevice,
+        }),
+      },
+      canvas: canvasWithContexts({ webgl2: {} }),
+    })
+
+    expect(capability.status).toBe('supported')
+    if (capability.status === 'supported') {
+      expect(capability.backend).toBe('webgpu')
+      if (capability.backend === 'webgpu') {
+        expect(capability.device).toBe(fakeDevice)
+      }
+    }
+  })
+
+  test('detectRendererCapability falls back to WebGL2 when GPU is null', async () => {
+    const webglCtx = {}
+    const capability = await detectRendererCapability({
+      gpu: null,
+      canvas: canvasWithContexts({ webgl2: webglCtx }),
+    })
+
+    expect(capability.status).toBe('supported')
+    if (capability.status === 'supported') {
+      expect(capability.backend).toBe('webgl')
+    }
+  })
+
+  test('detectRendererCapability returns unsupported when both GPU and WebGL2 are absent', async () => {
+    const capability = await detectRendererCapability({
+      gpu: null,
+      canvas: canvasWithContexts({}),
+    })
+
+    expect(capability.status).toBe('unsupported')
+  })
+
+  test('UnsupportedGpuViewerFallback renders diagnostic message', () => {
+    const fallbackNode = UnsupportedGpuViewerFallback()
+    expect(fallbackNode).toBeDefined()
+    expect(fallbackNode.type).toBe('div')
   })
 })

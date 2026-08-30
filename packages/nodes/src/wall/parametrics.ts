@@ -18,7 +18,7 @@ export const wallParametrics: ParametricDescriptor<WallNode> = {
     {
       label: 'Dimensions',
       fields: [
-        { key: 'thickness', kind: 'number', unit: 'm', min: 0.05, max: 0.6, step: 0.01 },
+        { key: 'thickness', kind: 'number', unit: 'm', min: 0.05, max: 1000, step: 0.01 },
         // `height` may be absent (plane-bound top); the custom panel owns the
         // Follows storey / Custom height mode switch, so this is metadata only.
         { key: 'height', kind: 'number', unit: 'm', min: 1.5, step: 0.05 },

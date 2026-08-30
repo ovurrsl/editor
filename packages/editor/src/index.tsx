@@ -99,6 +99,11 @@ export {
   buildSvgArrowHeadPoints,
   getArcPlanPoint,
 } from './components/editor-2d/svg-paths'
+export type {
+  SelectionAffordanceHistoryApi,
+  SelectionAffordanceInteractionApi,
+  SelectionAffordanceProps,
+} from './components/systems/selection-affordance-services'
 // Phase 5 Stage D transitional exports — pure drafting / angle helpers
 // consumed by kind-owned drag actions in @pascal-app/nodes. Stage F
 // cleanup moves these into @pascal-app/nodes (fence/drafting.ts +
@@ -437,6 +442,12 @@ export {
   subscribeHistoryCommandState,
 } from './lib/history'
 export {
+  type EditorHostTreeChildren,
+  type EditorHostTreeChildrenProps,
+  editorHostTreeChildrenRegistry,
+  registerEditorHostTreeChildren,
+} from './lib/host-tree-children'
+export {
   boundaryReshapeScope,
   curveReshapeScope,
   endpointReshapeScope,
@@ -570,6 +581,7 @@ export {
   collectZoneContentIds,
   collectZoneObjectIds,
   collectZoneObjectLabels,
+  resolveZoneTakeoffReports,
 } from './lib/zone-content'
 export { subscribeCameraPose } from './store/camera-pose-store'
 export { default as useAlignmentGuides } from './store/use-alignment-guides'

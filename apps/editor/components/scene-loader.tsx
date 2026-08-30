@@ -3,17 +3,29 @@
 // Node registry bootstrap is loaded once at the root via
 // `<ClientBootstrap>` in `app/layout.tsx` — no per-page side-effect
 // import here.
-import { applySceneGraphToEditor, Editor, type SceneGraph, useEditor } from '@pascal-app/editor'
+import {
+  applySceneGraphToEditor,
+  Editor,
+  type SceneGraph,
+  useEditor,
+  useInteractionScope,
+  useScene,
+  useViewer,
+} from '@pascal-app/editor'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AccountSettingsSection } from '@/components/account-settings-section'
 import { useSession } from '@/components/auth/session-provider'
 import { countGraphNodes, isEmptyGraphOverwrite } from '@/lib/empty-graph-guard'
 import { type PersistedSceneGraph, sceneGraphSignature } from '@/lib/scene-signature'
+import { usePluginManager } from '@/lib/plugins/use-plugin-manager'
 import { EDITOR_SIDEBAR_TABS } from './editor-sidebar-tabs'
-import { PresenceBar } from './presence-bar'
 import { useScenePresence } from './use-scene-presence'
-import { CommunityViewerToolbarLeft, CommunityViewerToolbarRight } from './viewer-toolbar'
+import {
+  CommunityViewerToolbarCenter,
+  CommunityViewerToolbarLeft,
+  CommunityViewerToolbarRight,
+} from './viewer-toolbar'
 
 export interface SceneMeta {
   id: string
@@ -102,7 +114,7 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
   const suppressRemoteSaveUntilRef = useRef(0)
   const [conflict, setConflict] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
-  const { openAuth } = useSession()
+  const { user, openAuth } = useSession()
 
   const presence = useScenePresence(meta.id, true)
   // Before presence loads, fall back to the server `readOnly` prop so an
@@ -123,8 +135,36 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
       })
       return unsub
     }
+    // Seamless Role Transfer & Lock Elimination (M2)
+    forcedReadOnlyRef.current = false
     useEditor.getState().setPreviewMode(false)
+    useInteractionScope.getState().end()
+    useViewer.getState().setInputDragging(false)
+    useViewer.getState().setCameraDragging(false)
+
+    // Auto-recover active building and level selection if null
+    const viewer = useViewer.getState()
+    if (!viewer.selection.levelId) {
+      const nodes = useScene.getState().nodes
+      const firstBuilding = Object.values(nodes).find((n) => n.type === 'building')
+      const firstLevel = Object.values(nodes).find((n) => n.type === 'level')
+      if (firstBuilding && firstLevel) {
+        viewer.setSelection({
+          buildingId: firstBuilding.id,
+          levelId: firstLevel.id,
+          selectedIds: [],
+          zoneId: null,
+        })
+      }
+    }
+    useViewer.getState().setSceneLocked(false)
   }, [forcedReadOnly])
+
+  useEffect(() => {
+    if (initialScene.installedPlugins && initialScene.installedPlugins.length > 0) {
+      void usePluginManager.getState().syncWithScene(initialScene.installedPlugins)
+    }
+  }, [initialScene])
 
   const lightPreview = isLightPreviewQuery(searchParams)
 
@@ -225,6 +265,9 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
       lastRemoteGraphJsonRef.current = sceneGraphSignature(payload.graph)
       suppressRemoteSaveUntilRef.current = Date.now() + 2500
       applySceneGraphToEditor(payload.graph)
+      if (payload.graph.installedPlugins && payload.graph.installedPlugins.length > 0) {
+        void usePluginManager.getState().syncWithScene(payload.graph.installedPlugins)
+      }
       setConflict(false)
       setSaveError(null)
     })
@@ -262,16 +305,6 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
 
   return (
     <div className="relative h-screen w-screen">
-      {presence.loaded &&
-        (presence.present.length > 1 || (presence.canEdit && !presence.isEditor)) && (
-          <PresenceBar
-            canEdit={presence.canEdit}
-            editor={presence.editor}
-            isEditor={presence.isEditor}
-            onTakeOver={presence.takeOver}
-            present={presence.present}
-          />
-        )}
       {conflict && (
         <div className="pointer-events-auto absolute top-4 left-1/2 z-50 w-full max-w-md -translate-x-1/2 rounded-lg border border-border bg-background p-4 shadow-xl">
           <h2 className="font-semibold text-sm">Another session saved first — refresh?</h2>
@@ -321,8 +354,24 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
         projectId={meta.projectId ?? 'default'}
         settingsPanelProps={{ accountSection: <AccountSettingsSection /> }}
         sidebarTabs={EDITOR_SIDEBAR_TABS}
-        viewerToolbarLeft={<CommunityViewerToolbarLeft />}
-        viewerToolbarRight={<CommunityViewerToolbarRight />}
+        viewerToolbarCenter={
+          <CommunityViewerToolbarCenter
+            currentUserId={user?.id}
+            presence={presence}
+          />
+        }
+        viewerToolbarLeft={
+          <CommunityViewerToolbarLeft
+            currentUserId={user?.id}
+            presence={presence}
+          />
+        }
+        viewerToolbarRight={
+          <CommunityViewerToolbarRight
+            currentUserId={user?.id}
+            presence={presence}
+          />
+        }
       />
     </div>
   )
