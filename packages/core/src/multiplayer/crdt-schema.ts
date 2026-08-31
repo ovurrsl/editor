@@ -53,8 +53,7 @@ export function isDeepEqualFast(a: unknown, b: unknown): boolean {
   const aKeys = Object.keys(aObj)
   const bKeys = Object.keys(bObj)
   if (aKeys.length !== bKeys.length) return false
-  for (let i = 0; i < aKeys.length; i++) {
-    const k = aKeys[i]
+  for (const k of aKeys) {
     if (!Object.prototype.hasOwnProperty.call(bObj, k) || !isDeepEqualFast(aObj[k], bObj[k])) {
       return false
     }
