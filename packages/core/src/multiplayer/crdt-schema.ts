@@ -28,6 +28,41 @@ export function initializeSceneDoc(doc: Y.Doc): SceneCRDTSchema {
 }
 
 /**
+ * Fast deep equality comparator for primitives, arrays, and plain objects.
+ * Avoids JSON.stringify serialization thrashing and allocation pressure.
+ */
+export function isDeepEqualFast(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true
+  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') {
+    return false
+  }
+  const isArrA = Array.isArray(a)
+  const isArrB = Array.isArray(b)
+  if (isArrA !== isArrB) return false
+  if (isArrA) {
+    const arrA = a as readonly unknown[]
+    const arrB = b as readonly unknown[]
+    if (arrA.length !== arrB.length) return false
+    for (let i = 0; i < arrA.length; i++) {
+      if (!isDeepEqualFast(arrA[i], arrB[i])) return false
+    }
+    return true
+  }
+  const aObj = a as Record<string, unknown>
+  const bObj = b as Record<string, unknown>
+  const aKeys = Object.keys(aObj)
+  const bKeys = Object.keys(bObj)
+  if (aKeys.length !== bKeys.length) return false
+  for (let i = 0; i < aKeys.length; i++) {
+    const k = aKeys[i]
+    if (!Object.prototype.hasOwnProperty.call(bObj, k) || !isDeepEqualFast(aObj[k], bObj[k])) {
+      return false
+    }
+  }
+  return true
+}
+
+/**
  * Converts a plain JavaScript AnyNode into a nested Y.Map structure,
  * preserving sub-property granularity for composite dictionaries (slots, metadata, customProperties).
  */
@@ -42,7 +77,7 @@ export function writeNodeToYMap(yNode: Y.Map<unknown>, node: AnyNode): void {
       const yNested = nestedMap as Y.Map<unknown>
       const record = val as Record<string, unknown>
       for (const [subKey, subVal] of Object.entries(record)) {
-        if (JSON.stringify(yNested.get(subKey)) !== JSON.stringify(subVal)) {
+        if (!isDeepEqualFast(yNested.get(subKey), subVal)) {
           yNested.set(subKey, subVal)
         }
       }
@@ -55,7 +90,7 @@ export function writeNodeToYMap(yNode: Y.Map<unknown>, node: AnyNode): void {
     }
 
     const existing = yNode.get(key)
-    if (JSON.stringify(existing) !== JSON.stringify(val)) {
+    if (!isDeepEqualFast(existing, val)) {
       yNode.set(key, val)
     }
   }
@@ -89,7 +124,7 @@ export function readNodeFromYMap(yNode: Y.Map<unknown>): AnyNode {
  */
 export function reconcileYArray(yArray: Y.Array<string>, target: readonly string[]): void {
   const current = yArray.toArray()
-  if (JSON.stringify(current) === JSON.stringify(target)) return
+  if (current.length === target.length && current.every((v, i) => v === target[i])) return
 
   // Minimal diff reconciliation
   const targetSet = new Set(target)
@@ -163,7 +198,7 @@ export function snapshotToYDoc(snapshot: SceneSnapshot, doc: Y.Doc): void {
           yMaterials.set(matId, yMat)
         }
         for (const [k, v] of Object.entries(mat)) {
-          if (JSON.stringify(yMat.get(k)) !== JSON.stringify(v)) {
+          if (!isDeepEqualFast(yMat.get(k), v)) {
             yMat.set(k, v)
           }
         }
@@ -185,7 +220,7 @@ export function snapshotToYDoc(snapshot: SceneSnapshot, doc: Y.Doc): void {
           yCollections.set(colId, yCol)
         }
         for (const [k, v] of Object.entries(col)) {
-          if (JSON.stringify(yCol.get(k)) !== JSON.stringify(v)) {
+          if (!isDeepEqualFast(yCol.get(k), v)) {
             yCol.set(k, v)
           }
         }

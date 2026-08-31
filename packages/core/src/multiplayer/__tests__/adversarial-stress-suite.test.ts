@@ -18,6 +18,7 @@ import {
   yDocToSnapshot,
 } from './multiplayer-test-harness'
 import { CollabWebSocketServer } from '../../../../../server/multiplayer/ws-server'
+import { createCollabToken } from '../../../../../server/multiplayer/auth-guard'
 import { MultiplayerAwarenessService } from '../awareness-service'
 import useLiveTransforms from '../../store/use-live-transforms'
 import type { AnyNode, AnyNodeId } from '../../schema/types'
@@ -257,12 +258,13 @@ describe('Adversarial Stress & Security Test Suite (Challenger 2)', () => {
 
       const sceneId = 'prod-security-room-1'
 
-      // Connect rogue viewer client
+      // Connect rogue viewer client (unauthenticated or rogue role attempt)
       const viewerWs = new WebSocket(`ws://127.0.0.1:${port}/collab/v1/scene:${sceneId}?role=viewer&userId=rogue-attacker`)
       await new Promise((resolve) => viewerWs.on('open', resolve))
 
-      // Connect legitimate editor client
-      const editorWs = new WebSocket(`ws://127.0.0.1:${port}/collab/v1/scene:${sceneId}?role=editor&userId=auth-editor`)
+      // Connect legitimate editor client with cryptographically signed token
+      const editorToken = createCollabToken({ userId: 'auth-editor', role: 'editor', sceneId })
+      const editorWs = new WebSocket(`ws://127.0.0.1:${port}/collab/v1/scene:${sceneId}?token=${editorToken}`)
       await new Promise((resolve) => editorWs.on('open', resolve))
 
       // 1. Rogue viewer transmits malicious Yjs update

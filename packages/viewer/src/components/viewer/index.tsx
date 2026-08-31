@@ -21,7 +21,7 @@ import { hasDrawableGeometry } from '../../lib/drawable-geometry'
 import { PERF_OVERLAY_ENABLED, pushGpuSample } from '../../lib/gpu-perf'
 import { applyIsolation, clearIsolation } from '../../lib/isolation'
 import { ensureKtx2Support } from '../../lib/ktx2-loader'
-import type { ColorPreset, RenderShading } from '../../lib/materials'
+import { clearMaterialCache, type ColorPreset, type RenderShading } from '../../lib/materials'
 import { initializeGpuRenderer, type RendererPowerPreference } from '../../lib/renderer-capability'
 import { getSceneTheme } from '../../lib/scene-themes'
 import { installTextureNodeNullGuard } from '../../lib/texture-node-guard'
@@ -440,6 +440,12 @@ const Viewer = forwardRef<ViewerHandle, ViewerProps>(function Viewer(
       if (isolateRef.current === isolate) clearIsolation()
     }
   }, [isolate])
+
+  useEffect(() => {
+    return () => {
+      clearMaterialCache()
+    }
+  }, [sceneReadyKey])
 
   const [rendererInitFailed, setRendererInitFailed] = useState(false)
 

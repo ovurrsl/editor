@@ -1777,21 +1777,15 @@ function sceneOperationPatchNextState(
   }
   for (const change of changes.nodeDeletes) {
     const id = change.node.id
-    const current = beforeState.nodes[id]
-    const parentId = (change.node.parentId as AnyNodeId | null | undefined) ?? null
-    const siblings = structuralSiblingIds(beforeState.nodes, beforeState.rootNodeIds, parentId)
-    if (
-      !current ||
-      createIds.has(id) ||
-      deleteIds.has(id) ||
-      !Number.isSafeInteger(change.position) ||
-      change.position < 0 ||
-      siblings?.[change.position] !== id ||
-      !areScenePatchValuesEqual(current, change.node)
-    ) {
+    if (createIds.has(id) || deleteIds.has(id)) {
       return null
     }
-    deleteIds.add(id)
+    const current = beforeState.nodes[id]
+    // Idempotent LWW delete: if node exists, queue for deletion.
+    // If node is already absent, treat as already deleted (no-op).
+    if (current) {
+      deleteIds.add(id)
+    }
   }
   for (const id of createIds) {
     if (deleteIds.has(id)) return null
@@ -1808,17 +1802,20 @@ function sceneOperationPatchNextState(
       : beforeState.rootNodeIds
   const changedParentIds = new Set<AnyNodeId>()
   for (const change of changes.nodeDeletes) {
-    const parentId = (change.node.parentId as AnyNodeId | null | undefined) ?? null
+    const id = change.node.id
+    const current = beforeState.nodes[id]
+    const parentId = ((current?.parentId ?? change.node.parentId) as AnyNodeId | null | undefined) ?? null
     if (parentId && !deleteIds.has(parentId)) changedParentIds.add(parentId)
-    delete nextNodes[change.node.id]
+    delete nextNodes[id]
   }
   for (const parentId of changedParentIds) {
     const parent = nextNodes[parentId]
-    if (!(parent && 'children' in parent && Array.isArray(parent.children))) return null
-    nextNodes[parentId] = {
-      ...parent,
-      children: (parent.children as AnyNodeId[]).filter((id) => !deleteIds.has(id)),
-    } as AnyNode
+    if (parent && 'children' in parent && Array.isArray(parent.children)) {
+      nextNodes[parentId] = {
+        ...parent,
+        children: (parent.children as AnyNodeId[]).filter((id) => !deleteIds.has(id)),
+      } as AnyNode
+    }
   }
 
   for (const change of parsedCreates) nextNodes[change.node.id] = change.node

@@ -34,9 +34,10 @@ function readAllowedOrigins(): readonly string[] | undefined {
 
 function isAllowedAssetUrl(url: string): boolean {
   if (typeof url !== 'string' || url.length === 0) return false
-  if (url.startsWith('asset://')) return true // internal handle
-  if (url.startsWith('blob:')) return true // in-memory reference
-  if (url.startsWith('data:image/')) return true // inline image only (never data:text/html)
+  const lower = url.toLowerCase()
+  if (lower.startsWith('asset://')) return true // internal handle
+  if (lower.startsWith('blob:')) return true // in-memory reference
+  if (lower.startsWith('data:image/') && !lower.startsWith('data:image/svg+xml')) return true // inline raster image only (never SVG or data:text/html)
   if (url.startsWith('/')) return true // app-relative path
   try {
     const parsed = new URL(url)

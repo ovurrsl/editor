@@ -22,7 +22,10 @@ describe('AssetUrl', () => {
       ['data:image/png;base64,AAA', 'inline PNG data URL'],
       ['data:image/jpeg;base64,/9j/', 'inline JPEG data URL'],
       ['data:image/webp;base64,UklGR', 'inline WebP data URL'],
-      ['data:image/svg+xml,%3Csvg%3E', 'inline SVG data URL'],
+      ['DATA:IMAGE/PNG;base64,AAA', 'uppercase DATA scheme PNG data URL'],
+      ['data:IMAGE/PNG;base64,AAA', 'uppercase IMAGE/PNG data URL'],
+      ['ASSET://abc', 'uppercase ASSET scheme'],
+      ['BLOB:https://example.com/uuid-5678', 'uppercase BLOB scheme'],
     ]
     for (const [url, label] of cases) {
       test(`accepts ${label}: ${url}`, () => {
@@ -40,6 +43,14 @@ describe('AssetUrl', () => {
       ['http://evil.com/', 'non-loopback http'],
       ['http://example.com:3000/x', 'http on non-loopback host'],
       ['http://169.254.169.254/latest/meta-data/', 'http on link-local (cloud metadata)'],
+      ['data:image/svg+xml,%3Csvg%3E', 'inline SVG data URL (XSS vector)'],
+      ['data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=', 'base64 SVG data URL (XSS vector)'],
+      ['data:image/SVG+XML,%3Csvg%3E', 'uppercase SVG data URL'],
+      ['data:image/SVG+XML;base64,PHN2Z3gvbmxvYWQ9YWxlcnQoMSk7+', 'uppercase SVG base64 data URL'],
+      ['data:image/Svg+Xml,<svg onload=alert(1)>', 'mixed case SVG data URL'],
+      ['data:IMAGE/SVG+XML;base64,PHN2Z248L3N2Zz4=', 'uppercase MIME and SVG data URL'],
+      ['DATA:IMAGE/SVG+XML;base64,PHN2Z248L3N2Z24=', 'uppercase DATA scheme SVG data URL'],
+      ['data:image/svg+xml;charset=utf-8,<svg><script>alert(1)</script></svg>', 'SVG data URL with charset parameter'],
       ['data:text/html,<script>alert(1)</script>', 'data text/html'],
       ['data:application/javascript,alert(1)', 'data application/javascript'],
       ['data:text/plain,hi', 'data text/plain'],

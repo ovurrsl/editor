@@ -453,6 +453,12 @@ export {
 } from './systems/wall/wall-topology'
 export type { SceneGraph } from './utils/clone-scene-graph'
 export { cloneLevelSubtree, cloneSceneGraph, forkSceneGraph } from './utils/clone-scene-graph'
+export type { SceneGraphPatch } from './utils/scene-diff'
+export {
+  computeSceneGraphDiff,
+  applySceneGraphPatch,
+  applySceneGraphPatchToStore,
+} from './utils/scene-diff'
 export { isObject } from './utils/types'
 export {
   type BuildStats,
@@ -464,3 +470,4 @@ export {
   validateBuildJson,
 } from './validation/validate-build-json'
 export * from './multiplayer'
+

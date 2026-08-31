@@ -187,6 +187,23 @@ function asSceneRow(value: unknown): SceneRow | null {
 }
 
 function rowToSceneEvent(row: SceneEventRow): SceneEvent {
+  try {
+    const raw = JSON.parse(row.graph_json)
+    if (raw && typeof raw === 'object' && 'graph' in raw && raw.graph) {
+      return {
+        eventId: Number(row.event_id),
+        sceneId: row.scene_id,
+        version: Number(row.version),
+        kind: row.kind,
+        createdAt: row.created_at,
+        graph: raw.graph as SceneGraph,
+        patch: raw.patch,
+        baseVersion: raw.baseVersion,
+      }
+    }
+  } catch {
+    // Fall back to parseGraph
+  }
   return {
     eventId: Number(row.event_id),
     sceneId: row.scene_id,
@@ -196,6 +213,7 @@ function rowToSceneEvent(row: SceneEventRow): SceneEvent {
     graph: parseGraph(row.graph_json, `${row.scene_id}@${row.version}`),
   }
 }
+
 
 /**
  * Drop every revision of this scene older than the newest
@@ -542,7 +560,9 @@ export class SqliteSceneStore implements SceneStore {
         throw new SceneNotFoundError(`Scene "${safeId}" not found`)
       }
 
-      const graphJson = serializeGraph(opts.graph)
+      const graphJson = opts.patch
+        ? JSON.stringify({ graph: opts.graph, patch: opts.patch, baseVersion: opts.baseVersion })
+        : serializeGraph(opts.graph)
       const now = new Date().toISOString()
       const result = db
         .query(
@@ -560,9 +580,12 @@ export class SqliteSceneStore implements SceneStore {
         kind: opts.kind,
         createdAt: now,
         graph: opts.graph,
+        patch: opts.patch,
+        baseVersion: opts.baseVersion,
       }
     })
   }
+
 
   async listSceneEvents(sceneId: string, opts: SceneEventListOptions = {}): Promise<SceneEvent[]> {
     const afterEventId = Math.max(0, opts.afterEventId ?? 0)

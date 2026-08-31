@@ -35,7 +35,9 @@ export class CollabWebSocketServer {
   private setupUpgradeHandler() {
     this.server.on('upgrade', async (req: http.IncomingMessage, socket: any, head: Buffer) => {
       const url = new URL(req.url ?? '/', `http://${req.headers.host ?? '127.0.0.1'}`)
-      const match = url.pathname.match(/^\/collab\/v1\/scene:([^/]+)/)
+      const match =
+        url.pathname.match(/^\/collab\/v1\/scene:([^/]+)/) ||
+        url.pathname.match(/^\/collab\/v1\/([^/]+)/)
       const sceneId = match ? match[1] : url.searchParams.get('sceneId') || 'default-scene'
 
       const auth = await authenticateCollabConnection(req, sceneId)
@@ -120,7 +122,9 @@ export class CollabWebSocketServer {
         room.conns.delete(ws)
         room.authMap.delete(ws)
         if (room.conns.size === 0) {
-          // Room idle
+          room.doc.destroy()
+          room.awareness.destroy()
+          this.rooms.delete(room.sceneId)
         }
       })
     })

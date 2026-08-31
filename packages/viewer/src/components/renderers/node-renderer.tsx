@@ -10,6 +10,7 @@ import {
 } from '@pascal-app/core'
 import { type ComponentType, lazy, Suspense } from 'react'
 import useViewer from '../../store/use-viewer'
+import { ErrorBoundary } from '../error-boundary'
 import { ParametricNodeRenderer } from './parametric-node-renderer'
 
 // Cache lazy components by their RendererSource so React.lazy isn't re-invoked
@@ -52,9 +53,11 @@ export const NodeRenderer = ({ nodeId }: { nodeId: AnyNode['id'] }) => {
     const Renderer = getRegistryRenderer(def.renderer as RendererSource<AnyNode>)
     if (!Renderer) return null
     return (
-      <Suspense fallback={null}>
-        <Renderer node={node} />
-      </Suspense>
+      <ErrorBoundary fallback={null} scope={`plugin-node:${node.type}`}>
+        <Suspense fallback={null}>
+          <Renderer node={node} />
+        </Suspense>
+      </ErrorBoundary>
     )
   }
   if (def.geometry) {

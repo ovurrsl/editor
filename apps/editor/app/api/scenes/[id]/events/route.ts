@@ -87,12 +87,26 @@ export async function GET(request: Request, { params }: RouteParams) {
             afterEventId: cursor,
             limit: MAX_EVENTS_PER_POLL,
           })
+          const wantFullGraph = url.searchParams.get('full') === 'true'
           for (const event of events) {
             cursor = event.eventId
             enqueue(`id: ${event.eventId}\n`)
             enqueue('event: scene\n')
-            enqueue(`data: ${JSON.stringify(event)}\n\n`)
+            const dataPayload =
+              event.patch && !wantFullGraph
+                ? {
+                    eventId: event.eventId,
+                    sceneId: event.sceneId,
+                    version: event.version,
+                    kind: event.kind,
+                    createdAt: event.createdAt,
+                    patch: event.patch,
+                    baseVersion: event.baseVersion,
+                  }
+                : event
+            enqueue(`data: ${JSON.stringify(dataPayload)}\n\n`)
           }
+
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error)
           enqueue('event: error\n')

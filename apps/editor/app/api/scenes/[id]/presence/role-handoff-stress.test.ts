@@ -27,6 +27,7 @@ beforeAll(async () => {
   const saved = {
     PASCAL_DB_PATH: process.env.PASCAL_DB_PATH,
     PASCAL_SCENE_API_TOKEN: process.env.PASCAL_SCENE_API_TOKEN,
+    PASCAL_SCENE_API_RATE_LIMIT: process.env.PASCAL_SCENE_API_RATE_LIMIT,
   }
   restoreEnv = () => {
     for (const [key, value] of Object.entries(saved)) {
@@ -35,6 +36,7 @@ beforeAll(async () => {
     }
   }
   process.env.PASCAL_DB_PATH = join(tempDir, 'pascal.db')
+  process.env.PASCAL_SCENE_API_RATE_LIMIT = '0'
   delete process.env.PASCAL_SCENE_API_TOKEN
 
   mock.module('@/lib/auth/db', () => ({

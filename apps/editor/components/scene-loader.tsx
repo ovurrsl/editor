@@ -12,7 +12,14 @@ import {
   useScene,
   useViewer,
 } from '@pascal-app/editor'
+import {
+  applySceneGraphPatch,
+  applySceneGraphPatchToStore,
+  computeSceneGraphDiff,
+  type SceneGraphPatch,
+} from '@pascal-app/core'
 import { useRouter, useSearchParams } from 'next/navigation'
+
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AccountSettingsSection } from '@/components/account-settings-section'
 import { useSession } from '@/components/auth/session-provider'
@@ -89,7 +96,9 @@ interface LiveSceneEvent {
   version: number
   kind: string
   createdAt: string
-  graph: PersistedSceneGraph
+  graph?: PersistedSceneGraph
+  patch?: SceneGraphPatch
+  baseVersion?: number
 }
 
 /**
@@ -110,8 +119,9 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
   // autosave wipe class: a save fired from a not-yet-hydrated (empty) editor
   // store must never overwrite a populated server copy.
   const serverNodeCountRef = useRef(meta.nodeCount)
+  const lastSavedGraphRef = useRef<SceneGraph>(initialScene)
   const lastRemoteGraphJsonRef = useRef<string | null>(null)
-  const suppressRemoteSaveUntilRef = useRef(0)
+  const isRecoveringRef = useRef(false)
   const [conflict, setConflict] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const { user, openAuth } = useSession()
@@ -173,14 +183,11 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
   const handleSave = useCallback(
     async (graph: SceneGraph, options?: { keepalive?: boolean }) => {
       if (forcedReadOnlyRef.current) return
-      const graphJson = sceneGraphSignature(graph)
-      const isRecentRemoteApply = Date.now() < suppressRemoteSaveUntilRef.current
-      if (lastRemoteGraphJsonRef.current === graphJson) {
-        lastRemoteGraphJsonRef.current = null
-        suppressRemoteSaveUntilRef.current = 0
+
+      const patch = computeSceneGraphDiff(lastSavedGraphRef.current, graph, versionRef.current)
+      if (patch === null) {
         return
       }
-      if (isRecentRemoteApply) return
 
       // Wipe guard: never PUT an empty graph over a populated server copy.
       // An empty serialization here means the editor store was not hydrated
@@ -197,12 +204,12 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
 
       try {
         const response = await fetch(`/api/scenes/${meta.id}`, {
-          method: 'PUT',
+          method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
             'If-Match': String(versionRef.current),
           },
-          body: JSON.stringify({ name: meta.name, graph }),
+          body: JSON.stringify({ name: meta.name, patch, baseVersion: versionRef.current }),
           // `keepalive` lets the request outlive a page unload (the autosave
           // flush on refresh/close). Browsers cap keepalive bodies at 64KB, so
           // only the unload flush opts in — normal debounced saves omit it and
@@ -219,29 +226,53 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
               `[scene-loader] Server rejected an empty-graph save for scene ${meta.id}.`,
             )
             setSaveError('Autosave blocked: the editor tried to save an empty scene')
-            return
+            throw new Error('empty_graph_rejected')
           }
           setConflict(true)
-          return
+          throw new Error('version_conflict')
         }
 
         if (response.status === 401) {
           setSaveError('Sign in to save your changes.')
           openAuth()
-          return
+          throw new Error('unauthorized')
         }
 
         if (!response.ok) {
-          setSaveError(`Save failed (${response.status})`)
+          // Fallback to full PUT if PATCH fails for an unexpected reason
+          const fallbackRes = await fetch(`/api/scenes/${meta.id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'If-Match': String(versionRef.current),
+            },
+            body: JSON.stringify({ name: meta.name, graph }),
+            keepalive: options?.keepalive,
+          })
+          if (!fallbackRes.ok) {
+            const msg = `Save failed (${fallbackRes.status})`
+            setSaveError(msg)
+            throw new Error(msg)
+          }
+          const next = (await fallbackRes.json()) as SceneMeta
+          versionRef.current = next.version
+          serverNodeCountRef.current = next.nodeCount
+          lastSavedGraphRef.current = graph
+          setSaveError(null)
           return
         }
 
         const next = (await response.json()) as SceneMeta
         versionRef.current = next.version
         serverNodeCountRef.current = next.nodeCount
+        lastSavedGraphRef.current = graph
         setSaveError(null)
       } catch (error) {
-        setSaveError(error instanceof Error ? error.message : 'Save failed')
+        const message = error instanceof Error ? error.message : 'Save failed'
+        if (message !== 'version_conflict' && message !== 'empty_graph_rejected' && message !== 'unauthorized') {
+          setSaveError(message)
+        }
+        throw error
       }
     },
     [meta.id, meta.name, openAuth],
@@ -260,16 +291,75 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
       if (payload.sceneId !== meta.id) return
       if (payload.version <= versionRef.current) return
 
-      versionRef.current = payload.version
-      serverNodeCountRef.current = countGraphNodes(payload.graph)
-      lastRemoteGraphJsonRef.current = sceneGraphSignature(payload.graph)
-      suppressRemoteSaveUntilRef.current = Date.now() + 2500
-      applySceneGraphToEditor(payload.graph)
-      if (payload.graph.installedPlugins && payload.graph.installedPlugins.length > 0) {
-        void usePluginManager.getState().syncWithScene(payload.graph.installedPlugins)
+      // Fast-path: granular patch application when baseVersion matches
+      if (
+        payload.patch &&
+        (payload.baseVersion === undefined || payload.baseVersion === versionRef.current)
+      ) {
+        const applied = applySceneGraphPatchToStore(payload.patch)
+        if (applied) {
+          versionRef.current = payload.version
+          if (lastSavedGraphRef.current) {
+            lastSavedGraphRef.current = applySceneGraphPatch(
+              lastSavedGraphRef.current,
+              payload.patch,
+            )
+            serverNodeCountRef.current = Object.keys(lastSavedGraphRef.current.nodes ?? {}).length
+          }
+          if (payload.patch.installedPlugins && payload.patch.installedPlugins.length > 0) {
+            void usePluginManager.getState().syncWithScene(payload.patch.installedPlugins)
+          }
+          setConflict(false)
+          setSaveError(null)
+          return
+        }
       }
-      setConflict(false)
-      setSaveError(null)
+
+      // Full graph fallback
+      if (payload.graph) {
+        versionRef.current = payload.version
+        serverNodeCountRef.current = countGraphNodes(payload.graph)
+        lastSavedGraphRef.current = payload.graph as SceneGraph
+        lastRemoteGraphJsonRef.current = sceneGraphSignature(payload.graph)
+        applySceneGraphToEditor(payload.graph)
+        if (payload.graph.installedPlugins && payload.graph.installedPlugins.length > 0) {
+          void usePluginManager.getState().syncWithScene(payload.graph.installedPlugins)
+        }
+        setConflict(false)
+        setSaveError(null)
+      } else {
+        // Recover from version gap by fetching full scene (deduplicated)
+        if (isRecoveringRef.current) return
+        isRecoveringRef.current = true
+        void fetch(`/api/scenes/${meta.id}`)
+          .then(async (res) => {
+            if (!res.ok) return
+            const fullScene = (await res.json()) as {
+              version: number
+              nodeCount: number
+              graph: SceneGraph
+            }
+            if (fullScene && fullScene.version > versionRef.current) {
+              versionRef.current = fullScene.version
+              serverNodeCountRef.current = fullScene.nodeCount
+              lastSavedGraphRef.current = fullScene.graph
+              lastRemoteGraphJsonRef.current = sceneGraphSignature(fullScene.graph)
+              applySceneGraphToEditor(fullScene.graph)
+              if (
+                fullScene.graph.installedPlugins &&
+                fullScene.graph.installedPlugins.length > 0
+              ) {
+                void usePluginManager.getState().syncWithScene(fullScene.graph.installedPlugins)
+              }
+              setConflict(false)
+              setSaveError(null)
+            }
+          })
+          .catch(() => {})
+          .finally(() => {
+            isRecoveringRef.current = false
+          })
+      }
     })
 
     source.addEventListener('error', () => {
@@ -280,6 +370,7 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
 
     return () => source.close()
   }, [meta.id])
+
 
   const handleThumb = useCallback(
     async (blob: Blob) => {

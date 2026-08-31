@@ -84,6 +84,7 @@ export function useScenePresence(sceneId: string, enabled: boolean): ScenePresen
         isEditor: data.isEditor,
         canEdit: data.canEdit,
         editor: data.editor,
+        connected: true,
       })
     } catch {
       // A dropped heartbeat is transient; the next interval retries.
@@ -117,6 +118,7 @@ export function useScenePresence(sceneId: string, enabled: boolean): ScenePresen
           isEditor: data.isEditor,
           canEdit: data.canEdit,
           editor: data.editor,
+          connected: true,
         })
       } catch {
         await beatRef.current()
@@ -124,6 +126,7 @@ export function useScenePresence(sceneId: string, enabled: boolean): ScenePresen
     },
     [sceneId],
   )
+
 
   useEffect(() => {
     if (!active) return

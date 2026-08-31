@@ -1,4 +1,5 @@
 import type { SceneGraph } from '@pascal-app/core/clone-scene-graph'
+import type { SceneGraphPatch } from '@pascal-app/core'
 
 /**
  * Slug-safe scene identifier: lowercase alphanumerics and hyphens, ≤ 64 chars.
@@ -44,7 +45,10 @@ export interface SceneEvent {
   kind: string
   createdAt: string
   graph: SceneGraph
+  patch?: SceneGraphPatch
+  baseVersion?: number
 }
+
 
 export interface SceneSaveOptions {
   id?: SceneId
@@ -125,7 +129,10 @@ export interface SceneEventAppendOptions {
   version: number
   kind: string
   graph: SceneGraph
+  patch?: SceneGraphPatch
+  baseVersion?: number
 }
+
 
 export interface SceneEventListOptions {
   afterEventId?: number

@@ -3,7 +3,13 @@ import { z } from 'zod'
 import { authorizeSceneMutation, authorizeSceneRead } from '@/lib/auth/guard'
 import { publishedSceneIds } from '@/lib/auth/site-scenes'
 import { countGraphNodes, isEmptyGraphOverwrite } from '@/lib/empty-graph-guard'
-import { apiGraphSchema } from '@/lib/graph-schema'
+import {
+  applySceneGraphPatch,
+  computeSceneGraphDiff,
+  type SceneGraph,
+  type SceneGraphPatch,
+} from '@pascal-app/core'
+import { apiGraphPatchSchema, apiGraphSchema } from '@/lib/graph-schema'
 import {
   guardSceneApiRequest,
   sceneApiJson,
@@ -16,24 +22,38 @@ export const dynamic = 'force-dynamic'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
-const putSceneSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  graph: apiGraphSchema,
-  thumbnailUrl: z.string().url().nullable().optional(),
-  expectedVersion: z.number().int().nonnegative().optional(),
-  /**
-   * Overwriting a populated scene with a 0-node graph is rejected (409
-   * `empty_graph_rejected`) unless this is set: an empty PUT is a hydration
-   * race or a bug far more often than an intentional full deletion, and the
-   * wipe is silent while the deletion is recoverable from scene_revisions.
-   */
-  force: z.boolean().optional(),
-})
+const putSceneSchema = z
+  .object({
+    name: z.string().min(1).max(200).optional(),
+    graph: apiGraphSchema.optional(),
+    patch: apiGraphPatchSchema.optional(),
+    baseVersion: z.number().int().nonnegative().optional(),
+    thumbnailUrl: z.string().url().nullable().optional(),
+    expectedVersion: z.number().int().nonnegative().optional(),
+    /**
+     * Overwriting a populated scene with a 0-node graph is rejected (409
+     * `empty_graph_rejected`) unless this is set: an empty PUT is a hydration
+     * race or a bug far more often than an intentional full deletion, and the
+     * wipe is silent while the deletion is recoverable from scene_revisions.
+     */
+    force: z.boolean().optional(),
+  })
+  .refine((data) => data.graph !== undefined || data.patch !== undefined, {
+    message: 'Either "graph" or "patch" must be provided',
+  })
 
-const patchSceneSchema = z.object({
-  name: z.string().min(1).max(200),
-  expectedVersion: z.number().int().nonnegative().optional(),
-})
+const patchSceneSchema = z
+  .object({
+    name: z.string().min(1).max(200).optional(),
+    patch: apiGraphPatchSchema.optional(),
+    baseVersion: z.number().int().nonnegative().optional(),
+    expectedVersion: z.number().int().nonnegative().optional(),
+    thumbnailUrl: z.string().url().nullable().optional(),
+    force: z.boolean().optional(),
+  })
+  .refine((data) => data.name !== undefined || data.patch !== undefined, {
+    message: 'Either "name" or "patch" must be provided',
+  })
 
 export function OPTIONS(request: NextRequest) {
   return sceneApiPreflight(request)
@@ -91,7 +111,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 
   const ifMatch = parseIfMatch(request.headers.get('If-Match'))
-  const expectedVersion = ifMatch ?? parsed.data.expectedVersion
+  const expectedVersion =
+    ifMatch ?? parsed.data.expectedVersion ?? (parsed.data.patch ? parsed.data.baseVersion : undefined)
 
   const operations = await getSceneOperations()
   try {
@@ -113,9 +134,27 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }
     }
 
+    let targetGraph: SceneGraph
+    let diffPatch: SceneGraphPatch | null = null
+
+    if (parsed.data.patch) {
+      targetGraph = applySceneGraphPatch(existing.graph, parsed.data.patch as SceneGraphPatch)
+      diffPatch = parsed.data.patch as SceneGraphPatch
+    } else if (parsed.data.graph) {
+      targetGraph = parsed.data.graph as SceneGraph
+      diffPatch = computeSceneGraphDiff(existing.graph, targetGraph, existing.version)
+    } else {
+      return sceneApiJson(
+        request,
+        { error: 'invalid_request', details: 'Either graph or patch is required' },
+        { status: 400 },
+      )
+    }
+
+    const targetNodeCount = Object.keys(targetGraph.nodes ?? {}).length
     if (
       !parsed.data.force &&
-      isEmptyGraphOverwrite(countGraphNodes(parsed.data.graph), existing.nodeCount)
+      isEmptyGraphOverwrite(targetNodeCount, existing.nodeCount)
     ) {
       return sceneApiJson(
         request,
@@ -133,7 +172,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       name: parsed.data.name ?? existing.name,
       projectId: existing.projectId,
       ownerId: existing.ownerId,
-      graph: parsed.data.graph as never,
+      graph: targetGraph as never,
       thumbnailUrl:
         parsed.data.thumbnailUrl === undefined ? existing.thumbnailUrl : parsed.data.thumbnailUrl,
       expectedVersion: expectedVersion ?? existing.version,
@@ -143,7 +182,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         sceneId: id,
         version: meta.version,
         kind: 'save_scene',
-        graph: parsed.data.graph as never,
+        graph: targetGraph as never,
+        patch: diffPatch ?? undefined,
+        baseVersion: existing.version,
       })
     }
     return sceneApiJson(request, meta, {
@@ -153,6 +194,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     return handleStoreError(request, error, { includeCurrentVersionFor: id })
   }
 }
+
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const guard = guardSceneApiRequest(request)
@@ -206,7 +248,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   }
 
   const ifMatch = parseIfMatch(request.headers.get('If-Match'))
-  const expectedVersion = ifMatch ?? parsed.data.expectedVersion
+  const expectedVersion =
+    ifMatch ?? parsed.data.expectedVersion ?? (parsed.data.patch ? parsed.data.baseVersion : undefined)
 
   const operations = await getSceneOperations()
   try {
@@ -216,14 +259,86 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
     const auth = await authorizeSceneMutation(id, existing.ownerId)
     if (!auth.ok) return sceneApiJson(request, { error: auth.error }, { status: auth.status })
-    const meta = await operations.renameStoredScene(id, parsed.data.name, { expectedVersion })
-    return sceneApiJson(request, meta, {
-      headers: { ETag: `"${meta.version}"` },
-    })
+
+    if (parsed.data.patch) {
+      if (auth.user && operations.canTrackPresence) {
+        const editor = (await operations.listScenePresence(id)).find((p) => p.isEditor)
+        if (editor && editor.userId !== auth.user.id) {
+          return sceneApiJson(request, { error: 'scene_locked_by_editor' }, { status: 423 })
+        }
+      }
+
+      if (expectedVersion !== undefined && expectedVersion !== existing.version) {
+        return sceneApiJson(
+          request,
+          { error: 'version_conflict', currentVersion: existing.version },
+          { status: 409 },
+        )
+      }
+
+      const targetGraph = applySceneGraphPatch(existing.graph, parsed.data.patch as SceneGraphPatch)
+      const targetNodeCount = Object.keys(targetGraph.nodes ?? {}).length
+
+      if (
+        !parsed.data.force &&
+        isEmptyGraphOverwrite(targetNodeCount, existing.nodeCount)
+      ) {
+        return sceneApiJson(
+          request,
+          {
+            error: 'empty_graph_rejected',
+            details: `Refusing to overwrite ${existing.nodeCount} nodes with an empty graph. Pass "force": true to overwrite intentionally.`,
+            currentVersion: existing.version,
+            currentNodeCount: existing.nodeCount,
+          },
+          { status: 409 },
+        )
+      }
+
+      const meta = await operations.saveScene({
+        id,
+        name: parsed.data.name ?? existing.name,
+        projectId: existing.projectId,
+        ownerId: existing.ownerId,
+        graph: targetGraph as never,
+        thumbnailUrl:
+          parsed.data.thumbnailUrl === undefined ? existing.thumbnailUrl : parsed.data.thumbnailUrl,
+        expectedVersion: existing.version,
+      })
+
+      if (operations.canAppendSceneEvents) {
+        await operations.appendSceneEvent({
+          sceneId: id,
+          version: meta.version,
+          kind: 'save_scene',
+          graph: targetGraph as never,
+          patch: parsed.data.patch as SceneGraphPatch,
+          baseVersion: existing.version,
+        })
+      }
+
+      return sceneApiJson(request, meta, {
+        headers: { ETag: `"${meta.version}"` },
+      })
+    }
+
+    if (parsed.data.name) {
+      const meta = await operations.renameStoredScene(id, parsed.data.name, { expectedVersion })
+      return sceneApiJson(request, meta, {
+        headers: { ETag: `"${meta.version}"` },
+      })
+    }
+
+    return sceneApiJson(
+      request,
+      { error: 'invalid_request', details: 'Either name or patch must be provided' },
+      { status: 400 },
+    )
   } catch (error) {
     return handleStoreError(request, error, { includeCurrentVersionFor: id })
   }
 }
+
 
 /**
  * Parses an `If-Match` header value per RFC 7232. Accepts `"<version>"` or

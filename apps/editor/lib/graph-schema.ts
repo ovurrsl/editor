@@ -85,3 +85,60 @@ export const apiGraphSchema = z
       }
     }
   })
+
+export const apiGraphPatchSchema = z
+  .object({
+    baseVersion: z.number().int().nonnegative().optional(),
+    updatedNodes: z.record(z.string().min(1), z.unknown()).optional(),
+    createdNodes: z.record(z.string().min(1), z.unknown()).optional(),
+    deletedNodeIds: z.array(z.string().min(1)).optional(),
+    rootNodeIds: z.array(z.string().min(1)).optional(),
+    materials: z.record(z.string().min(1), z.unknown().nullable()).optional(),
+    collections: z.record(z.string().min(1), z.unknown().nullable()).optional(),
+    installedPlugins: z.array(z.string().min(1)).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.updatedNodes) {
+      for (const [nodeId, node] of Object.entries(value.updatedNodes)) {
+        if (node && typeof node === 'object' && 'id' in node && (node as any).id !== nodeId) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['updatedNodes', nodeId],
+            message: `Node key "${nodeId}" does not match node id "${(node as any).id}"`,
+          })
+        }
+        const res = validateNode(node)
+        if (!res.success) {
+          for (const issue of res.error.issues) {
+            ctx.addIssue({
+              code: 'custom',
+              path: ['updatedNodes', nodeId, ...issue.path],
+              message: issue.message,
+            })
+          }
+        }
+      }
+    }
+    if (value.createdNodes) {
+      for (const [nodeId, node] of Object.entries(value.createdNodes)) {
+        if (node && typeof node === 'object' && 'id' in node && (node as any).id !== nodeId) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['createdNodes', nodeId],
+            message: `Node key "${nodeId}" does not match node id "${(node as any).id}"`,
+          })
+        }
+        const res = validateNode(node)
+        if (!res.success) {
+          for (const issue of res.error.issues) {
+            ctx.addIssue({
+              code: 'custom',
+              path: ['createdNodes', nodeId, ...issue.path],
+              message: issue.message,
+            })
+          }
+        }
+      }
+    }
+  })
+
