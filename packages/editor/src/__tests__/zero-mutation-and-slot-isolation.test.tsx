@@ -30,16 +30,16 @@ describe('Strict Zero-Mutation & Slot Isolation Invariant Tests', () => {
         stageOverlay: mockStageOverlay,
         sidebarOverlay: mockSidebarOverlay,
         viewerContent: mockViewerContent,
-        sidebarTabs: [{ id: 'build', label: 'Build', icon: 'build', component: React.createElement('div', null, 'Build Panel') }],
+        sidebarTabs: [{ id: 'build', label: 'Build', icon: 'build' as any }],
         renderTabContent: (tabId: string) => React.createElement('div', { id: `tab-content-${tabId}` }),
-      })
+      } as any)
 
       expect(element).toBeDefined()
-      expect(element.type).toBe(EditorLayoutV2)
-      expect(element.props.viewerToolbarCenter).toBe(mockToolbarCenter)
-      expect(element.props.stageOverlay).toBe(mockStageOverlay)
-      expect(element.props.viewerToolbarLeft).toBe(mockToolbarLeft)
-      expect(element.props.viewerToolbarRight).toBe(mockToolbarRight)
+      expect(element.type).toBe(EditorLayoutV2 as any)
+      expect((element.props as any).viewerToolbarCenter).toBe(mockToolbarCenter)
+      expect((element.props as any).stageOverlay).toBe(mockStageOverlay)
+      expect((element.props as any).viewerToolbarLeft).toBe(mockToolbarLeft)
+      expect((element.props as any).viewerToolbarRight).toBe(mockToolbarRight)
     })
   })
 

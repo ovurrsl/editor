@@ -167,6 +167,19 @@ const PipePointHandles = ({ pipe, target }: { pipe: PipeSegmentNode; target: Obj
     detached: boolean
   } | null>(null)
 
+  const activeGestureCleanupRef = useRef<(() => void) | null>(null)
+  useEffect(() => {
+    return () => {
+      if (activeGestureCleanupRef.current) {
+        activeGestureCleanupRef.current()
+      }
+      if (dragRef.current) {
+        dragRef.current.cleanup()
+        dragRef.current = null
+      }
+    }
+  }, [])
+
   const makeRay = (clientX: number, clientY: number) => {
     const rect = gl.domElement.getBoundingClientRect()
     const ndc = new Vector2(
@@ -422,13 +435,21 @@ const PipePointHandles = ({ pipe, target }: { pipe: PipeSegmentNode; target: Obj
       }
     }
 
+    if (activeGestureCleanupRef.current) {
+      activeGestureCleanupRef.current()
+    }
+
     const cleanup = () => {
+      activeGestureCleanupRef.current = null
+      dragRef.current = null
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
       useViewer.getState().setInputDragging(false)
       document.body.style.cursor = ''
     }
+
+    activeGestureCleanupRef.current = cleanup
 
     dragRef.current = {
       index,
@@ -446,6 +467,13 @@ const PipePointHandles = ({ pipe, target }: { pipe: PipeSegmentNode; target: Obj
 
   const onRunMoveDown = (kind: RunMoveKind) => (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation()
+    if (activeGestureCleanupRef.current) {
+      activeGestureCleanupRef.current()
+    }
+    if (dragRef.current) {
+      dragRef.current.cleanup()
+      dragRef.current = null
+    }
     const parentId = (pipe.parentId ?? undefined) as AnyNodeId | undefined
     const initialPath = pipe.path.map((p) => [...p] as Point)
     const center = runAxisAndCenter(pipe)?.center ?? initialPath[0]!
@@ -616,8 +644,8 @@ const PipePointHandles = ({ pipe, target }: { pipe: PipeSegmentNode; target: Obj
       }
     }
 
-    const onUp = () => {
-      swallowNextClick()
+    const cleanup = () => {
+      activeGestureCleanupRef.current = null
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
@@ -626,6 +654,12 @@ const PipePointHandles = ({ pipe, target }: { pipe: PipeSegmentNode; target: Obj
       setRunMoving(false)
       setVerticalGhost(null)
       clearLivePreview()
+    }
+    activeGestureCleanupRef.current = cleanup
+
+    const onUp = () => {
+      swallowNextClick()
+      cleanup()
 
       const restore = useScene.getState()
       const restoredPreviewNodes = Array.from(previewDeletedSnapshots.values()).filter(

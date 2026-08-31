@@ -21,6 +21,7 @@ import { hasDrawableGeometry } from '../../lib/drawable-geometry'
 import { PERF_OVERLAY_ENABLED, pushGpuSample } from '../../lib/gpu-perf'
 import { applyIsolation, clearIsolation } from '../../lib/isolation'
 import { ensureKtx2Support } from '../../lib/ktx2-loader'
+import { createThrottledPointerEvents } from '../../hooks/use-throttled-pointer'
 import { clearMaterialCache, type ColorPreset, type RenderShading } from '../../lib/materials'
 import { initializeGpuRenderer, type RendererPowerPreference } from '../../lib/renderer-capability'
 import { getSceneTheme } from '../../lib/scene-themes'
@@ -527,6 +528,7 @@ const Viewer = forwardRef<ViewerHandle, ViewerProps>(function Viewer(
         transparentBackground ? 'bg-transparent' : isDark ? 'bg-[#1f2433]' : 'bg-[#fafafa]'
       }`}
       dpr={[1, maxDpr]}
+      events={createThrottledPointerEvents}
       frameloop="never"
       gl={
         ((props: { canvas?: HTMLCanvasElement; powerPreference?: RendererPowerPreference }) => {

@@ -262,7 +262,7 @@ export function PanelWrapper({
 
   // Expanding can grow the panel past an edge if it was dragged there while
   // collapsed — nudge it back inside the viewer bounds.
-  useLayoutEffect(() => {
+  const clampIntoBounds = useCallback(() => {
     if (isMobile || collapsed) return
     const el = panelRef.current
     if (!el) return
@@ -276,6 +276,19 @@ export function PanelWrapper({
       setOffset((prev) => ({ x: (prev?.x ?? 0) + dx, y: (prev?.y ?? 0) + dy }))
     }
   }, [collapsed, isMobile])
+
+  useLayoutEffect(() => {
+    clampIntoBounds()
+    if (isMobile || collapsed) return
+    const region = panelRef.current?.closest('[data-viewer-bounds]')
+    window.addEventListener('resize', clampIntoBounds)
+    const observer = region ? new ResizeObserver(clampIntoBounds) : null
+    if (region && observer) observer.observe(region)
+    return () => {
+      window.removeEventListener('resize', clampIntoBounds)
+      observer?.disconnect()
+    }
+  }, [clampIntoBounds, collapsed, isMobile])
 
   return (
     <div
@@ -298,7 +311,8 @@ export function PanelWrapper({
           ? undefined
           : {
               width,
-              transform: offset ? `translate(${offset.x}px, ${offset.y}px)` : undefined,
+              transform: offset ? `translate3d(${offset.x}px, ${offset.y}px, 0)` : undefined,
+              willChange: isDragging ? 'transform' : undefined,
             }
       }
     >

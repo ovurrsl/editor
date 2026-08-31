@@ -58,12 +58,12 @@ describe('Tier 2 Plugin Inspector Extensions & Slot Contracts', () => {
       // Inspect registered extensions per kind
       const palletRackExtensions = getInspectorExtensions('warehouse:pallet-rack')
       expect(palletRackExtensions.length).toBe(1)
-      expect(palletRackExtensions[0].id).toBe('test-plugin:rack-analytics')
-      expect(palletRackExtensions[0].title).toBe('Rack Structural Analysis')
+      expect(palletRackExtensions[0]?.id).toBe('test-plugin:rack-analytics')
+      expect(palletRackExtensions[0]?.title).toBe('Rack Structural Analysis')
 
       const cantileverExtensions = getInspectorExtensions('warehouse:cantilever')
       expect(cantileverExtensions.length).toBe(1)
-      expect(cantileverExtensions[0].id).toBe('test-plugin:rack-analytics')
+      expect(cantileverExtensions[0]?.id).toBe('test-plugin:rack-analytics')
 
       // Unrelated kind returns empty array
       expect(getInspectorExtensions('wall')).toEqual([])
@@ -97,7 +97,7 @@ describe('Tier 2 Plugin Inspector Extensions & Slot Contracts', () => {
         inspectorExtensions: [extensionV1],
       })
 
-      expect(getInspectorExtensions('wall')[0].title).toBe('Timber Stud Takeoff V1')
+      expect(getInspectorExtensions('wall')[0]?.title).toBe('Timber Stud Takeoff V1')
 
       // Re-load with V2
       await loadPlugin({
@@ -109,7 +109,7 @@ describe('Tier 2 Plugin Inspector Extensions & Slot Contracts', () => {
 
       const wallExtensions = getInspectorExtensions('wall')
       expect(wallExtensions.length).toBe(1)
-      expect(wallExtensions[0].title).toBe('Timber Stud Takeoff V2 (HMR)')
+      expect(wallExtensions[0]?.title).toBe('Timber Stud Takeoff V2 (HMR)')
     })
 
     test('registers zone takeoff extensions and allows retrieval', () => {
@@ -168,8 +168,8 @@ describe('Tier 2 Plugin Inspector Extensions & Slot Contracts', () => {
       ]
 
       expect(resolveActiveExtension(null, extensions)).toBeNull()
-      expect(resolveActiveExtension('warehouse:analytics', extensions)).toEqual(extensions[0])
-      expect(resolveActiveExtension('bones:engineering', extensions)).toEqual(extensions[1])
+      expect(resolveActiveExtension('warehouse:analytics', extensions)).toEqual(extensions[0]!)
+      expect(resolveActiveExtension('bones:engineering', extensions)).toEqual(extensions[1]!)
 
       // Stale or uninstalled extension ID safely returns null (falls back to regular mode)
       expect(resolveActiveExtension('uninstalled:extension', extensions)).toBeNull()

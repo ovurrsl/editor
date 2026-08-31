@@ -79,6 +79,16 @@ const _uvWorldPoint = new THREE.Vector3()
 const _uvWorldNormal = new THREE.Vector3()
 const _prevSegmentUvMatrix = new THREE.Matrix4()
 const _prevSegmentUvNormalMatrix = new THREE.Matrix3()
+const _scratchM1 = new THREE.Matrix4()
+const _scratchM2 = new THREE.Matrix4()
+const _scratchM3 = new THREE.Matrix4()
+const _scratchV1 = new THREE.Vector3()
+const _scratchV2 = new THREE.Vector3()
+const _scratchV3 = new THREE.Vector3()
+const _scratchV4 = new THREE.Vector3()
+const _scratchV5 = new THREE.Vector3()
+const _scratchCentroid = new THREE.Vector3()
+const _scratchNormal = new THREE.Vector3()
 
 function withSegmentUvMatrix<T>(matrix: THREE.Matrix4, build: () => T): T {
   _prevSegmentUvMatrix.copy(_segmentUvMatrix)
@@ -954,12 +964,12 @@ function remapDutchRakeBoardMaterials(geometry: THREE.BufferGeometry) {
   const triangleCount = (index?.count ?? position.count) / 3
   if (!Number.isFinite(triangleCount) || triangleCount <= 0) return
 
-  const a = new THREE.Vector3()
-  const b = new THREE.Vector3()
-  const c = new THREE.Vector3()
-  const ab = new THREE.Vector3()
-  const ac = new THREE.Vector3()
-  const normal = new THREE.Vector3()
+  const a = _scratchV1
+  const b = _scratchV2
+  const c = _scratchV3
+  const ab = _scratchV4
+  const ac = _scratchV5
+  const normal = _scratchNormal
   const triangleMaterials = new Array<number>(triangleCount).fill(DUTCH_RAKE_SIDE_MATERIAL_INDEX)
 
   for (let triangleIndex = 0; triangleIndex < triangleCount; triangleIndex += 1) {
@@ -1803,8 +1813,8 @@ function buildOccludingRoofInterior(
   const roofEntries = collectSiblingRoofEntries(parent, nodes)
   const currentEntry = roofEntries.find(({ segment }) => segment.id === node.id)
   if (!currentEntry) return null
-  const targetRoofInverse = composeRoofTransform(parent).invert()
-  const targetSegmentInverse = composeSegmentTransform(node).invert()
+  const targetRoofInverse = _prevSegmentUvMatrix.copy(composeRoofTransform(parent, _scratchM1)).invert()
+  const targetSegmentInverse = _segWorldMatrix.copy(composeSegmentTransform(node, _scratchM2)).invert()
   let combinedInterior: Brush | null = null
 
   for (let siblingIndex = 0; siblingIndex < roofEntries.length; siblingIndex++) {
@@ -1830,12 +1840,12 @@ function buildOccludingRoofInterior(
     const siblingBrushes = getRoofSegmentBrushes(sibling)
     if (!siblingBrushes) continue
 
-    const siblingInTargetRoof = new THREE.Matrix4()
-      .multiplyMatrices(targetRoofInverse, composeRoofTransform(entry.roof))
-      .multiply(composeSegmentTransform(sibling))
+    const siblingInTargetRoof = _matrix
+      .multiplyMatrices(targetRoofInverse, composeRoofTransform(entry.roof, _scratchM1))
+      .multiply(composeSegmentTransform(sibling, _scratchM2))
     const relativeMatrix =
       space === 'segment'
-        ? new THREE.Matrix4().multiplyMatrices(targetSegmentInverse, siblingInTargetRoof)
+        ? _segLocalMatrix.multiplyMatrices(targetSegmentInverse, siblingInTargetRoof)
         : siblingInTargetRoof
     csgGeometry(siblingBrushes.innerBrush).applyMatrix4(relativeMatrix)
     siblingBrushes.innerBrush.updateMatrixWorld()
@@ -1883,20 +1893,18 @@ function collectSiblingRoofEntries(
   })
 }
 
-function composeRoofTransform(roof: RoofNode): THREE.Matrix4 {
-  return new THREE.Matrix4().compose(
-    new THREE.Vector3(...roof.position),
-    new THREE.Quaternion().setFromAxisAngle(_yAxis, roof.rotation ?? 0),
-    new THREE.Vector3(1, 1, 1),
-  )
+function composeRoofTransform(roof: RoofNode, target?: THREE.Matrix4): THREE.Matrix4 {
+  const m = target ?? _scratchM1
+  _position.set(roof.position[0], roof.position[1], roof.position[2])
+  _quaternion.setFromAxisAngle(_yAxis, roof.rotation ?? 0)
+  return m.compose(_position, _quaternion, _scale)
 }
 
-function composeSegmentTransform(segment: RoofSegmentNode): THREE.Matrix4 {
-  return new THREE.Matrix4().compose(
-    new THREE.Vector3(...segment.position),
-    new THREE.Quaternion().setFromAxisAngle(_yAxis, segment.rotation ?? 0),
-    new THREE.Vector3(1, 1, 1),
-  )
+function composeSegmentTransform(segment: RoofSegmentNode, target?: THREE.Matrix4): THREE.Matrix4 {
+  const m = target ?? _scratchM2
+  _position.set(segment.position[0], segment.position[1], segment.position[2])
+  _quaternion.setFromAxisAngle(_yAxis, segment.rotation ?? 0)
+  return m.compose(_position, _quaternion, _scale)
 }
 
 // ============================================================================
@@ -2189,15 +2197,12 @@ function collectGeometryPlanes(geometry: THREE.BufferGeometry): THREE.Plane[] {
   const source = geometry.index ? geometry.toNonIndexed() : geometry
   const position = source.getAttribute('position') as THREE.BufferAttribute | undefined
   const planes: THREE.Plane[] = []
-  const a = new THREE.Vector3()
-  const b = new THREE.Vector3()
-  const c = new THREE.Vector3()
   if (!position) return planes
   for (let i = 0; i + 2 < position.count; i += 3) {
-    a.fromBufferAttribute(position, i)
-    b.fromBufferAttribute(position, i + 1)
-    c.fromBufferAttribute(position, i + 2)
-    const plane = new THREE.Plane().setFromCoplanarPoints(a, b, c)
+    _scratchV1.fromBufferAttribute(position, i)
+    _scratchV2.fromBufferAttribute(position, i + 1)
+    _scratchV3.fromBufferAttribute(position, i + 2)
+    const plane = new THREE.Plane().setFromCoplanarPoints(_scratchV1, _scratchV2, _scratchV3)
     if (Number.isFinite(plane.normal.x) && plane.normal.lengthSq() > 1e-10) {
       planes.push(plane.normalize())
     }
@@ -2229,8 +2234,8 @@ function splitShellByFacePlanes(
   const keptUvs: number[] = []
   const keptGroups: RawGeometryGroup[] = []
   let keptVertexCount = 0
-  const point = new THREE.Vector3()
-  const triNormal = new THREE.Vector3()
+  const point = _scratchV1
+  const triNormal = _scratchV2
 
   const pushTriangle = (
     targetPositions: number[],
@@ -2310,13 +2315,13 @@ export function remapRoofShellFaces(geometry: THREE.BufferGeometry, node: RoofSe
 
   const triangleCount = index.count / 3
   const triangleMaterials = new Array<number>(triangleCount).fill(0)
-  const a = new THREE.Vector3()
-  const b = new THREE.Vector3()
-  const c = new THREE.Vector3()
-  const ab = new THREE.Vector3()
-  const ac = new THREE.Vector3()
-  const centroid = new THREE.Vector3()
-  const normal = new THREE.Vector3()
+  const a = _scratchV1
+  const b = _scratchV2
+  const c = _scratchV3
+  const ab = _scratchV4
+  const ac = _scratchV5
+  const centroid = _scratchCentroid
+  const normal = _scratchNormal
 
   for (const group of geometry.groups) {
     const startTriangle = Math.floor(group.start / 3)
@@ -2622,11 +2627,10 @@ function addDutchRakeBoard(
   const baseOuter = base.clone().addScaledVector(outward, reach)
   const topPoly = [apex.clone(), base.clone(), baseOuter, apexOuter]
 
-  const normal = new THREE.Vector3()
-    .crossVectors(
-      new THREE.Vector3().subVectors(topPoly[1]!, topPoly[0]!),
-      new THREE.Vector3().subVectors(topPoly[2]!, topPoly[0]!),
-    )
+  _scratchV1.subVectors(topPoly[1]!, topPoly[0]!)
+  _scratchV2.subVectors(topPoly[2]!, topPoly[0]!)
+  const normal = _scratchNormal
+    .crossVectors(_scratchV1, _scratchV2)
     .normalize()
   if (normal.y < 0) {
     topPoly.reverse()
@@ -2923,17 +2927,18 @@ function createGeometryFromFaces(
     const p0 = face[0]!
     const p1 = face[1]!
     const p2 = face[2]!
-    const vA = new THREE.Vector3().subVectors(p1, p0)
-    const vB = new THREE.Vector3().subVectors(p2, p0)
-    const normal = new THREE.Vector3().crossVectors(vA, vB).normalize()
-    if (normal.lengthSq() < 1e-12) continue
+    _scratchV1.subVectors(p1, p0)
+    _scratchV2.subVectors(p2, p0)
+    _scratchNormal.crossVectors(_scratchV1, _scratchV2).normalize()
+    if (_scratchNormal.lengthSq() < 1e-12) continue
+    const normal = _scratchNormal
     let slopeAlignedDown: THREE.Vector3 | null = null
     let slopeAlignedAcross: THREE.Vector3 | null = null
     let slopeAlignedVOrigin = 0
 
     const slopeUvNormal =
       options?.treatBidirectionalSlopeFacesAsSlope && normal.y < 0
-        ? normal.clone().multiplyScalar(-1)
+        ? _scratchV3.copy(normal).multiplyScalar(-1)
         : normal
 
     if (Math.abs(slopeUvNormal.y) > SHINGLE_SURFACE_EPSILON) {

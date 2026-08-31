@@ -21,6 +21,8 @@ export function blockSelectionCentroid(
   return [total[0] / positions.length, total[1] / positions.length, total[2] / positions.length]
 }
 
+const _v1 = new Vector3()
+
 export function blockLocalPointToClient(
   point: BlockPoint,
   target: Object3D,
@@ -28,7 +30,8 @@ export function blockLocalPointToClient(
   canvas: HTMLCanvasElement,
 ): Vector2 | null {
   target.updateWorldMatrix(true, false)
-  const projected = target.localToWorld(new Vector3(...point)).project(camera)
+  _v1.set(point[0], point[1], point[2])
+  const projected = target.localToWorld(_v1).project(camera)
   if (![projected.x, projected.y, projected.z].every(Number.isFinite)) return null
   const rect = canvas.getBoundingClientRect()
   return new Vector2(

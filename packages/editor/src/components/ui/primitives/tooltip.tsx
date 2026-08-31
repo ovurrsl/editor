@@ -1,12 +1,15 @@
 'use client'
 
 import * as TooltipPrimitive from '@radix-ui/react-tooltip'
-import type * as React from 'react'
+import * as React from 'react'
 
 import { cn } from '../../../lib/utils'
 
+const TooltipProviderContext = React.createContext<boolean>(false)
+
 function TooltipProvider({
   delayDuration = 0,
+  children,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
   return (
@@ -14,14 +17,28 @@ function TooltipProvider({
       data-slot="tooltip-provider"
       delayDuration={delayDuration}
       {...props}
-    />
+    >
+      <TooltipProviderContext.Provider value={true}>
+        {children}
+      </TooltipProviderContext.Provider>
+    </TooltipPrimitive.Provider>
   )
 }
 
-function Tooltip({ ...props }: React.ComponentProps<typeof TooltipPrimitive.Root>) {
+function Tooltip({ children, ...props }: React.ComponentProps<typeof TooltipPrimitive.Root>) {
+  const hasProvider = React.useContext(TooltipProviderContext)
+  if (hasProvider) {
+    return (
+      <TooltipPrimitive.Root data-slot="tooltip" {...props}>
+        {children}
+      </TooltipPrimitive.Root>
+    )
+  }
   return (
     <TooltipProvider>
-      <TooltipPrimitive.Root data-slot="tooltip" {...props} />
+      <TooltipPrimitive.Root data-slot="tooltip" {...props}>
+        {children}
+      </TooltipPrimitive.Root>
     </TooltipProvider>
   )
 }

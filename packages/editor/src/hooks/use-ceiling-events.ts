@@ -7,7 +7,7 @@ import {
   sceneRegistry,
   useScene,
 } from '@pascal-app/core'
-import { useViewer } from '@pascal-app/viewer'
+import { createThrottledPointerMoveHandler, useViewer } from '@pascal-app/viewer'
 import { useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import { type Object3D, Plane, Raycaster, Vector2, Vector3 } from 'three'
@@ -152,7 +152,10 @@ export function useCeilingEvents() {
       emitter.emit('ceiling:move', ev)
     }
 
+    const throttledMove = createThrottledPointerMoveHandler<PointerEvent>(onMove)
+
     const onClick = (e: MouseEvent) => {
+      throttledMove.flush()
       if (useViewer.getState().cameraDragging) return
       if (e.button !== 0) return
       if (!isActive()) return
@@ -161,14 +164,18 @@ export function useCeilingEvents() {
       emitter.emit('ceiling:click', buildEvent(hit, e))
     }
 
-    const onPointerLeave = (e: PointerEvent) => emitLeave(e)
+    const onPointerLeave = (e: PointerEvent) => {
+      throttledMove.cancel()
+      emitLeave(e)
+    }
 
-    canvas.addEventListener('pointermove', onMove)
+    canvas.addEventListener('pointermove', throttledMove.handlePointerMove)
     canvas.addEventListener('click', onClick)
     canvas.addEventListener('pointerleave', onPointerLeave)
 
     return () => {
-      canvas.removeEventListener('pointermove', onMove)
+      throttledMove.cancel()
+      canvas.removeEventListener('pointermove', throttledMove.handlePointerMove)
       canvas.removeEventListener('click', onClick)
       canvas.removeEventListener('pointerleave', onPointerLeave)
     }

@@ -54,12 +54,7 @@ import { swallowNextClick } from './handles/use-handle-drag'
 const ALIGNMENT_THRESHOLD_M = 0.08
 const DRAG_THRESHOLD_PX = 4
 
-/**
- * Arm a 3D group move from a pointer-down on `nodeId`. Returns false
- * (attaching nothing) unless the node is a transformable member of a
- * multi-selection.
- */
-export function armGroupMove3d(args: {
+export type ArmGroupMoveArgs = {
   nodeId: AnyNodeId
   clientX: number
   clientY: number
@@ -68,7 +63,25 @@ export function armGroupMove3d(args: {
   camera: Camera
   raycaster: Raycaster
   domElement: HTMLCanvasElement
-}): boolean {
+}
+
+let activeGroupMove3DCancel: (() => void) | null = null
+
+export function cancelActiveGroupMove3D() {
+  if (activeGroupMove3DCancel) {
+    activeGroupMove3DCancel()
+  }
+}
+
+/**
+ * Arm a 3D group move from a pointer-down on `nodeId`. Returns false
+ * (attaching nothing) unless the node is a transformable member of a
+ * multi-selection.
+ */
+export function armGroupMove3d(args: ArmGroupMoveArgs): boolean {
+  if (activeGroupMove3DCancel) {
+    activeGroupMove3DCancel()
+  }
   const { nodeId, clientX, clientY, pointerId, camera, raycaster, domElement } = args
   const { selectedIds, levelId } = useViewer.getState().selection
   if (selectedIds.length < 2 || !selectedIds.includes(nodeId)) return false
@@ -286,6 +299,9 @@ export function armGroupMove3d(args: {
   // History resume is NOT here — it pairs one-to-one with the
   // `pauseSceneHistory` in `engage()`, on the commit and cancel paths.
   const teardown = () => {
+    if (activeGroupMove3DCancel === cancel) {
+      activeGroupMove3DCancel = null
+    }
     removeListeners()
     if (domElement.style.cursor === 'grabbing') domElement.style.cursor = ''
     useAlignmentGuides.getState().clear()
@@ -394,6 +410,7 @@ export function armGroupMove3d(args: {
     cancel()
   }
 
+  activeGroupMove3DCancel = cancel
   window.addEventListener('pointermove', onMove)
   window.addEventListener('pointerup', onUp, true)
   window.addEventListener('pointercancel', onPointerCancel)

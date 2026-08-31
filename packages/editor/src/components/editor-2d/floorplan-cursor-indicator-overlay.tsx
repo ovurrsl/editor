@@ -88,6 +88,37 @@ export const FloorplanCursorIndicatorOverlay = memo(function FloorplanCursorIndi
     return null
   }, [activeFloorplanToolConfig, floorplanSelectionTool, mode, structureLayer])
 
+  const cachedOverlayRectRef = useRef<{ left: number; top: number; width: number; height: number }>({
+    left: 0,
+    top: 0,
+    width: 0,
+    height: 0,
+  })
+
+  useLayoutEffect(() => {
+    const anchor = anchorRef.current
+    const overlayHost = anchor?.parentElement
+    if (!overlayHost) return
+
+    const updateRect = () => {
+      const rect = overlayHost.getBoundingClientRect()
+      cachedOverlayRectRef.current = {
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      }
+    }
+    updateRect()
+    const observer = new ResizeObserver(updateRect)
+    observer.observe(overlayHost)
+    window.addEventListener('resize', updateRect)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', updateRect)
+    }
+  }, [])
+
   useLayoutEffect(() => {
     const anchor = anchorRef.current
     const overlayHost = anchor?.parentElement
@@ -99,7 +130,7 @@ export const FloorplanCursorIndicatorOverlay = memo(function FloorplanCursorIndi
       return
     }
 
-    const overlayRect = overlayHost.getBoundingClientRect()
+    const overlayRect = cachedOverlayRectRef.current
     const nextPosition = projectFloorplanCursorPoint(cursorPoint, sceneToViewport, {
       x: overlayRect.left,
       y: overlayRect.top,
@@ -122,9 +153,9 @@ export const FloorplanCursorIndicatorOverlay = memo(function FloorplanCursorIndi
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute z-20"
+      className="pointer-events-none absolute top-0 left-0 z-20 will-change-transform"
       ref={anchorRef}
-      style={{ left: position.x, top: position.y }}
+      style={{ transform: `translate3d(${position.x}px, ${position.y}px, 0)` }}
     >
       {mode === 'delete' ? (
         <div

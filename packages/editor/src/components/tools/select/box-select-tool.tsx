@@ -203,8 +203,9 @@ function collectNodeIdsInScreenRect(
   rect: ScreenRect,
   camera: Camera,
   canvas: HTMLCanvasElement,
+  cachedRect?: DOMRect | DOMRectReadOnly,
 ): string[] {
-  const canvasRect = canvas.getBoundingClientRect()
+  const canvasRect = cachedRect ?? canvas.getBoundingClientRect()
   const result: string[] = []
 
   // Plan-footprint membership for the data kinds (walls / fences by their
@@ -385,13 +386,22 @@ const ScreenRectangleSelectTool: React.FC = () => {
 
   useEffect(() => {
     const canvas = gl.domElement
+    const cachedCanvasRectRef = { current: canvas.getBoundingClientRect() }
+
+    const updateCanvasRect = () => {
+      cachedCanvasRectRef.current = canvas.getBoundingClientRect()
+    }
+    const resizeObserver = new ResizeObserver(updateCanvasRect)
+    resizeObserver.observe(canvas)
 
     const flushPreview = () => {
       previewRafRef.current = null
       const rect = pendingPreviewRectRef.current
       if (!rect) return
       pendingPreviewRectRef.current = null
-      syncPreviewSelectedIds(collectNodeIdsInScreenRect(rect, camera, canvas))
+      syncPreviewSelectedIds(
+        collectNodeIdsInScreenRect(rect, camera, canvas, cachedCanvasRectRef.current),
+      )
     }
 
     const updateDrag = (event: PointerEvent) => {
@@ -440,7 +450,7 @@ const ScreenRectangleSelectTool: React.FC = () => {
       )
       const clampedRect = intersectScreenRects(
         rect,
-        screenRectFromDomRect(canvas.getBoundingClientRect()),
+        screenRectFromDomRect(cachedCanvasRectRef.current),
       )
       if (!clampedRect) {
         if (previewRafRef.current !== null) {
@@ -487,9 +497,11 @@ const ScreenRectangleSelectTool: React.FC = () => {
         )
         const clampedRect = intersectScreenRects(
           rect,
-          screenRectFromDomRect(canvas.getBoundingClientRect()),
+          screenRectFromDomRect(cachedCanvasRectRef.current),
         )
-        const ids = clampedRect ? collectNodeIdsInScreenRect(clampedRect, camera, canvas) : []
+        const ids = clampedRect
+          ? collectNodeIdsInScreenRect(clampedRect, camera, canvas, cachedCanvasRectRef.current)
+          : []
         commitBoxSelection(ids, event)
       }
 
@@ -508,6 +520,7 @@ const ScreenRectangleSelectTool: React.FC = () => {
       const viewer = useViewer.getState()
       if (viewer.cameraDragging || viewer.inputDragging) return
 
+      cachedCanvasRectRef.current = canvas.getBoundingClientRect()
       pointerDownRef.current = true
       isDraggingRef.current = false
       pointerIdRef.current = event.pointerId
@@ -529,6 +542,7 @@ const ScreenRectangleSelectTool: React.FC = () => {
     window.addEventListener('pointercancel', onPointerCancel)
 
     return () => {
+      resizeObserver.disconnect()
       canvas.removeEventListener('pointerdown', onCanvasPointerDown)
       window.removeEventListener('pointermove', updateDrag)
       window.removeEventListener('pointerup', finishDrag)

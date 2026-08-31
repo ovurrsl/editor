@@ -5,7 +5,7 @@ import {
   type GridEvent,
   sceneRegistry,
 } from '@pascal-app/core'
-import { useViewer } from '@pascal-app/viewer'
+import { createThrottledPointerMoveHandler, useViewer } from '@pascal-app/viewer'
 import { useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import { Plane, Raycaster, Vector2, Vector3 } from 'three'
@@ -89,19 +89,26 @@ export function useGridEvents(gridY: number) {
       emitter.emit(eventKey, payload)
     }
 
+    const throttledMove = createThrottledPointerMoveHandler<PointerEvent>((e) => {
+      emit('move', e)
+    })
+
     const handlePointerDown = (e: PointerEvent) => {
+      throttledMove.flush()
       if (useViewer.getState().cameraDragging) return
       if (e.button !== 0) return
       emit('pointerdown', e)
     }
 
     const handlePointerUp = (e: PointerEvent) => {
+      throttledMove.flush()
       if (useViewer.getState().cameraDragging) return
       if (e.button !== 0) return
       emit('pointerup', e)
     }
 
     const handleClick = (e: PointerEvent) => {
+      throttledMove.flush()
       if (useViewer.getState().cameraDragging) return
       if (e.button !== 0) return
       emit('click', e)
@@ -109,7 +116,7 @@ export function useGridEvents(gridY: number) {
 
     const handlePointerMove = (e: PointerEvent) => {
       // Emit move even if camera is dragging, so tools like PolygonEditor still work
-      emit('move', e)
+      throttledMove.handlePointerMove(e)
     }
 
     const handleDoubleClick = (e: MouseEvent) => {
@@ -131,6 +138,7 @@ export function useGridEvents(gridY: number) {
     canvas.addEventListener('contextmenu', handleContextMenu)
 
     return () => {
+      throttledMove.cancel()
       canvas.removeEventListener('pointerdown', handlePointerDown)
       canvas.removeEventListener('pointerup', handlePointerUp)
       canvas.removeEventListener('click', handleClick)

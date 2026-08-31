@@ -244,6 +244,24 @@ function getWallFaceMaterialIndex(
   return WALL_BAND_SLOT_MATERIAL_INDEX[getWallBandSlotId(side, band)]
 }
 
+const _wallV1 = new THREE.Vector3()
+const _wallV2 = new THREE.Vector3()
+const _wallV3 = new THREE.Vector3()
+const _wallAB = new THREE.Vector3()
+const _wallAC = new THREE.Vector3()
+const _wallNormal = new THREE.Vector3()
+const _wallCentroid = new THREE.Vector3()
+const _wallProjCentroid = new THREE.Vector2()
+const _wallWorldMat = new THREE.Matrix4()
+const _wallPosScratch = new THREE.Vector3()
+const _wallQuatScratch = new THREE.Quaternion()
+const _wallUvV1 = new THREE.Vector3()
+const _wallUvV2 = new THREE.Vector3()
+const _wallUvV3 = new THREE.Vector3()
+const _wallUvNormal = new THREE.Vector3()
+const _wallUvEdgeAB = new THREE.Vector3()
+const _wallUvEdgeAC = new THREE.Vector3()
+
 function assignWallMaterialGroups(
   geometry: THREE.BufferGeometry,
   wall: WallNode,
@@ -261,14 +279,14 @@ function assignWallMaterialGroups(
   }
 
   const triangleMaterials = new Array<number>(triangleCount).fill(0)
-  const a = new THREE.Vector3()
-  const b = new THREE.Vector3()
-  const c = new THREE.Vector3()
-  const ab = new THREE.Vector3()
-  const ac = new THREE.Vector3()
-  const normal = new THREE.Vector3()
-  const centroid = new THREE.Vector3()
-  const projectedCentroid = new THREE.Vector2()
+  const a = _wallV1
+  const b = _wallV2
+  const c = _wallV3
+  const ab = _wallAB
+  const ac = _wallAC
+  const normal = _wallNormal
+  const centroid = _wallCentroid
+  const projectedCentroid = _wallProjCentroid
   const maxBoundaryDistance = Math.max(
     getWallThickness(wall) * 0.02,
     WALL_FACE_EDGE_DISTANCE_EPSILON,
@@ -794,9 +812,9 @@ function updateWallGeometry(wallId: string, miterData: WallMiterData) {
   // World transform the render mesh will apply (position + Y-rotation below).
   // Reproduce it here so the UVs can be projected in WORLD space — see
   // `applyWorldPlanarWallUVs`.
-  const wallWorldMatrix = new THREE.Matrix4().compose(
-    new THREE.Vector3(node.start[0], slabElevation, node.start[1]),
-    new THREE.Quaternion().setFromAxisAngle(WALL_UV_Y_AXIS, -wallAngle),
+  const wallWorldMatrix = _wallWorldMat.compose(
+    _wallPosScratch.set(node.start[0], slabElevation, node.start[1]),
+    _wallQuatScratch.setFromAxisAngle(WALL_UV_Y_AXIS, -wallAngle),
     WALL_UV_UNIT_SCALE,
   )
   const newGeo = applyWorldPlanarWallUVs(builtGeo, wallWorldMatrix)
@@ -855,12 +873,12 @@ function applyWorldPlanarWallUVs(
   const position = target.getAttribute('position')
   if (!position || position.count === 0) return target
 
-  const a = new THREE.Vector3()
-  const b = new THREE.Vector3()
-  const c = new THREE.Vector3()
-  const normal = new THREE.Vector3()
-  const edgeAB = new THREE.Vector3()
-  const edgeAC = new THREE.Vector3()
+  const a = _wallUvV1
+  const b = _wallUvV2
+  const c = _wallUvV3
+  const normal = _wallUvNormal
+  const edgeAB = _wallUvEdgeAB
+  const edgeAC = _wallUvEdgeAC
   const uvs = new Float32Array(position.count * 2)
 
   for (let i = 0; i < position.count; i += 3) {
@@ -1253,7 +1271,7 @@ function collectCutoutBrushes(
     if (!positions) continue
 
     // Calculate bounds in wall-local space
-    const v3 = new THREE.Vector3()
+    const v3 = _wallPosScratch
     let minX = Number.POSITIVE_INFINITY,
       maxX = Number.NEGATIVE_INFINITY
     let minY = Number.POSITIVE_INFINITY,

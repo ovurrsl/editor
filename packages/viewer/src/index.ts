@@ -54,6 +54,13 @@ export { SceneEnvironment } from './components/viewer/scene-environment'
 export { useAssetUrl } from './hooks/use-asset-url'
 export { useGLTFKTX2 } from './hooks/use-gltf-ktx2'
 export { useNodeEvents } from './hooks/use-node-events'
+export {
+  createThrottledPointerEvents,
+  createThrottledPointerMoveHandler,
+  type PointerState,
+  useThrottledPointer,
+  type UseThrottledPointerOptions,
+} from './hooks/use-throttled-pointer'
 export { ASSETS_CDN_URL, resolveAssetUrl, resolveCdnUrl } from './lib/asset-url'
 export { backdropGradient, deepSkyColor, horizonHazeColor } from './lib/backdrop'
 export { applyWorldScaleBoxUVs } from './lib/box-uv'
@@ -141,6 +148,15 @@ export {
   SCENE_THEMES,
   type SceneTheme,
 } from './lib/scene-themes'
+export {
+  createSceneBvhMaintainer,
+  getMeshWorldInverseMatrix,
+  getTriangleNormalDirect,
+  intersectTriangleDirect,
+  isSceneBvhExcluded,
+  type SceneBvhMaintainer,
+  type SceneBvhMaintainerOptions,
+} from './lib/scene-bvh-maintainer'
 export { type HiddenReason, hideFromScene, showInScene } from './lib/scene-visibility'
 export {
   createSnapshotPipeline,
@@ -273,3 +289,28 @@ export {
 } from './systems/window/window-animation-system'
 export { buildWindowPreviewMesh, WindowSystem } from './systems/window/window-system'
 export { ZoneSystem } from './systems/zone/zone-system'
+export {
+  MathAllocPool,
+  _box,
+  _box3,
+  _e1,
+  _invQuat,
+  _line,
+  _m1,
+  _m2,
+  _m3_1,
+  _mInv,
+  _plane,
+  _q1,
+  _q2,
+  _ray,
+  _sphere,
+  _tri,
+  _triangle,
+  _v1,
+  _v2,
+  _v2_1,
+  _v2_2,
+  _v3,
+  _v4,
+} from './math/math-pool'

@@ -4950,6 +4950,12 @@ export function FloorplanPanel({
   useFloorplanCameraSyncBridge()
   const viewportHostRef = useRef<HTMLDivElement>(null)
   const svgRef = useRef<SVGSVGElement>(null)
+  const cachedSvgRectRef = useRef<{ left: number; top: number; width: number; height: number }>({
+    left: 0,
+    top: 0,
+    width: 0,
+    height: 0,
+  })
   const floorplanBackgroundRef = useRef<SVGRectElement>(null)
   const floorplanSceneRef = useRef<SVGGElement>(null)
   const floorplanContentRef = useRef<SVGGElement>(null)
@@ -6771,10 +6777,27 @@ export function FloorplanPanel({
         width: rect.width,
         height: rect.height,
       })
+      if (svgRef.current) {
+        const svgRect = svgRef.current.getBoundingClientRect()
+        cachedSvgRectRef.current = {
+          left: svgRect.left,
+          top: svgRect.top,
+          width: svgRect.width,
+          height: svgRect.height,
+        }
+      } else {
+        cachedSvgRectRef.current = {
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height,
+        }
+      }
       setIsPanelReady(true)
     }
     const observer = new ResizeObserver(update)
     observer.observe(el)
+    if (svgRef.current) observer.observe(svgRef.current)
     window.addEventListener('resize', update)
     update()
     return () => {
@@ -10304,9 +10327,12 @@ export function FloorplanPanel({
         state.currentClientX,
         state.currentClientY,
       )
+      const svgDomRect = cachedSvgRectRef.current.width > 0
+        ? screenRectFromDomRect(cachedSvgRectRef.current as DOMRect)
+        : screenRectFromDomRect(svg.getBoundingClientRect())
       const clampedRect = intersectScreenRects(
         rect,
-        screenRectFromDomRect(svg.getBoundingClientRect()),
+        svgDomRect,
       )
 
       if (!clampedRect) {
@@ -10347,9 +10373,10 @@ export function FloorplanPanel({
           event.clientX,
           event.clientY,
         )
-        const clampedRect = svg
-          ? intersectScreenRects(rect, screenRectFromDomRect(svg.getBoundingClientRect()))
-          : null
+        const svgDomRect = cachedSvgRectRef.current.width > 0
+          ? screenRectFromDomRect(cachedSvgRectRef.current as DOMRect)
+          : (svg ? screenRectFromDomRect(svg.getBoundingClientRect()) : null)
+        const clampedRect = svgDomRect ? intersectScreenRects(rect, svgDomRect) : null
         const ids = svg && clampedRect ? collectFloorplanScreenSelectionIds(clampedRect, svg) : []
 
         commitFloorplanScreenSelection(ids, event)
@@ -10691,7 +10718,7 @@ export function FloorplanPanel({
         !wallEndpointDragRef.current &&
         !siteVertexDragState
       ) {
-        const rect = event.currentTarget.getBoundingClientRect()
+        const rect = cachedSvgRectRef.current.width > 0 ? cachedSvgRectRef.current : event.currentTarget.getBoundingClientRect()
         const nextPosition = {
           x: event.clientX - rect.left,
           y: event.clientY - rect.top,
@@ -10740,7 +10767,7 @@ export function FloorplanPanel({
 
       event.preventDefault()
       event.stopPropagation()
-      const rect = svgRef.current?.getBoundingClientRect()
+      const rect = cachedSvgRectRef.current.width > 0 ? cachedSvgRectRef.current : svgRef.current?.getBoundingClientRect()
       if (rect) {
         setFloorplanCursorPosition({
           x: event.clientX - rect.left,
@@ -10770,7 +10797,7 @@ export function FloorplanPanel({
 
   const handleMarqueePointerMove = useCallback(
     (event: ReactPointerEvent<SVGRectElement>) => {
-      const rect = svgRef.current?.getBoundingClientRect()
+      const rect = cachedSvgRectRef.current.width > 0 ? cachedSvgRectRef.current : svgRef.current?.getBoundingClientRect()
       if (rect) {
         setFloorplanCursorPosition({
           x: event.clientX - rect.left,
@@ -10931,7 +10958,7 @@ export function FloorplanPanel({
     }
 
     const getFallbackClientPoint = () => {
-      const rect = svg.getBoundingClientRect()
+      const rect = cachedSvgRectRef.current.width > 0 ? cachedSvgRectRef.current : svg.getBoundingClientRect()
       return {
         clientX: rect.left + rect.width / 2,
         clientY: rect.top + rect.height / 2,

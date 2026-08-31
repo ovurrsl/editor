@@ -53,6 +53,13 @@ export function ActionMenu({ className }: { className?: string }) {
   const menuRef = useRef<HTMLDivElement>(null)
   const isSnappedToBottomCenterRef = useRef(false)
   const dragOffsetRef = useRef<{ x: number; y: number } | null>(null)
+  const cachedDimensionsRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 })
+  const cachedBoundsRef = useRef<{ left: number; top: number; right: number; bottom: number }>({
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
+  })
   const dragRef = useRef<{
     startX: number
     startY: number
@@ -63,6 +70,7 @@ export function ActionMenu({ className }: { className?: string }) {
     width: number
     height: number
     minTop: number
+    bounds: { left: number; top: number; right: number; bottom: number }
   } | null>(null)
 
   const handlePointerDown = useCallback(
@@ -73,6 +81,8 @@ export function ActionMenu({ className }: { className?: string }) {
       const rect = menuRef.current?.getBoundingClientRect()
       if (!rect) return
       const bounds = getDragBounds(menuRef.current)
+      cachedBoundsRef.current = bounds
+      cachedDimensionsRef.current = { width: rect.width, height: rect.height }
       const base = offset ?? { x: 0, y: 0 }
       dragRef.current = {
         startX: e.clientX,
@@ -84,6 +94,7 @@ export function ActionMenu({ className }: { className?: string }) {
         width: rect.width,
         height: rect.height,
         minTop: bounds.top + DRAG_MARGIN,
+        bounds,
       }
       dragOffsetRef.current = base
       setIsDragging(true)
@@ -99,20 +110,17 @@ export function ActionMenu({ className }: { className?: string }) {
     const dy = e.clientY - drag.startY
     
     // Snapping logic relative to the top of the viewer area (bounds.top + 12px)
-    const bounds = getDragBounds(menuRef.current)
+    const bounds = drag.bounds
     const SNAP_TOP_Y = bounds.top + 12
     const SNAP_THRESHOLD = 32
 
     const rawTop = drag.rectTop + dy
     const snapped = rawTop <= SNAP_TOP_Y + SNAP_THRESHOLD
     
-    // The rail resizes when it snaps (h-8 compact vs the full bar), and the
-    // offset below has to compensate for that. Measure what is on screen rather
-    // than naming a width: a hardcoded number stops matching the moment a button
-    // is added to or removed from the menu, and the rail then jumps on every drag.
-    const liveRect = menuRef.current?.getBoundingClientRect()
-    const currentWidth = liveRect?.width ?? drag.width
-    const currentHeight = liveRect?.height ?? drag.height
+    // Use cached dimensions from pointerdown / ResizeObserver instead of polling getBoundingClientRect()
+    // during active mouse movement to eliminate forced synchronous layouts.
+    const currentWidth = cachedDimensionsRef.current.width || drag.width
+    const currentHeight = cachedDimensionsRef.current.height || drag.height
 
     const targetLeft = drag.rectLeft + dx
     const minLeft = bounds.left + DRAG_MARGIN
@@ -151,7 +159,7 @@ export function ActionMenu({ className }: { className?: string }) {
     dragOffsetRef.current = nextOffset
 
     if (menuRef.current) {
-      menuRef.current.style.transform = `translate(calc(-50% + ${nextOffset.x}px), ${nextOffset.y}px)`
+      menuRef.current.style.transform = `translate3d(calc(-50% + ${nextOffset.x}px), ${nextOffset.y}px, 0)`
     }
   }, [])
 
@@ -181,7 +189,9 @@ export function ActionMenu({ className }: { className?: string }) {
     const el = menuRef.current
     if (!el) return
     const rect = el.getBoundingClientRect()
+    cachedDimensionsRef.current = { width: rect.width, height: rect.height }
     const bounds = getDragBounds(el)
+    cachedBoundsRef.current = bounds
 
     const SNAP_TOP_Y = bounds.top + 12
     const isCurrentlySnapped = Math.abs(rect.top - SNAP_TOP_Y) < 5
@@ -207,12 +217,24 @@ export function ActionMenu({ className }: { className?: string }) {
     clampIntoBounds()
     if (isMobile) return
     const region = menuRef.current?.closest('[data-viewer-bounds]')
+    const menuEl = menuRef.current
     window.addEventListener('resize', clampIntoBounds)
-    const observer = region ? new ResizeObserver(clampIntoBounds) : null
-    if (region && observer) observer.observe(region)
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target === menuEl) {
+          cachedDimensionsRef.current = {
+            width: entry.contentRect.width,
+            height: entry.contentRect.height,
+          }
+        }
+      }
+      clampIntoBounds()
+    })
+    if (region) observer.observe(region)
+    if (menuEl) observer.observe(menuEl)
     return () => {
       window.removeEventListener('resize', clampIntoBounds)
-      observer?.disconnect()
+      observer.disconnect()
     }
   }, [clampIntoBounds, isMobile])
 
@@ -246,8 +268,9 @@ export function ActionMenu({ className }: { className?: string }) {
         style={{
           bottom: isMobile ? MOBILE_BOTTOM_OFFSET : undefined,
           transform: !isMobile && currentOffset
-            ? `translate(calc(-50% + ${currentOffset.x}px), ${currentOffset.y}px)`
+            ? `translate3d(calc(-50% + ${currentOffset.x}px), ${currentOffset.y}px, 0)`
             : undefined,
+          willChange: isDragging ? 'transform' : undefined,
         }}
         transition={activeTransition}
         onPointerDown={handlePointerDown}

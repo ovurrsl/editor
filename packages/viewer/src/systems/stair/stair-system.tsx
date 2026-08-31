@@ -19,6 +19,19 @@ const STAIR_TREAD_MATERIAL_INDEX = 0
 const STAIR_SIDE_MATERIAL_INDEX = 1
 const _uvPosition = new THREE.Vector3()
 const _uvNormal = new THREE.Vector3()
+const _stairMatrix = new THREE.Matrix4()
+const _stairV0 = new THREE.Vector3()
+const _stairV1 = new THREE.Vector3()
+const _stairV2 = new THREE.Vector3()
+const _stairEdge1 = new THREE.Vector3()
+const _stairEdge2 = new THREE.Vector3()
+const _stairNormal = new THREE.Vector3()
+const _stairCurrentPos = new THREE.Vector3()
+const _stairLocalAttachPos = new THREE.Vector3()
+const _stairYAxis = new THREE.Vector3(0, 1, 0)
+const _stairCylDir = new THREE.Vector3()
+const _stairCylMid = new THREE.Vector3()
+const _stairCylQuat = new THREE.Quaternion()
 
 // ============================================================================
 // STAIR SYSTEM
@@ -204,10 +217,9 @@ function generateStairSegmentGeometry(
 
   // Rotate so extrusion is along X (width), and the shape is in the XZ plane
   // Shape is drawn in XY, extruded along Z → rotate -90° around Y then offset
-  const matrix = new THREE.Matrix4()
-  matrix.makeRotationY(-Math.PI / 2)
-  matrix.setPosition(width / 2, 0, 0)
-  extrudedGeometry.applyMatrix4(matrix)
+  _stairMatrix.makeRotationY(-Math.PI / 2)
+  _stairMatrix.setPosition(width / 2, 0, 0)
+  extrudedGeometry.applyMatrix4(_stairMatrix)
   extrudedGeometry.computeVertexNormals()
 
   const geometry = extrudedGeometry.index ? extrudedGeometry.toNonIndexed() : extrudedGeometry
@@ -371,12 +383,12 @@ function applyStraightStairMaterialGroups(geometry: THREE.BufferGeometry) {
   }
 
   const triangleMaterials: number[] = new Array(triangleCount)
-  const v0 = new THREE.Vector3()
-  const v1 = new THREE.Vector3()
-  const v2 = new THREE.Vector3()
-  const edge1 = new THREE.Vector3()
-  const edge2 = new THREE.Vector3()
-  const normal = new THREE.Vector3()
+  const v0 = _stairV0
+  const v1 = _stairV1
+  const v2 = _stairV2
+  const edge1 = _stairEdge1
+  const edge2 = _stairEdge2
+  const normal = _stairNormal
 
   for (let triangleIndex = 0; triangleIndex < triangleCount; triangleIndex++) {
     const vertexOffset = triangleIndex * 3
@@ -472,7 +484,7 @@ interface SegmentTransform {
  */
 function computeSegmentTransforms(segments: StairSegmentNode[]): SegmentTransform[] {
   const transforms: SegmentTransform[] = []
-  let currentPos = new THREE.Vector3(0, 0, 0)
+  _stairCurrentPos.set(0, 0, 0)
   let currentRot = 0
 
   for (let i = 0; i < segments.length; i++) {
@@ -480,36 +492,36 @@ function computeSegmentTransforms(segments: StairSegmentNode[]): SegmentTransfor
 
     if (i === 0) {
       transforms.push({
-        position: [currentPos.x, currentPos.y, currentPos.z],
+        position: [_stairCurrentPos.x, _stairCurrentPos.y, _stairCurrentPos.z],
         rotation: currentRot,
       })
     } else {
       const prev = segments[i - 1]!
-      const localAttachPos = new THREE.Vector3()
+      _stairLocalAttachPos.set(0, 0, 0)
       let rotChange = 0
 
       switch (segment.attachmentSide) {
         case 'front':
-          localAttachPos.set(0, prev.height, prev.length)
+          _stairLocalAttachPos.set(0, prev.height, prev.length)
           rotChange = 0
           break
         case 'left':
-          localAttachPos.set(prev.width / 2, prev.height, prev.length / 2)
+          _stairLocalAttachPos.set(prev.width / 2, prev.height, prev.length / 2)
           rotChange = Math.PI / 2
           break
         case 'right':
-          localAttachPos.set(-prev.width / 2, prev.height, prev.length / 2)
+          _stairLocalAttachPos.set(-prev.width / 2, prev.height, prev.length / 2)
           rotChange = -Math.PI / 2
           break
       }
 
       // Rotate local attachment point by previous global rotation
-      localAttachPos.applyAxisAngle(new THREE.Vector3(0, 1, 0), currentRot)
-      currentPos = currentPos.clone().add(localAttachPos)
+      _stairLocalAttachPos.applyAxisAngle(_stairYAxis, currentRot)
+      _stairCurrentPos.add(_stairLocalAttachPos)
       currentRot += rotChange
 
       transforms.push({
-        position: [currentPos.x, currentPos.y, currentPos.z],
+        position: [_stairCurrentPos.x, _stairCurrentPos.y, _stairCurrentPos.z],
         rotation: currentRot,
       })
     }
@@ -1011,9 +1023,12 @@ function buildOffsetRailSegmentGeometries(
     const end = points[index + 1]
     if (!(start && end)) continue
 
+    _stairCurrentPos.copy(start).addScaledVector(_stairYAxis, heightOffset)
+    _stairLocalAttachPos.copy(end).addScaledVector(_stairYAxis, heightOffset)
+
     const segmentGeometry = createCylinderBetweenPoints(
-      start.clone().add(new THREE.Vector3(0, heightOffset, 0)),
-      end.clone().add(new THREE.Vector3(0, heightOffset, 0)),
+      _stairCurrentPos,
+      _stairLocalAttachPos,
       radius,
       8,
     )
@@ -1051,19 +1066,16 @@ function createCylinderBetweenPoints(
   radius: number,
   radialSegments: number,
 ): THREE.BufferGeometry | null {
-  const direction = new THREE.Vector3().subVectors(end, start)
-  const length = direction.length()
+  _stairCylDir.subVectors(end, start)
+  const length = _stairCylDir.length()
   if (length <= 1e-5) return null
 
-  const midpoint = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5)
-  const quaternion = new THREE.Quaternion().setFromUnitVectors(
-    new THREE.Vector3(0, 1, 0),
-    direction.clone().normalize(),
-  )
+  _stairCylMid.addVectors(start, end).multiplyScalar(0.5)
+  _stairCylQuat.setFromUnitVectors(_stairYAxis, _stairCylDir.normalize())
 
   const geometry = new THREE.CylinderGeometry(radius, radius, length, radialSegments)
-  geometry.applyQuaternion(quaternion)
-  geometry.translate(midpoint.x, midpoint.y, midpoint.z)
+  geometry.applyQuaternion(_stairCylQuat)
+  geometry.translate(_stairCylMid.x, _stairCylMid.y, _stairCylMid.z)
   return geometry
 }
 

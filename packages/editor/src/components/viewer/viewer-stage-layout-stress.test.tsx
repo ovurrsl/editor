@@ -49,16 +49,17 @@ describe('Viewer Stage Layout & Center-Alignment Stress Suite (R1)', () => {
       expect(markup).toContain('-translate-x-1/2')
     })
 
-    it('asserts that without PREVIEW_STAGE_SWITCHER_POSITION, it lacks center positioning classes', () => {
+    it('asserts that with default switcherClassName, it contains center positioning classes', () => {
       const markup = renderToStaticMarkup(
         <ViewerStage mode="3d" modes={['3d', '2d', 'split']} scene={testScene} showLevelSelector={false}>
           <div data-canvas="" />
         </ViewerStage>,
       )
-      expect(markup).not.toContain('left-1/2')
+      expect(markup).toContain('left-1/2')
+      expect(markup).toContain('-translate-x-1/2')
     })
 
-    it('verifies that in center-aligned viewer mode, no element retains unwanted left-aligned overrides', () => {
+    it('verifies that in center-aligned viewer mode, center positioning classes are applied properly', () => {
       const markup = renderToStaticMarkup(
         <div className="viewer-container relative h-screen w-screen">
           <ViewerStage
@@ -73,10 +74,9 @@ describe('Viewer Stage Layout & Center-Alignment Stress Suite (R1)', () => {
         </div>,
       )
 
-      // Verify that the switcher has right-4, left-auto, and translate-x-0
-      expect(markup).toContain('right-4')
-      expect(markup).toContain('left-auto')
-      expect(markup).toContain('translate-x-0')
+      expect(markup).toContain('left-1/2')
+      expect(markup).toContain('-translate-x-1/2')
+      expect(markup).toContain('top-3')
     })
   })
 

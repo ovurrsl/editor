@@ -6,6 +6,7 @@ import {
   type NodeEvent,
 } from '@pascal-app/core'
 import type { ThreeEvent } from '@react-three/fiber'
+import { _v1 } from '../math/math-pool'
 import useViewer from '../store/use-viewer'
 
 // Derive `{ node, event }` per kind directly from the `AnyNode`
@@ -18,11 +19,12 @@ type NodeByKind<K extends AnyNodeType> = Extract<AnyNode, { type: K }>
 export function useNodeEvents<K extends AnyNodeType>(node: NodeByKind<K>, type: K) {
   const emit = (suffix: EventSuffix, e: ThreeEvent<PointerEvent>) => {
     const eventKey = `${type}:${suffix}` as `${K}:${EventSuffix}`
-    const localPoint = e.object.worldToLocal(e.point.clone())
+    _v1.copy(e.point)
+    e.object.worldToLocal(_v1)
     const payload: NodeEvent<NodeByKind<K>> = {
       node,
       position: [e.point.x, e.point.y, e.point.z],
-      localPosition: [localPoint.x, localPoint.y, localPoint.z],
+      localPosition: [_v1.x, _v1.y, _v1.z],
       normal: e.face ? [e.face.normal.x, e.face.normal.y, e.face.normal.z] : undefined,
       faceIndex: e.faceIndex ?? undefined,
       object: e.object,

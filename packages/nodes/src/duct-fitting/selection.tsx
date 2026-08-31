@@ -22,7 +22,7 @@ import {
 } from '@pascal-app/editor'
 import { useViewer } from '@pascal-app/viewer'
 import { createPortal, type ThreeEvent, useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   BufferGeometry,
   Euler,
@@ -340,6 +340,15 @@ const FittingHandles = ({ fitting, target }: { fitting: DuctFittingNode; target:
   // pointer handlers own the gesture), exactly like the duct-segment rig.
   const [dragging, setDragging] = useState(false)
   const [sideSign, setSideSign] = useState(1)
+  const activeDragCleanupRef = useRef<(() => void) | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (activeDragCleanupRef.current) {
+        activeDragCleanupRef.current()
+      }
+    }
+  }, [])
 
   const makeRay = (clientX: number, clientY: number) => {
     const rect = gl.domElement.getBoundingClientRect()
@@ -445,6 +454,9 @@ const FittingHandles = ({ fitting, target }: { fitting: DuctFittingNode; target:
     ) =>
     (e: ThreeEvent<PointerEvent>) => {
       e.stopPropagation()
+      if (activeDragCleanupRef.current) {
+        activeDragCleanupRef.current()
+      }
       const initialPosition = [...fitting.position] as Point
       const initialRotation = [...fitting.rotation] as Point
       const connectivity = analyzePortConnectivity(fitting as AnyNode, useScene.getState().nodes)
@@ -471,6 +483,7 @@ const FittingHandles = ({ fitting, target }: { fitting: DuctFittingNode; target:
       }
 
       const cleanup = () => {
+        activeDragCleanupRef.current = null
         window.removeEventListener('pointermove', onMove)
         window.removeEventListener('pointerup', onUp)
         window.removeEventListener('pointercancel', onUp)
@@ -478,6 +491,7 @@ const FittingHandles = ({ fitting, target }: { fitting: DuctFittingNode; target:
         setDragging(false)
         if (document.body.style.cursor === cursor) document.body.style.cursor = ''
       }
+      activeDragCleanupRef.current = cleanup
 
       const onUp = () => {
         // Swallow the trailing synthetic click so it doesn't reach the
@@ -611,6 +625,9 @@ const FittingHandles = ({ fitting, target }: { fitting: DuctFittingNode; target:
     (dimension: FittingDimension, axisLocal: Vector3, cursor: Cursor) =>
     (e: ThreeEvent<PointerEvent>) => {
       e.stopPropagation()
+      if (activeDragCleanupRef.current) {
+        activeDragCleanupRef.current()
+      }
       const baseValue = fitting[dimension]
       const initialPatch = { [dimension]: baseValue } as Partial<DuctFittingNode>
       const centerWorld = toWorld(fitting.position as Point)
@@ -652,6 +669,7 @@ const FittingHandles = ({ fitting, target }: { fitting: DuctFittingNode; target:
       }
 
       const cleanup = () => {
+        activeDragCleanupRef.current = null
         window.removeEventListener('pointermove', onMove)
         window.removeEventListener('pointerup', onUp)
         window.removeEventListener('pointercancel', onUp)
@@ -659,6 +677,7 @@ const FittingHandles = ({ fitting, target }: { fitting: DuctFittingNode; target:
         setDragging(false)
         if (document.body.style.cursor === cursor) document.body.style.cursor = ''
       }
+      activeDragCleanupRef.current = cleanup
 
       const onUp = () => {
         swallowNextClick()

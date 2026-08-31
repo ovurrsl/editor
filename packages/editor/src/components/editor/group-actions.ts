@@ -77,6 +77,14 @@ export function canGroupPickUp(): boolean {
   return groupParticipantIds().length > 0
 }
 
+let activeGroupPickUpCancel: (() => void) | null = null
+
+export function cancelActiveGroupPickUp() {
+  if (activeGroupPickUpCancel) {
+    activeGroupPickUpCancel()
+  }
+}
+
 /**
  * Pick up the current multi-selection: it follows the cursor (delta-relative)
  * until a click commits, mirroring the single-node `movingNode` flow. Returns
@@ -91,6 +99,9 @@ export function canGroupPickUp(): boolean {
 export function startGroupPickUp(
   opts: { onCancel?: () => void; positionAtCursor?: boolean; scopeToSelection?: boolean } = {},
 ): boolean {
+  if (activeGroupPickUpCancel) {
+    activeGroupPickUpCancel()
+  }
   const { selectedIds, levelId } = useViewer.getState().selection
   const participantIds = groupParticipantIds()
   if (participantIds.length === 0) return false
@@ -305,6 +316,7 @@ export function startGroupPickUp(
     window.removeEventListener('pointermove', onMove)
     window.removeEventListener('pointerdown', onPointerDown, true)
     window.removeEventListener('pointerup', onPointerUp, true)
+    window.removeEventListener('pointercancel', onPointerCancel, true)
     window.removeEventListener('keydown', onKeyDown, true)
     window.removeEventListener('contextmenu', onContextMenu, true)
   }
@@ -312,6 +324,9 @@ export function startGroupPickUp(
   // History resume pairs one-to-one with the pause above, on the commit and
   // cancel paths only.
   const teardown = () => {
+    if (activeGroupPickUpCancel === cancel) {
+      activeGroupPickUpCancel = null
+    }
     removeListeners()
     if (document.body.style.cursor === 'grabbing') document.body.style.cursor = ''
     useAlignmentGuides.getState().clear()
@@ -351,6 +366,10 @@ export function startGroupPickUp(
 
   const onMove = (e: PointerEvent) => {
     applyMove(e)
+  }
+
+  const onPointerCancel = () => {
+    cancel()
   }
 
   // Capture phase: commit before the press reaches selection / tools, so the
@@ -428,9 +447,11 @@ export function startGroupPickUp(
     e.stopPropagation()
   }
 
+  activeGroupPickUpCancel = cancel
   window.addEventListener('pointermove', onMove)
   window.addEventListener('pointerdown', onPointerDown, true)
   window.addEventListener('pointerup', onPointerUp, true)
+  window.addEventListener('pointercancel', onPointerCancel, true)
   window.addEventListener('keydown', onKeyDown, true)
   window.addEventListener('contextmenu', onContextMenu, true)
   return true

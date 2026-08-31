@@ -45,7 +45,7 @@ import {
   useInteractionScope,
   useMeasurementDraft,
 } from '@pascal-app/editor'
-import { setSurfaceRaycastLayers, useViewer } from '@pascal-app/viewer'
+import { createThrottledPointerMoveHandler, setSurfaceRaycastLayers, useViewer } from '@pascal-app/viewer'
 import { Html } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { type FC, useEffect, useMemo, useRef, useState } from 'react'
@@ -73,6 +73,7 @@ import { MeshBasicNodeMaterial } from 'three/webgpu'
 import { matchMeasurementFeatureForNode } from './resolve'
 import {
   createMeasurementSurfaceQuerySession,
+  getCachedCanvasRect,
   type MeasurementSurfacePreference,
   type MeasurementSurfaceQuerySession,
   type MeasurementAxisSurfaceIntersection as QueriedAxisSurfaceIntersection,
@@ -525,7 +526,7 @@ function setRayFromPointer(
   camera: Camera,
   canvas: HTMLCanvasElement,
 ) {
-  const rect = canvas.getBoundingClientRect()
+  const rect = getCachedCanvasRect(canvas)
   pointer.set(
     ((event.clientX - rect.left) / rect.width) * 2 - 1,
     -((event.clientY - rect.top) / rect.height) * 2 + 1,
@@ -539,7 +540,7 @@ function worldPointScreenDistance(
   camera: Camera,
   canvas: HTMLCanvasElement,
 ): number {
-  const rect = canvas.getBoundingClientRect()
+  const rect = getCachedCanvasRect(canvas)
   const projected = point.clone().project(camera)
   if (!Number.isFinite(projected.z) || projected.z < -1 || projected.z > 1) {
     return Number.POSITIVE_INFINITY
@@ -2034,7 +2035,10 @@ export const MeasurementTool: FC = () => {
       )
     }
 
+    const throttledMove = createThrottledPointerMoveHandler<PointerEvent>(onPointerMove)
+
     const onPointerLeave = () => {
+      throttledMove.cancel()
       if (vertexGesture.current) return
       const draft = useMeasurementDraft.getState()
       if (draft.stage !== 'collecting') return
@@ -2042,6 +2046,7 @@ export const MeasurementTool: FC = () => {
     }
 
     const onPointerUp = (event: PointerEvent) => {
+      throttledMove.flush()
       const gesture = vertexGesture.current
       if (!gesture || gesture.pointerId !== event.pointerId) return
       consume(event)
@@ -2060,6 +2065,7 @@ export const MeasurementTool: FC = () => {
     }
 
     const onPointerCancel = (event: PointerEvent) => {
+      throttledMove.cancel()
       const gesture = vertexGesture.current
       if (!gesture || gesture.pointerId !== event.pointerId) return
       consume(event)
@@ -2067,6 +2073,7 @@ export const MeasurementTool: FC = () => {
     }
 
     const onClick = (event: MouseEvent) => {
+      throttledMove.flush()
       if (event.button !== 0 || useViewer.getState().cameraDragging) return
       const draft = useMeasurementDraft.getState()
       if (draft.owner && draft.owner !== '3d') return
@@ -2147,10 +2154,13 @@ export const MeasurementTool: FC = () => {
       }
     }
 
-    const onBlur = () => clearVertexGesture(false)
+    const onBlur = () => {
+      throttledMove.cancel()
+      clearVertexGesture(false)
+    }
 
     canvas.addEventListener('pointerdown', onPointerDown, true)
-    canvas.addEventListener('pointermove', onPointerMove, true)
+    canvas.addEventListener('pointermove', throttledMove.handlePointerMove, true)
     canvas.addEventListener('pointerup', onPointerUp, true)
     canvas.addEventListener('pointercancel', onPointerCancel, true)
     canvas.addEventListener('pointerleave', onPointerLeave, true)
@@ -2159,10 +2169,11 @@ export const MeasurementTool: FC = () => {
     document.addEventListener('keydown', onKeyDown, true)
     window.addEventListener('blur', onBlur)
     return () => {
+      throttledMove.cancel()
       cancelVertexGesture.current = () => {}
       clearVertexGesture(false)
       canvas.removeEventListener('pointerdown', onPointerDown, true)
-      canvas.removeEventListener('pointermove', onPointerMove, true)
+      canvas.removeEventListener('pointermove', throttledMove.handlePointerMove, true)
       canvas.removeEventListener('pointerup', onPointerUp, true)
       canvas.removeEventListener('pointercancel', onPointerCancel, true)
       canvas.removeEventListener('pointerleave', onPointerLeave, true)

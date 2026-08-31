@@ -9,7 +9,7 @@ import {
   useLiveNodeOverrides,
   useScene,
 } from '@pascal-app/core'
-import { useViewer } from '@pascal-app/viewer'
+import { createThrottledPointerMoveHandler, useViewer } from '@pascal-app/viewer'
 import { type ThreeEvent, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import { type Camera, type Object3D, type Plane, type Ray, Vector2, type Vector3 } from 'three'
@@ -75,23 +75,40 @@ type UseHandleDragArgs =
       onTap: (event: ThreeEvent<PointerEvent>) => void
     }
 
+let activeSwallowCleanup: (() => void) | null = null
+
 export function swallowNextClick() {
+  if (activeSwallowCleanup) {
+    activeSwallowCleanup()
+  }
   const swallow = (clickEvent: Event) => {
     clickEvent.stopPropagation()
     clickEvent.preventDefault()
   }
-  window.addEventListener('click', swallow, { capture: true, once: true })
-  setTimeout(() => {
+  const timeoutId = setTimeout(() => {
     window.removeEventListener('click', swallow, { capture: true })
+    if (activeSwallowCleanup === cleanup) {
+      activeSwallowCleanup = null
+    }
   }, 300)
+
+  const cleanup = () => {
+    clearTimeout(timeoutId)
+    window.removeEventListener('click', swallow, { capture: true })
+  }
+  activeSwallowCleanup = cleanup
+  window.addEventListener('click', swallow, { capture: true, once: true })
 }
 
-function suppressInputDraggingUntilPointerRelease(pointerId: number) {
+function suppressInputDraggingUntilPointerRelease(pointerId: number): () => void {
   const previousInputDragging = useViewer.getState().inputDragging
   useViewer.getState().setInputDragging(true)
 
+  let cleaned = false
   function restore(event?: PointerEvent) {
+    if (cleaned) return
     if (event && event.pointerId !== pointerId) return
+    cleaned = true
     useViewer.getState().setInputDragging(previousInputDragging)
     window.removeEventListener('pointerup', restore)
     window.removeEventListener('pointercancel', restore)
@@ -104,6 +121,8 @@ function suppressInputDraggingUntilPointerRelease(pointerId: number) {
   window.addEventListener('pointerup', restore)
   window.addEventListener('pointercancel', restore)
   window.addEventListener('blur', onBlur)
+
+  return () => restore()
 }
 
 export function useHandleDrag(args: UseHandleDragArgs) {
@@ -120,7 +139,8 @@ export function useHandleDrag(args: UseHandleDragArgs) {
     suppressBoxSelectForPointer(event)
 
     if (args.kind === 'tap') {
-      suppressInputDraggingUntilPointerRelease(event.nativeEvent.pointerId)
+      const releaseCleanup = suppressInputDraggingUntilPointerRelease(event.nativeEvent.pointerId)
+      dragCleanupRef.current = releaseCleanup
       swallowNextClick()
       sfxEmitter.emit('sfx:item-pick')
       document.body.style.cursor = ''
@@ -131,9 +151,10 @@ export function useHandleDrag(args: UseHandleDragArgs) {
     const { cursor, dragControls, handleIndex, node, rideObject, setIsDragging } = args
     rideObject.updateMatrixWorld()
 
+    const cachedCanvasRect = gl.domElement.getBoundingClientRect()
     const ndc = new Vector2()
     const setPointerRay = (clientX: number, clientY: number) => {
-      const rect = gl.domElement.getBoundingClientRect()
+      const rect = cachedCanvasRect
       ndc.set(
         ((clientX - rect.left) / rect.width) * 2 - 1,
         -((clientY - rect.top) / rect.height) * 2 + 1,
@@ -194,8 +215,11 @@ export function useHandleDrag(args: UseHandleDragArgs) {
       }
     }
 
+    const throttledMove = createThrottledPointerMoveHandler<PointerEvent>(onMove)
+
     const cleanup = () => {
-      window.removeEventListener('pointermove', onMove)
+      throttledMove.cancel()
+      window.removeEventListener('pointermove', throttledMove.handlePointerMove)
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onCancel)
       window.removeEventListener('keydown', onKeyDown, true)
@@ -218,6 +242,7 @@ export function useHandleDrag(args: UseHandleDragArgs) {
     }
 
     const onUp = () => {
+      throttledMove.flush()
       swallowNextClick()
       sfxEmitter.emit('sfx:item-place')
       if (lastPatch) {
@@ -233,6 +258,7 @@ export function useHandleDrag(args: UseHandleDragArgs) {
     }
 
     const onCancel = () => {
+      throttledMove.cancel()
       clearOverride()
       cleanup()
     }
@@ -248,7 +274,7 @@ export function useHandleDrag(args: UseHandleDragArgs) {
     }
 
     dragCleanupRef.current = onCancel
-    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointermove', throttledMove.handlePointerMove)
     window.addEventListener('pointerup', onUp)
     window.addEventListener('pointercancel', onCancel)
     window.addEventListener('keydown', onKeyDown, true)

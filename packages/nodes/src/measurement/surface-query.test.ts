@@ -243,3 +243,25 @@ describe('polygon measurement surface intent', () => {
     material.dispose()
   })
 })
+
+describe('forced synchronous layout elimination (R2)', () => {
+  test('getCachedCanvasRect caches bounding rect to eliminate repeated DOM layout queries', () => {
+    let getBoundingClientRectCalls = 0
+    const mockCanvas = {
+      getBoundingClientRect: () => {
+        getBoundingClientRectCalls++
+        return { left: 10, top: 20, width: 800, height: 600, right: 810, bottom: 620 } as DOMRect
+      },
+    } as unknown as HTMLCanvasElement
+
+    const { getCachedCanvasRect } = require('./surface-query')
+    const rect1 = getCachedCanvasRect(mockCanvas)
+    const rect2 = getCachedCanvasRect(mockCanvas)
+    const rect3 = getCachedCanvasRect(mockCanvas)
+
+    expect(getBoundingClientRectCalls).toBe(1)
+    expect(rect1.left).toBe(10)
+    expect(rect2.width).toBe(800)
+    expect(rect3.height).toBe(600)
+  })
+})

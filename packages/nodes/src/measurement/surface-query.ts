@@ -9,7 +9,13 @@ import {
   useScene,
 } from '@pascal-app/core'
 import type { MeasurementAxis, MeasurementAxisGuide, MeasurementPoint } from '@pascal-app/editor'
-import { setSurfaceRaycastLayers, ZONE_LAYER } from '@pascal-app/viewer'
+import {
+  getMeshWorldInverseMatrix,
+  getTriangleNormalDirect,
+  intersectTriangleDirect,
+  setSurfaceRaycastLayers,
+  ZONE_LAYER,
+} from '@pascal-app/viewer'
 import {
   type Camera,
   type InstancedMesh,
@@ -17,6 +23,7 @@ import {
   type Material,
   Matrix3,
   Matrix4,
+  Mesh,
   type Object3D,
   Quaternion,
   Raycaster,
@@ -391,33 +398,84 @@ function collectVisibleMeasurementSurfaceHits(
   return hits
 }
 
-export function measurementIntersectionWorldNormal(intersection: Intersection<Object3D>): Vector3 {
+const _normalMatrix = new Matrix3()
+const _instMatrix = new Matrix4()
+const _tempWorldMat = new Matrix4()
+const _faceNormal = new Vector3()
+const _invQuat = new Quaternion()
+const _outWorldNormal = new Vector3()
+const _localHitPoint = new Vector3()
+const _localHitNormal = new Vector3()
+const _prefNormal = new Vector3()
+const _prefPoint = new Vector3()
+const _candNormal = new Vector3()
+const _candPoint = new Vector3()
+const _diffPoint = new Vector3()
+const _verifyDir = new Vector3()
+const _verifyOrig = new Vector3()
+const _screenProjected = new Vector3()
+const _axisOrigin = new Vector3()
+const _axisDir = new Vector3()
+const _axisRayOrig = new Vector3()
+const _axisHitLocal = new Vector3()
+const _axisNormal = new Vector3()
+const _rotQuat = new Quaternion()
+const _AXIS_X = new Vector3(1, 0, 0)
+const _AXIS_Y = new Vector3(0, 1, 0)
+const _AXIS_Z = new Vector3(0, 0, 1)
+
+export function measurementIntersectionWorldNormal(
+  intersection: Intersection<Object3D>,
+  target?: Vector3,
+): Vector3 {
   const object = intersection.object
-  const worldMatrix = object.matrixWorld.clone()
   const instancedMesh = object as InstancedMesh
+  let worldMatrix = object.matrixWorld
   if (instancedMesh.isInstancedMesh && intersection.instanceId !== undefined) {
-    const instanceMatrix = new Matrix4()
-    instancedMesh.getMatrixAt(intersection.instanceId, instanceMatrix)
-    worldMatrix.multiply(instanceMatrix)
+    instancedMesh.getMatrixAt(intersection.instanceId, _instMatrix)
+    _tempWorldMat.multiplyMatrices(object.matrixWorld, _instMatrix)
+    worldMatrix = _tempWorldMat
   }
-  return intersection
-    .face!.normal.clone()
-    .applyNormalMatrix(new Matrix3().getNormalMatrix(worldMatrix))
-    .normalize()
+  _normalMatrix.getNormalMatrix(worldMatrix)
+
+  if (intersection.face?.normal) {
+    _faceNormal.copy(intersection.face.normal)
+  } else if (intersection.face && (object as Mesh).geometry) {
+    const geom = (object as Mesh).geometry
+    const pos = geom.getAttribute('position')
+    if (pos && pos.array instanceof Float32Array) {
+      getTriangleNormalDirect(
+        pos.array as Float32Array,
+        intersection.face.a,
+        intersection.face.b,
+        intersection.face.c,
+        _faceNormal,
+      )
+    } else {
+      _faceNormal.set(0, 1, 0)
+    }
+  } else {
+    _faceNormal.set(0, 1, 0)
+  }
+
+  const out = target ?? _outWorldNormal
+  return out.copy(_faceNormal).applyNormalMatrix(_normalMatrix).normalize()
 }
 
 function toLocalSurfaceHit(hit: WorldSurfaceHit, levelObject: Object3D): LocalSurfaceHit {
   hit.intersection.object.updateWorldMatrix(true, false)
   levelObject.updateWorldMatrix(true, false)
 
-  const point = levelObject.worldToLocal(hit.intersection.point.clone())
-  const normal = measurementIntersectionWorldNormal(hit.intersection)
-  const inverseLevelRotation = levelObject.getWorldQuaternion(new Quaternion()).invert()
-  normal.applyQuaternion(inverseLevelRotation).normalize()
+  _localHitPoint.copy(hit.intersection.point)
+  levelObject.worldToLocal(_localHitPoint)
+  measurementIntersectionWorldNormal(hit.intersection, _localHitNormal)
+  levelObject.getWorldQuaternion(_invQuat)
+  _invQuat.invert()
+  _localHitNormal.applyQuaternion(_invQuat).normalize()
 
   return {
-    point: [point.x, point.y, point.z],
-    normal: [normal.x, normal.y, normal.z],
+    point: [_localHitPoint.x, _localHitPoint.y, _localHitPoint.z],
+    normal: [_localHitNormal.x, _localHitNormal.y, _localHitNormal.z],
     targetNodeId: hit.targetNodeId,
   }
 }
@@ -454,23 +512,40 @@ export function selectMeasurementSurfaceHit(
     )
   }
 
-  const preferredNormal = new Vector3(...preference.normal)
-  if (preferredNormal.lengthSq() <= 1e-12) return null
-  preferredNormal.normalize()
-  const preferredPoint = new Vector3(...preference.point)
+  _prefNormal.set(preference.normal[0], preference.normal[1], preference.normal[2])
+  if (_prefNormal.lengthSq() <= 1e-12) return null
+  _prefNormal.normalize()
+  _prefPoint.set(preference.point[0], preference.point[1], preference.point[2])
   return (
     hits.find((hit) => {
       const localHit = toLocalSurfaceHit(hit, levelObject)
-      const normalAlignment = Math.abs(preferredNormal.dot(new Vector3(...localHit.normal)))
-      const planeDistance = Math.abs(
-        new Vector3(...localHit.point).sub(preferredPoint).dot(preferredNormal),
-      )
+      _candNormal.set(localHit.normal[0], localHit.normal[1], localHit.normal[2])
+      const normalAlignment = Math.abs(_prefNormal.dot(_candNormal))
+      _candPoint.set(localHit.point[0], localHit.point[1], localHit.point[2])
+      const planeDistance = Math.abs(_diffPoint.subVectors(_candPoint, _prefPoint).dot(_prefNormal))
       return (
         normalAlignment >= SURFACE_INTENT_MIN_NORMAL_ALIGNMENT &&
         planeDistance <= SURFACE_INTENT_PLANE_TOLERANCE
       )
     }) ?? null
   )
+}
+
+const canvasRectCache = new WeakMap<HTMLCanvasElement, DOMRectReadOnly>()
+
+export function getCachedCanvasRect(canvas: HTMLCanvasElement): DOMRectReadOnly {
+  let cached = canvasRectCache.get(canvas)
+  if (!cached) {
+    cached = canvas.getBoundingClientRect()
+    canvasRectCache.set(canvas, cached)
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(() => {
+        canvasRectCache.set(canvas, canvas.getBoundingClientRect())
+      })
+      observer.observe(canvas)
+    }
+  }
+  return cached
 }
 
 function setRayFromPointer(
@@ -480,7 +555,7 @@ function setRayFromPointer(
   camera: Camera,
   canvas: HTMLCanvasElement,
 ) {
-  const rect = canvas.getBoundingClientRect()
+  const rect = getCachedCanvasRect(canvas)
   pointer.set(
     ((event.clientX - rect.left) / rect.width) * 2 - 1,
     -((event.clientY - rect.top) / rect.height) * 2 + 1,
@@ -494,13 +569,13 @@ export function worldPointScreenDistance(
   camera: Camera,
   canvas: HTMLCanvasElement,
 ): number {
-  const rect = canvas.getBoundingClientRect()
-  const projected = point.clone().project(camera)
-  if (!Number.isFinite(projected.z) || projected.z < -1 || projected.z > 1) {
+  const rect = getCachedCanvasRect(canvas)
+  _screenProjected.copy(point).project(camera)
+  if (!Number.isFinite(_screenProjected.z) || _screenProjected.z < -1 || _screenProjected.z > 1) {
     return Number.POSITIVE_INFINITY
   }
-  const x = rect.left + ((projected.x + 1) / 2) * rect.width
-  const y = rect.top + ((1 - projected.y) / 2) * rect.height
+  const x = rect.left + ((_screenProjected.x + 1) / 2) * rect.width
+  const y = rect.top + ((1 - _screenProjected.y) / 2) * rect.height
   return Math.hypot(event.clientX - x, event.clientY - y)
 }
 
@@ -524,11 +599,9 @@ function verifyProjectedSurfacePoint(
   context: MeasurementRaycastContext,
 ): WorldSurfaceHit | null {
   for (const sign of [-1, 1] as const) {
-    const direction = surfaceNormalWorld.clone().multiplyScalar(-sign)
-    raycaster.set(
-      candidateWorld.clone().addScaledVector(surfaceNormalWorld, SURFACE_VERIFY_HALF_SPAN * sign),
-      direction,
-    )
+    _verifyDir.copy(surfaceNormalWorld).multiplyScalar(-sign)
+    _verifyOrig.copy(candidateWorld).addScaledVector(surfaceNormalWorld, SURFACE_VERIFY_HALF_SPAN * sign)
+    raycaster.set(_verifyOrig, _verifyDir)
     raycaster.near = 0
     raycaster.far = SURFACE_VERIFY_HALF_SPAN * 2
     const hit = castVisibleMeasurementSurface(raycaster, context)
@@ -585,8 +658,11 @@ function resolveSurfacePoint(
   }
 
   args.levelObject.updateWorldMatrix(true, false)
-  const levelRotation = args.levelObject.getWorldQuaternion(new Quaternion())
-  const rawNormalWorld = new Vector3(...rawHit.normal).applyQuaternion(levelRotation).normalize()
+  args.levelObject.getWorldQuaternion(_rotQuat)
+  const rawNormalWorld = _candNormal
+    .set(rawHit.normal[0], rawHit.normal[1], rawHit.normal[2])
+    .applyQuaternion(_rotQuat)
+    .normalize()
   const projectedCandidates = [
     ...anchors.flatMap((anchor) =>
       projectMeasurementPointToAxes(anchor, rawHit.point).map((candidate) => ({
@@ -606,7 +682,8 @@ function resolveSurfacePoint(
         })
       : []),
   ].map((candidate) => {
-    const candidateWorld = args.levelObject.localToWorld(new Vector3(...candidate.point))
+    _candPoint.set(candidate.point[0], candidate.point[1], candidate.point[2])
+    const candidateWorld = args.levelObject.localToWorld(_candPoint.clone())
     return {
       ...candidate,
       candidateWorld,
@@ -695,43 +772,38 @@ function collectMeasurementAxisSurfaceIntersections(
   if (context.roots.length === 0) return []
 
   levelObject.updateWorldMatrix(true, false)
-  const origin = levelObject.localToWorld(new Vector3(...anchor))
-  const levelRotation = levelObject.getWorldQuaternion(new Quaternion())
-  const inverseLevelRotation = levelRotation.clone().invert()
+  _axisOrigin.set(anchor[0], anchor[1], anchor[2])
+  levelObject.localToWorld(_axisOrigin)
+  levelObject.getWorldQuaternion(_rotQuat)
+  _invQuat.copy(_rotQuat).invert()
   setSurfaceRaycastLayers(raycaster.layers)
   raycaster.near = 0
   raycaster.far = maxDistance
   const intersections: MeasurementAxisSurfaceIntersection[] = []
 
   for (const axis of ['x', 'y', 'z'] as const) {
-    const localDirection =
-      axis === 'x'
-        ? new Vector3(1, 0, 0)
-        : axis === 'y'
-          ? new Vector3(0, 1, 0)
-          : new Vector3(0, 0, 1)
+    const localDirection = axis === 'x' ? _AXIS_X : axis === 'y' ? _AXIS_Y : _AXIS_Z
     for (const sign of [-1, 1] as const) {
-      const direction = localDirection
-        .clone()
+      _axisDir
+        .copy(localDirection)
         .multiplyScalar(sign)
-        .applyQuaternion(levelRotation)
+        .applyQuaternion(_rotQuat)
         .normalize()
-      raycaster.set(
-        origin.clone().addScaledVector(direction, AXIS_INTERSECTION_MIN_DISTANCE),
-        direction,
-      )
+      _axisRayOrig.copy(_axisOrigin).addScaledVector(_axisDir, AXIS_INTERSECTION_MIN_DISTANCE)
+      raycaster.set(_axisRayOrig, _axisDir)
       const hits = collectVisibleMeasurementSurfaceHits(raycaster, context)
       let accepted = 0
       for (const hit of hits) {
-        const worldDistance = hit.intersection.point.distanceTo(origin)
+        const worldDistance = hit.intersection.point.distanceTo(_axisOrigin)
         if (
           worldDistance < AXIS_INTERSECTION_MIN_DISTANCE ||
           worldDistance > maxDistance + AXIS_INTERSECTION_MIN_DISTANCE
         ) {
           continue
         }
-        const local = levelObject.worldToLocal(hit.intersection.point.clone())
-        const point: MeasurementPoint = [local.x, local.y, local.z]
+        _axisHitLocal.copy(hit.intersection.point)
+        levelObject.worldToLocal(_axisHitLocal)
+        const point: MeasurementPoint = [_axisHitLocal.x, _axisHitLocal.y, _axisHitLocal.z]
         if (
           intersections.some(
             (candidate) =>
@@ -740,10 +812,9 @@ function collectMeasurementAxisSurfaceIntersections(
         ) {
           continue
         }
-        const normal = measurementIntersectionWorldNormal(hit.intersection)
-          .applyQuaternion(inverseLevelRotation)
-          .normalize()
-        intersections.push({ axis, point, normal: [normal.x, normal.y, normal.z] })
+        measurementIntersectionWorldNormal(hit.intersection, _axisNormal)
+        _axisNormal.applyQuaternion(_invQuat).normalize()
+        intersections.push({ axis, point, normal: [_axisNormal.x, _axisNormal.y, _axisNormal.z] })
         accepted += 1
         if (accepted >= MAX_AXIS_INTERSECTIONS_PER_DIRECTION) break
       }

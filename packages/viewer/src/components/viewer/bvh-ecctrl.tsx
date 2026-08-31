@@ -97,6 +97,8 @@ export const characterStatus: CharacterStatus = {
   animationStatus: 'IDLE',
 }
 
+const _debugLookTarget = new THREE.Vector3()
+
 const BVHEcctrl = forwardRef<BVHEcctrlApi, EcctrlProps>(
   (
     {
@@ -750,7 +752,10 @@ const BVHEcctrl = forwardRef<BVHEcctrlApi, EcctrlProps>(
           .copy(characterGroupRef.current.position)
           .addScaledVector(upAxis.current, 0.7)
       }
-      lookDirRef.current?.lookAt(lookDirRef.current.position.clone().add(camProjDir.current))
+      if (lookDirRef.current) {
+        _debugLookTarget.copy(lookDirRef.current.position).add(camProjDir.current)
+        lookDirRef.current.lookAt(_debugLookTarget)
+      }
       inputDirRef.current?.position.copy(characterSegment.current.end)
       inputDirRef.current?.setDirection(inputDir.current)
       inputDirRef.current?.setLength(inputDir.current.lengthSq())

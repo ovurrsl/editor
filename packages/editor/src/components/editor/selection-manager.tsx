@@ -1240,7 +1240,12 @@ export const SelectionManager = () => {
     if (mode !== 'select') return
     if (movingNode || isCurveReshape) return
 
+    let activeDirectDragCleanup: (() => void) | null = null
+
     const onPointerDown = (event: NodeEvent) => {
+      if (activeDirectDragCleanup) {
+        activeDirectDragCleanup()
+      }
       if (!selectionEnabled(useInteractionScope.getState().scope)) return
       const pointer = pointerEventFromNodeEvent(event)
       if (pointer.button !== 0) return
@@ -1274,9 +1279,10 @@ export const SelectionManager = () => {
         nodes: useScene.getState().nodes,
         selectedIds: useViewer.getState().selection.selectedIds,
       })
-      if (!canDirectMoveNode(node)) return
+      if (!node || !canDirectMoveNode(node)) return
       // A locked node can be selected and inspected but never moved.
       if (isNodeEditLocked(node)) return
+
       // Sole selection only: per-node direct manipulation stands down for a
       // multi-selection (the group sessions own plain drags there, and Cmd is
       // the selection-toggle key — a wobbly Cmd+click must not yank one
@@ -1291,6 +1297,7 @@ export const SelectionManager = () => {
       let engaged = false
 
       const cleanup = () => {
+        activeDirectDragCleanup = null
         window.removeEventListener('pointermove', onMove)
         window.removeEventListener('pointerup', onEnd)
         window.removeEventListener('pointercancel', onEnd)
@@ -1298,6 +1305,7 @@ export const SelectionManager = () => {
           useViewer.getState().setInputDragging(false)
         }
       }
+      activeDirectDragCleanup = cleanup
 
       const onMove = (moveEvent: PointerEvent) => {
         if (moveEvent.pointerId !== pointerId) return
@@ -1375,14 +1383,15 @@ export const SelectionManager = () => {
     }
 
     return () => {
+      if (activeDirectDragCleanup) {
+        activeDirectDragCleanup()
+      }
       for (const type of subscribedKinds) {
         emitter.off(`${type}:pointerdown` as any, onPointerDown as any)
       }
     }
   }, [isCurveReshape, mode, movingNode, camera, raycaster, glDomElement, registryVersion])
 
-  // Move cursor over the selected movable node: the visual cue that clicking it
-  // picks it up (replaces the removed move-cross gizmo). Reacts only when the
   // hovered/selected node changes (not on every camera move) so it doesn't fight
   // the rotate/resize gizmos' own hover cursors. Clears only the cursor it owns.
   useEffect(() => {
@@ -1440,7 +1449,12 @@ export const SelectionManager = () => {
     if (mode !== 'select') return
     if (movingNode || isCurveReshape) return
 
+    let activeDirectRotateCleanup: (() => void) | null = null
+
     const onPointerDown = (event: PointerEvent) => {
+      if (activeDirectRotateCleanup) {
+        activeDirectRotateCleanup()
+      }
       if (event.button !== 2 || !isCommandModifier(event)) return
       if (!(event.target instanceof HTMLCanvasElement)) return
 
@@ -1482,6 +1496,7 @@ export const SelectionManager = () => {
       }
 
       const cleanup = () => {
+        activeDirectRotateCleanup = null
         window.removeEventListener('pointermove', onMove, true)
         window.removeEventListener('pointerup', onUp, true)
         window.removeEventListener('pointercancel', onCancel, true)
@@ -1495,6 +1510,7 @@ export const SelectionManager = () => {
           document.body.style.cursor = ''
         }
       }
+      activeDirectRotateCleanup = cleanup
 
       const onMove = (moveEvent: PointerEvent) => {
         if (moveEvent.pointerId !== pointerId) return
@@ -1541,6 +1557,9 @@ export const SelectionManager = () => {
     window.addEventListener('pointerdown', onPointerDown, true)
     return () => {
       window.removeEventListener('pointerdown', onPointerDown, true)
+      if (activeDirectRotateCleanup) {
+        activeDirectRotateCleanup()
+      }
     }
   }, [isCurveReshape, mode, movingNode])
 

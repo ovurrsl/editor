@@ -238,15 +238,22 @@ function topologyExtent(topology: BlockTopology): number {
   )
 }
 
+const _blockV1 = new Vector3()
+const _blockV2 = new Vector3()
+const _blockV3 = new Vector3()
+const _blockV4 = new Vector3()
+const _blockScale = new Vector3()
+const _blockRaycaster = new Raycaster()
+
 function closestAxisParameterToRay(
   axisOrigin: Vector3,
   axisDirection: Vector3,
   ray: Raycaster['ray'],
 ): number {
-  const originToRay = axisOrigin.clone().sub(ray.origin)
+  _blockV1.subVectors(axisOrigin, ray.origin)
   const b = axisDirection.dot(ray.direction)
-  const d = axisDirection.dot(originToRay)
-  const e = ray.direction.dot(originToRay)
+  const d = axisDirection.dot(_blockV1)
+  const e = ray.direction.dot(_blockV1)
   const denominator = 1 - b * b
   if (Math.abs(denominator) < 1e-6) return -d
   const axisParameter = (b * e - d) / denominator
@@ -261,11 +268,12 @@ function geometrySnapThreshold(
   extent: number,
 ): number {
   target.updateWorldMatrix(true, false)
+  target.getWorldScale(_blockScale)
   const screenThreshold = blockGeometrySnapThreshold(
     camera,
     worldPoint,
     canvas.getBoundingClientRect().height,
-    target.getWorldScale(new Vector3()),
+    _blockScale,
   )
   return Math.min(extent * 0.15, Math.max(0.02, screenThreshold))
 }
@@ -1627,6 +1635,7 @@ function BlockEditor({
   useEffect(
     () => () => {
       cancelDragRef.current?.()
+      cancelDragRef.current = null
       useLiveNodeOverrides.getState().clear(node.id)
       sceneApi.markDirty(node.id)
       endOwnedScope()
@@ -1832,31 +1841,35 @@ function BlockEditor({
     (id: string, event: ThreeEvent<MouseEvent>) => {
       if (xray) return true
       target.updateWorldMatrix(true, true)
-      const raycaster = new Raycaster()
-      raycaster.ray.copy(event.ray)
-      const nearestSurface = raycaster.intersectObject(target, true)[0]
+      _blockRaycaster.ray.copy(event.ray)
+      const nearestSurface = _blockRaycaster.intersectObject(target, true)[0]
       if (!nearestSurface) return true
       let worldPoint: Vector3 | null = null
       if (mode === 'vertex') {
         const vertex = displayTopology.vertices.find((entry) => entry.id === id)
-        if (vertex) worldPoint = target.localToWorld(new Vector3(...vertex.position))
+        if (vertex) {
+          _blockV1.set(vertex.position[0], vertex.position[1], vertex.position[2])
+          worldPoint = target.localToWorld(_blockV1)
+        }
       } else if (mode === 'edge') {
         const edge = displayTopology.edges.find((entry) => entry.id === id)
         const vertices = topologyVertexMap(displayTopology)
         const start = edge ? vertices.get(edge.vertexIds[0]) : null
         const end = edge ? vertices.get(edge.vertexIds[1]) : null
         if (start && end) {
-          const worldStart = target.localToWorld(new Vector3(...start))
-          const worldEnd = target.localToWorld(new Vector3(...end))
-          worldPoint = new Vector3()
+          _blockV1.set(start[0], start[1], start[2])
+          _blockV2.set(end[0], end[1], end[2])
+          const worldStart = target.localToWorld(_blockV1)
+          const worldEnd = target.localToWorld(_blockV2)
+          worldPoint = _blockV3
           event.ray.distanceSqToSegment(worldStart, worldEnd, undefined, worldPoint)
         }
       } else {
-        worldPoint = event.point.clone()
+        worldPoint = _blockV1.copy(event.point)
       }
       if (!worldPoint) return false
-      const scale = target.getWorldScale(new Vector3())
-      const tolerance = componentRadius * Math.max(scale.x, scale.y, scale.z) * 1.5
+      target.getWorldScale(_blockScale)
+      const tolerance = componentRadius * Math.max(_blockScale.x, _blockScale.y, _blockScale.z) * 1.5
       return event.ray.origin.distanceTo(worldPoint) <= nearestSurface.distance + tolerance
     },
     [componentRadius, displayTopology, mode, target, xray],
@@ -1944,7 +1957,8 @@ function BlockEditor({
       const startPointer =
         lastPointerClientRef.current?.clone() ?? pivotClient.clone().add(new Vector2(80, 0))
       const startRay = makeRay(startPointer.x, startPointer.y)
-      const viewAxisWorld = camera.getWorldDirection(new Vector3()).normalize()
+      camera.getWorldDirection(_blockV1).normalize()
+      const viewAxisWorld = _blockV1.clone()
       const viewPlane = new Plane().setFromNormalAndCoplanarPoint(viewAxisWorld, worldOrigin)
       const startPlaneHit = startRay.intersectPlane(viewPlane, new Vector3()) ?? worldOrigin.clone()
       const targetWorldQuaternion = target.getWorldQuaternion(new Quaternion())
@@ -1971,11 +1985,10 @@ function BlockEditor({
       let lastSnapValue: string | number | null = null
       let typedInput = ''
 
-      const worldAxisFor = (axis: Axis) =>
-        target
-          .localToWorld(originLocal.clone().add(new Vector3(...AXIS_VECTORS[axis])))
-          .sub(worldOrigin)
-          .normalize()
+      const worldAxisFor = (axis: Axis) => {
+        _blockV1.set(...AXIS_VECTORS[axis]).add(originLocal)
+        return target.localToWorld(_blockV1).sub(worldOrigin).normalize()
+      }
 
       const updatePreview = (clientX: number, clientY: number, altKey: boolean) => {
         lastClientX = clientX
@@ -1992,9 +2005,8 @@ function BlockEditor({
             const worldAxis = worldAxisFor(activeConstraint)
             const startParameter = closestAxisParameterToRay(worldOrigin, worldAxis, startRay)
             const currentParameter = closestAxisParameterToRay(worldOrigin, worldAxis, ray)
-            const localPoint = target.worldToLocal(
-              worldOrigin.clone().addScaledVector(worldAxis, currentParameter - startParameter),
-            )
+            _blockV2.copy(worldOrigin).addScaledVector(worldAxis, currentParameter - startParameter)
+            const localPoint = target.worldToLocal(_blockV2)
             const axisIndex = activeConstraint === 'x' ? 0 : activeConstraint === 'y' ? 1 : 2
             delta = blockAxisDelta(
               activeConstraint,
@@ -2009,21 +2021,19 @@ function BlockEditor({
             lockedTranslationInitialHit &&
             lockedTranslationPlane
           ) {
-            const currentHit = ray.intersectPlane(lockedTranslationPlane, new Vector3())
+            const currentHit = ray.intersectPlane(lockedTranslationPlane, _blockV3)
             if (!currentHit) return
-            const localPoint = target.worldToLocal(
-              worldOrigin.clone().add(currentHit.sub(lockedTranslationInitialHit)),
-            )
+            _blockV4.subVectors(currentHit, lockedTranslationInitialHit)
+            const localPoint = target.worldToLocal(_blockV2.copy(worldOrigin).add(_blockV4))
             delta = blockConstrainTranslationDelta(
               [localPoint.x - origin[0], localPoint.y - origin[1], localPoint.z - origin[2]],
               activeConstraint,
             )
           } else {
-            const currentHit = ray.intersectPlane(viewPlane, new Vector3())
+            const currentHit = ray.intersectPlane(viewPlane, _blockV3)
             if (!currentHit) return
-            const localPoint = target.worldToLocal(
-              worldOrigin.clone().add(currentHit.clone().sub(startPlaneHit)),
-            )
+            _blockV4.subVectors(currentHit, startPlaneHit)
+            const localPoint = target.worldToLocal(_blockV2.copy(worldOrigin).add(_blockV4))
             delta = [localPoint.x - origin[0], localPoint.y - origin[1], localPoint.z - origin[2]]
           }
           if (numericValue !== null) {
@@ -2071,7 +2081,7 @@ function BlockEditor({
             lockedRotationPlane &&
             lockedRotationWorldAxis
           ) {
-            const currentHit = ray.intersectPlane(lockedRotationPlane, new Vector3())
+            const currentHit = ray.intersectPlane(lockedRotationPlane, _blockV3)
             if (!currentHit) return
             const lockedAngle = lockedRotationAngleFromHits(
               worldOrigin,
@@ -2088,10 +2098,11 @@ function BlockEditor({
               wrappedAngle = lockedAngle
             }
           } else {
+            _blockV1.set(clientX, clientY, 0)
             wrappedAngle = blockRotationPointerAngle(
               pivotClient,
               startPointer,
-              new Vector2(clientX, clientY),
+              _blockV1 as unknown as Vector2,
             )
           }
           accumulatedAngle += unwrapRotationDelta(previousWrappedAngle, wrappedAngle)
@@ -2158,7 +2169,11 @@ function BlockEditor({
       }
 
       const onMove = (pointerEvent: PointerEvent) => {
-        lastPointerClientRef.current = new Vector2(pointerEvent.clientX, pointerEvent.clientY)
+        if (!lastPointerClientRef.current) {
+          lastPointerClientRef.current = new Vector2(pointerEvent.clientX, pointerEvent.clientY)
+        } else {
+          lastPointerClientRef.current.set(pointerEvent.clientX, pointerEvent.clientY)
+        }
         updatePreview(pointerEvent.clientX, pointerEvent.clientY, pointerEvent.altKey)
       }
       const onPointerDown = (pointerEvent: PointerEvent, finish: (commit: boolean) => void) => {
@@ -2278,9 +2293,9 @@ function BlockEditor({
       const originLocal = new Vector3(...origin)
       const worldOrigin = target.localToWorld(originLocal.clone())
       const normalAxis = isPlaneConstraint(constraint) ? PLANE_NORMAL[constraint] : constraint
-      const localAxis = new Vector3(...AXIS_VECTORS[normalAxis])
+      _blockV1.set(...AXIS_VECTORS[normalAxis])
       const worldAxis = target
-        .localToWorld(originLocal.clone().add(localAxis))
+        .localToWorld(originLocal.clone().add(_blockV1))
         .sub(worldOrigin)
         .normalize()
       const dragPlane = isPlaneConstraint(constraint)
@@ -2312,20 +2327,17 @@ function BlockEditor({
         const ray = makeRay(pointerEvent.clientX, pointerEvent.clientY)
         let delta: Point
         if (dragPlane && initialPlaneHit) {
-          const currentHit = ray.intersectPlane(dragPlane, new Vector3())
+          const currentHit = ray.intersectPlane(dragPlane, _blockV3)
           if (!currentHit) return
-          const localPoint = target.worldToLocal(
-            worldOrigin.clone().add(currentHit.sub(initialPlaneHit)),
-          )
+          _blockV4.subVectors(currentHit, initialPlaneHit)
+          const localPoint = target.worldToLocal(_blockV2.copy(worldOrigin).add(_blockV4))
           delta = [localPoint.x - origin[0], localPoint.y - origin[1], localPoint.z - origin[2]]
           delta[axisIndex] = 0
         } else {
           delta = [0, 0, 0]
           const parameter = closestAxisParameterToRay(worldOrigin, worldAxis, ray)
-          const worldPoint = worldOrigin
-            .clone()
-            .addScaledVector(worldAxis, parameter - initialParameter)
-          const localPoint = target.worldToLocal(worldPoint)
+          _blockV2.copy(worldOrigin).addScaledVector(worldAxis, parameter - initialParameter)
+          const localPoint = target.worldToLocal(_blockV2)
           delta[axisIndex] = blockPointerDistanceForAxis(
             normalAxis,
             localPoint.getComponent(axisIndex) - originLocal.getComponent(axisIndex),
@@ -2447,16 +2459,17 @@ function BlockEditor({
       target.updateWorldMatrix(true, false)
       const originLocal = new Vector3(...origin)
       const worldOrigin = target.localToWorld(originLocal.clone())
-      const localAxis = new Vector3(...AXIS_VECTORS[axis])
+      _blockV1.set(...AXIS_VECTORS[axis])
       const worldAxis = target
-        .localToWorld(originLocal.clone().add(localAxis))
+        .localToWorld(originLocal.clone().add(_blockV1))
         .sub(worldOrigin)
         .normalize()
-      const initialVector = event.point
-        .clone()
+      const initialVector = _blockV2
+        .copy(event.point)
         .sub(worldOrigin)
         .projectOnPlane(worldAxis)
         .normalize()
+        .clone()
       if (initialVector.lengthSq() < 1e-6) return
       const rotationPlane = new Plane().setFromNormalAndCoplanarPoint(worldAxis, worldOrigin)
       const baseTopology = displayTopology
@@ -2480,10 +2493,10 @@ function BlockEditor({
       const onMove = (pointerEvent: PointerEvent) => {
         const hit = makeRay(pointerEvent.clientX, pointerEvent.clientY).intersectPlane(
           rotationPlane,
-          new Vector3(),
+          _blockV3,
         )
         if (!hit) return
-        const currentVector = hit.sub(worldOrigin).projectOnPlane(worldAxis)
+        const currentVector = _blockV4.copy(hit).sub(worldOrigin).projectOnPlane(worldAxis)
         if (currentVector.lengthSq() < 1e-6) return
         currentVector.normalize()
         const wrappedAngle = signedAngleAroundAxis(initialVector, currentVector, worldAxis)
@@ -3095,12 +3108,14 @@ function BlockEditor({
       const end = edge ? vertices.get(edge.vertexIds[1]) : null
       if (!(edge && start && end)) return
       target.updateWorldMatrix(true, false)
-      const worldStart = target.localToWorld(new Vector3(...start))
-      const worldEnd = target.localToWorld(new Vector3(...end))
-      const worldDirection = worldEnd.clone().sub(worldStart)
+      _blockV1.set(start[0], start[1], start[2])
+      _blockV2.set(end[0], end[1], end[2])
+      const worldStart = target.localToWorld(_blockV1).clone()
+      const worldEnd = target.localToWorld(_blockV2).clone()
+      const worldDirection = _blockV3.subVectors(worldEnd, worldStart)
       const worldLength = worldDirection.length()
       if (worldLength < 1e-6) return
-      const worldAxis = worldDirection.normalize()
+      const worldAxis = _blockV4.copy(worldDirection).normalize()
       const initialParameter = closestAxisParameterToRay(worldStart, worldAxis, event.ray)
       const baseTopology = node.topology
       const restoreInputDragging = interactionApi.beginInputDrag()

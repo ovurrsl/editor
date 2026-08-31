@@ -261,6 +261,19 @@ const DuctPointHandles = ({ duct, target }: { duct: DuctSegmentNode; target: Obj
     detached: boolean
   } | null>(null)
 
+  const activeGestureCleanupRef = useRef<(() => void) | null>(null)
+  useEffect(() => {
+    return () => {
+      if (activeGestureCleanupRef.current) {
+        activeGestureCleanupRef.current()
+      }
+      if (dragRef.current) {
+        dragRef.current.cleanup()
+        dragRef.current = null
+      }
+    }
+  }, [])
+
   const makeRay = (clientX: number, clientY: number) => {
     const rect = gl.domElement.getBoundingClientRect()
     const ndc = new Vector2(
@@ -588,13 +601,21 @@ const DuctPointHandles = ({ duct, target }: { duct: DuctSegmentNode; target: Obj
       }
     }
 
+    if (activeGestureCleanupRef.current) {
+      activeGestureCleanupRef.current()
+    }
+
     const cleanup = () => {
+      activeGestureCleanupRef.current = null
+      dragRef.current = null
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
       useViewer.getState().setInputDragging(false)
       document.body.style.cursor = ''
     }
+
+    activeGestureCleanupRef.current = cleanup
 
     dragRef.current = {
       index,
@@ -619,6 +640,13 @@ const DuctPointHandles = ({ duct, target }: { duct: DuctSegmentNode; target: Obj
   // fittings need no follow — just the single-undo dance on the scalar field.
   const onRollDown = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation()
+    if (activeGestureCleanupRef.current) {
+      activeGestureCleanupRef.current()
+    }
+    if (dragRef.current) {
+      dragRef.current.cleanup()
+      dragRef.current = null
+    }
     const axis = runAxisAndCenter(duct)
     if (!axis) return
     const startRoll = duct.roll
@@ -672,14 +700,20 @@ const DuctPointHandles = ({ duct, target }: { duct: DuctSegmentNode; target: Obj
       useScene.getState().updateNode(duct.id, { roll: next })
     }
 
-    const onUp = () => {
-      swallowNextClick()
+    const cleanup = () => {
+      activeGestureCleanupRef.current = null
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
       useViewer.getState().setInputDragging(false)
       document.body.style.cursor = ''
       setRolling(false)
+    }
+    activeGestureCleanupRef.current = cleanup
+
+    const onUp = () => {
+      swallowNextClick()
+      cleanup()
       // Single-undo dance: revert to the pre-drag roll while paused, resume,
       // then re-apply the final roll as one tracked change. A roll edit also
       // invalidates any stored auto-offset base, so strip the tag on commit.
@@ -707,6 +741,13 @@ const DuctPointHandles = ({ duct, target }: { duct: DuctSegmentNode; target: Obj
   // only thing that differs.
   const onRunMoveDown = (kind: RunMoveKind) => (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation()
+    if (activeGestureCleanupRef.current) {
+      activeGestureCleanupRef.current()
+    }
+    if (dragRef.current) {
+      dragRef.current.cleanup()
+      dragRef.current = null
+    }
     const parentId = (duct.parentId ?? undefined) as AnyNodeId | undefined
     const initialPath = duct.path.map((p) => [...p] as Point)
     const center = runAxisAndCenter(duct)?.center ?? initialPath[0]!
@@ -1027,8 +1068,8 @@ const DuctPointHandles = ({ duct, target }: { duct: DuctSegmentNode; target: Obj
       }
     }
 
-    const onUp = () => {
-      swallowNextClick()
+    const cleanup = () => {
+      activeGestureCleanupRef.current = null
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
@@ -1037,6 +1078,12 @@ const DuctPointHandles = ({ duct, target }: { duct: DuctSegmentNode; target: Obj
       setRunMoving(false)
       setVerticalGhost(null)
       clearLivePreview()
+    }
+    activeGestureCleanupRef.current = cleanup
+
+    const onUp = () => {
+      swallowNextClick()
+      cleanup()
       // Single-undo dance: while paused, revert to the PRE-drag baseline (the
       // original Z — recreate the minted nodes the rewind deleted and restore
       // the run + partners), resume, then write the final state as ONE tracked
