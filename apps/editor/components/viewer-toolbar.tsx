@@ -876,6 +876,7 @@ export function CommunityViewerToolbarLeft({
   return (
     <div className="flex items-center gap-2">
       <CollapseSidebarButton />
+      <ViewModeControl />
       <HistoryLockControls />
       {presence?.loaded && (
         <div className="flex items-center gap-2">
