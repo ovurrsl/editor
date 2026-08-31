@@ -55,7 +55,7 @@ export const ViewerOverlay = ({
 
   return (
     <>
-      {!isPreviewMode && <ViewerSceneHeader onBack={onBack} owner={owner} projectName={projectName} />}
+      <ViewerSceneHeader onBack={onBack} owner={owner} projectName={projectName} />
       {!hideBottomBar ? (
         <ViewerControlsBar
           canShowGuides={canShowGuides}
