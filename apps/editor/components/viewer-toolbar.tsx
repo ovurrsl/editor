@@ -926,10 +926,23 @@ export function CommunityViewerToolbarCenter({
     return null
   }
 
-  // VIEWER & PREVIEW MODE: Sadece ViewModeControl ortada
+  // VIEWER & PREVIEW MODE: Sadece ustteki (native) buton grubu kalacak, o yuzden ViewModeControl render etmiyoruz.
+  // Avatar Grubunu (PresencePopover) ise native [3D / 2D / Split] buton grubunun hemen sagina (merkezin 115px sagina) yerlestiriyoruz.
   return (
-    <div className="flex items-center justify-center gap-2 w-full">
-      <ViewModeControl />
+    <div className="relative flex h-8 items-center justify-center mt-1">
+      <div className="absolute left-[115px] top-1/2 -translate-y-1/2">
+        {presence?.loaded && presence.present.length > 0 ? (
+          <PresencePopover
+            canEdit={presence.canEdit}
+            currentUserId={currentUserId}
+            editor={presence.editor}
+            isEditor={presence.isEditor}
+            onPassControl={presence.passControl}
+            onTakeOver={presence.takeOver}
+            present={presence.present}
+          />
+        ) : null}
+      </div>
     </div>
   )
 }
