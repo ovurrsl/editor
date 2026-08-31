@@ -3,7 +3,7 @@ import {
   type AnyNodeId,
   type CeilingNode,
   getZoneTakeoffExtensions,
-  type ItemNode,
+  isPluginContributedKind,
   pointInPolygon2D,
   pointOnSegment,
   type SlabNode,
@@ -192,15 +192,37 @@ export function collectZoneContentIds(
       const polygon = surface.polygon.map((point) => [point[0], point[1]] as Point2D)
       return polygonMatchesZoneFootprint(polygon, footprint)
     })
-  const floorItems = Object.values(nodes)
-    .filter((node): node is ItemNode => node.type === 'item' && node.parentId === levelId)
-    .filter((item) => pointInPolygonWithTolerance([item.position[0], item.position[2]], footprint))
+  /**
+   * Items, PLUS anything an installed plugin contributed.
+   *
+   * This used to read `node.type === 'item'`, so deleting a zone with its
+   * contents took the walls, the slab and the ceiling and left the racking
+   * standing in mid-air on a floor that no longer existed. Nothing errored; the
+   * zone was simply gone and its hundred pallet racks were not.
+   *
+   * Deliberately NOT widened to every positioned node. `collectZoneObjectIds`
+   * answers that question and the contents READOUT uses it, but a readout and a
+   * delete are not the same promise: widening this would start removing host
+   * structural kinds — a column inside the zone — from a menu entry whose users
+   * have never seen it do that. Plugin kinds are the reported gap and the whole
+   * of it.
+   */
+  const floorContents = Object.values(nodes)
+    .filter((node) => node.parentId === levelId)
+    .filter((node) => node.type === 'item' || isPluginContributedKind(node.type))
+    .filter((node) => {
+      const position = (node as { position?: unknown }).position
+      if (!Array.isArray(position) || position.length < 3) return false
+      const [x, , z] = position as number[]
+      if (typeof x !== 'number' || typeof z !== 'number') return false
+      return pointInPolygonWithTolerance([x, z], footprint)
+    })
 
   return Array.from(
     new Set<AnyNodeId>([
       ...boundaryWalls.map((wall) => wall.id as AnyNodeId),
       ...surfaces.map((surface) => surface.id as AnyNodeId),
-      ...floorItems.map((item) => item.id as AnyNodeId),
+      ...floorContents.map((node) => node.id as AnyNodeId),
     ]),
   )
 }

@@ -37,16 +37,84 @@ export const THUMBNAIL_HEIGHT = 1080
  * survives, so transparent item/preset captures keep working.
  */
 export const SNAPSHOT_MIME = 'image/webp'
-export const SNAPSHOT_QUALITY = 0.9
+export const SNAPSHOT_QUALITY = 0.95
 // Retina canvases make viewport/area captures multi-MB; 2048 keeps them near the 1920 presets.
 export const SNAPSHOT_MAX_EDGE = 2048
 
-function clampSnapshotSize(width: number, height: number): { w: number; h: number } {
-  const maxEdge = Math.max(width, height)
-  if (maxEdge <= SNAPSHOT_MAX_EDGE) return { w: width, h: height }
+/**
+ * Render a deliberate snapshot this many times larger than it is saved, then
+ * downscale — supersampling, the one form of antialiasing that adds detail
+ * rather than hiding the lack of it.
+ *
+ * The pipeline antialiases with FXAA, which is a post-process: it finds edges
+ * and blurs them. That is the right trade for a moving frame and the wrong one
+ * for a warehouse, where the subject IS thousands of 5 cm steel uprights and
+ * FXAA smears the whole lattice into haze. Rendering at 2x and averaging down
+ * puts four real samples behind every saved pixel, so a thin upright resolves
+ * as a thin upright instead of a suggestion of one. FXAA still runs, but at
+ * twice the resolution its blur costs half as much of the saved image.
+ *
+ * A still capture can afford this; a 60 fps frame cannot. That is the whole
+ * reason the two paths differ.
+ */
+export const SNAPSHOT_SUPERSAMPLE = 2
 
-  const scale = SNAPSHOT_MAX_EDGE / maxEdge
+/**
+ * Long-edge ceiling for the RENDER, as opposed to the saved file.
+ * `SNAPSHOT_MAX_EDGE` bounds what is written to disk; supersampling needs room
+ * above it. 4096 is the smallest max-texture guarantee across the WebGPU
+ * baseline, so this cannot ask a device for something it refuses to allocate.
+ */
+export const SNAPSHOT_MAX_RENDER_EDGE = 4096
+
+function clampSnapshotSize(
+  width: number,
+  height: number,
+  ceiling: number = SNAPSHOT_MAX_EDGE,
+): { w: number; h: number } {
+  const maxEdge = Math.max(width, height)
+  if (maxEdge <= ceiling) return { w: width, h: height }
+
+  const scale = ceiling / maxEdge
   return { w: Math.round(width * scale), h: Math.round(height * scale) }
+}
+
+/**
+ * The resolution a capture should RENDER at, given the window and the request.
+ *
+ * The render target used to be sized from the canvas, so a 1920x1080 snapshot
+ * taken in a 1200px-wide window was rendered at 1200px and then stretched to
+ * reach the number. The file said 1920x1080 and carried 1200px of real detail;
+ * the picture looked soft and nothing anywhere admitted why.
+ *
+ * Two rules make this correct rather than merely bigger:
+ *
+ * - **Uniform scale.** The camera's aspect comes from the canvas, so raising
+ *   one axis alone renders a stretched picture. Both axes move by one factor;
+ *   the centre-crop downstream still does the aspect conversion, only now from
+ *   a source with detail to spare.
+ * - **Never below the canvas.** Rendering smaller than the window would trade a
+ *   soft picture for a genuinely lower-resolution one.
+ *
+ * Only `standard` mode asks for a size of its own. `viewport` and `area` are by
+ * definition readings of what is on screen, so they stay at the canvas.
+ */
+export function resolveCaptureSize(
+  canvas: { w: number; h: number },
+  request: { w: number; h: number },
+  captureMode?: SnapshotCaptureMode,
+): { w: number; h: number } {
+  if (captureMode !== undefined) return { w: canvas.w, h: canvas.h }
+  if (canvas.w <= 0 || canvas.h <= 0) return { w: canvas.w, h: canvas.h }
+
+  const want = clampSnapshotSize(request.w, request.h)
+  const factor = Math.max(1, want.w / canvas.w, want.h / canvas.h) * SNAPSHOT_SUPERSAMPLE
+  const capped = clampSnapshotSize(
+    Math.round(canvas.w * factor),
+    Math.round(canvas.h * factor),
+    SNAPSHOT_MAX_RENDER_EDGE,
+  )
+  return { w: Math.max(canvas.w, capped.w), h: Math.max(canvas.h, capped.h) }
 }
 
 export type SnapshotCaptureMode = 'standard' | 'viewport' | 'area'
@@ -252,9 +320,28 @@ export async function createSnapshotPipeline({
       capture: async ({ captureMode, cropRegion, standardSize }) => {
         const standardW = standardSize?.w ?? THUMBNAIL_WIDTH
         const standardH = standardSize?.h ?? THUMBNAIL_HEIGHT
-        const { width: captureWidth, height: captureHeight } = renderer.domElement
 
-        // Resize RT if the canvas dimensions changed
+        /**
+         * Render at the size being asked for, not at the size of the window.
+         *
+         * The target used to be sized from `renderer.domElement`, so a 1920x1080
+         * snapshot taken in a 1200px-wide window was rendered at 1200px and then
+         * stretched. The file said 1920x1080 and carried 1200px of real detail —
+         * the picture looked soft and no number anywhere admitted why. Only the
+         * `standard` mode asks for a size of its own; `viewport` and `area` are
+         * by definition readings of what is on screen, so they keep the canvas.
+         *
+         * Clamped to SNAPSHOT_MAX_EDGE, and never scaled DOWN below the canvas:
+         * rendering smaller than the window would trade the soft picture for a
+         * genuinely lower-resolution one.
+         */
+        const { w: captureWidth, h: captureHeight } = resolveCaptureSize(
+          { w: renderer.domElement.width, h: renderer.domElement.height },
+          { w: standardW, h: standardH },
+          captureMode,
+        )
+
+        // Resize RT if the target dimensions changed
         if (renderTarget.width !== captureWidth || renderTarget.height !== captureHeight) {
           renderTarget.setSize(captureWidth, captureHeight)
         }
@@ -376,12 +463,19 @@ export async function createSnapshotPipeline({
             sHeight = Math.round(captureWidth / dstAspect)
             sy = Math.round((captureHeight - sHeight) / 2)
           }
-          outW = standardW
-          outH = standardH
+          // The reported size is the one actually produced. Asking for more
+          // than SNAPSHOT_MAX_EDGE used to still write the requested number and
+          // stretch to reach it — a file that claimed 4000px and held 2048.
+          ;({ w: outW, h: outH } = clampSnapshotSize(standardW, standardH))
           const offscreen = new OffscreenCanvas(outW, outH)
-          offscreen
-            .getContext('2d')!
-            .drawImage(srcCanvas, sx, sy, sWidth, sHeight, 0, 0, outW, outH)
+          const ctx = offscreen.getContext('2d')!
+          // This downscale IS the supersampling resolve — the averaging that
+          // turns four rendered samples into one saved pixel. Left on the
+          // default filter it would point-sample and throw the extra render
+          // away, which is worse than not having rendered it.
+          ctx.imageSmoothingEnabled = true
+          ctx.imageSmoothingQuality = 'high'
+          ctx.drawImage(srcCanvas, sx, sy, sWidth, sHeight, 0, 0, outW, outH)
           blob = await offscreen.convertToBlob({ type: SNAPSHOT_MIME, quality: SNAPSHOT_QUALITY })
         }
 

@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import {
   type AnyNode,
   type AnyNodeId,
+  loadPlugin,
   nodeRegistry,
   registerZoneTakeoffExtension,
   type ZoneNode,
@@ -41,6 +42,32 @@ function positioned(
   return { id, type, parentId, position: [x, 1, z], ...props } as unknown as AnyNode
 }
 
+/**
+ * Register a plugin kind for real.
+ *
+ * `isPluginContributedKind` asks the REGISTRY, not the kind string, so a kind
+ * only counts as plugin-contributed once a plugin has actually registered it.
+ * Loading a manifest is what makes these tests exercise the shipped path rather
+ * than a prefix match that would pass for a string nobody owns.
+ */
+async function loadWarehouseKind(kind = 'warehouse:pallet-rack') {
+  await loadPlugin({
+    id: 'test:warehouse',
+    apiVersion: 1,
+    nodes: [
+      {
+        kind,
+        schemaVersion: 1,
+        schema: {} as never,
+        category: 'furnish',
+        defaults: () => ({}) as never,
+        capabilities: {},
+        presentation: { label: 'Rack', icon: { kind: 'iconify', name: 'lucide:square' } },
+      },
+    ],
+  } as never)
+}
+
 function sceneOf(...nodes: AnyNode[]): Readonly<Record<AnyNodeId, AnyNode>> {
   return Object.fromEntries(nodes.map((n) => [n.id, n])) as Record<AnyNodeId, AnyNode>
 }
@@ -62,8 +89,10 @@ describe('collectZoneObjectIds', () => {
     expect(found).toContain('rack_1' as AnyNodeId)
     expect(found).toContain('item_1' as AnyNodeId)
 
-    // The delete path sees the item and misses the rack — the discrepancy this
-    // function was added to work around rather than silently widen.
+    // The delete path used to see the item and miss the rack. That gap is now
+    // closed for plugin kinds — see the `delete with contents` suite below —
+    // but only once the kind is REGISTERED, which it is not here. Unregistered,
+    // it is just a string, and the delete path is right to leave it alone.
     expect(collectZoneContentIds(scene, zone)).not.toContain('rack_1' as AnyNodeId)
   })
 
@@ -619,5 +648,48 @@ describe('resolveZoneTakeoffReports', () => {
     expect(reportsBefore).toHaveLength(1)
     expect(reportsAfter).toHaveLength(0)
     expect(shallow(reportsBefore, reportsAfter)).toBe(false)
+  })
+})
+
+describe('collectZoneContentIds — delete with contents', () => {
+  beforeEach(async () => {
+    await loadWarehouseKind()
+  })
+
+  afterEach(() => {
+    nodeRegistry._reset()
+  })
+
+  /**
+   * The reported gap. Deleting a zone with its contents took the walls, the
+   * slab and the ceiling and left a hundred pallet racks standing on a floor
+   * that no longer existed. Nothing errored — the zone was simply gone and its
+   * racking was not.
+   */
+  test('takes plugin objects standing in the zone', () => {
+    const scene = sceneOf(
+      positioned('rack', 'warehouse:pallet-rack', 2, 2),
+      positioned('crate', 'item', 3, 3),
+    )
+
+    const found = collectZoneContentIds(scene, zone)
+    expect(found).toContain('rack' as AnyNodeId)
+    expect(found).toContain('crate' as AnyNodeId)
+  })
+
+  /**
+   * The half that could go wrong quietly. Widening this to every positioned
+   * node would start deleting host structural kinds from a menu entry whose
+   * users have never seen it do that — a column inside the zone is not what
+   * anyone means by "the zone's contents".
+   */
+  test('leaves host structural kinds alone', () => {
+    const scene = sceneOf(positioned('col', 'column', 4, 4))
+    expect(collectZoneContentIds(scene, zone)).not.toContain('col' as AnyNodeId)
+  })
+
+  test('ignores plugin objects outside the polygon', () => {
+    const scene = sceneOf(positioned('far', 'warehouse:pallet-rack', 90, 90))
+    expect(collectZoneContentIds(scene, zone)).not.toContain('far' as AnyNodeId)
   })
 })
