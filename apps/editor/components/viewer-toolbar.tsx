@@ -867,44 +867,54 @@ export function CommunityViewerToolbarLeft({
   const editorName = activeEditor ? displayName(activeEditor.email, activeEditor.userId) : null
   const editorInitials = editorName ? editorName.slice(0, 2).toUpperCase() : ''
 
-  if (isPreviewMode) {
-    return null
-  }
-
-  if (isEditor) {
+  if (isEditor && !isPreviewMode) {
     // EDITOR MODE
     return (
       <div className="flex items-center gap-2">
         <CollapseSidebarButton />
         <HistoryLockControls />
         {presence?.loaded && (
-          <div
-            aria-label="Editor"
-            className={cn(
-              "inline-flex h-8 items-center gap-2 rounded-xl border px-2 py-1 shadow-2xl backdrop-blur-md",
-              presence.connected ? "border-green-500/50 bg-green-500/20 text-green-700" : "border-red-500/50 bg-red-500/20 text-red-700"
-            )}
-            data-testid="active-editor-badge"
-          >
-            <span
-              className="flex h-5 w-5 items-center justify-center rounded-full border border-background bg-muted-foreground font-medium text-[9px] text-background shadow-sm"
-              title={activeEditor?.email ?? activeEditor?.userId ?? 'You'}
+          <div className="flex items-center gap-2">
+            <div
+              aria-label="Editor"
+              className={cn(
+                "inline-flex h-8 items-center gap-2 rounded-xl border px-2 py-1 shadow-2xl backdrop-blur-md",
+                presence.connected ? "border-green-500/50 bg-green-500/20 text-green-700" : "border-red-500/50 bg-red-500/20 text-red-700"
+              )}
+              data-testid="active-editor-badge"
             >
-              {editorInitials || 'ME'}
-            </span>
-            <span className="font-medium text-xs pr-1">
-              Editor
-            </span>
+              <span
+                className="flex h-5 w-5 items-center justify-center rounded-full border border-background bg-muted-foreground font-medium text-[9px] text-background shadow-sm"
+                title={activeEditor?.email ?? activeEditor?.userId ?? 'You'}
+              >
+                {editorInitials || 'ME'}
+              </span>
+              <span className="font-medium text-xs pr-1">
+                Editor
+              </span>
+            </div>
+            {presence.present.length > 0 && (
+              <PresencePopover
+                canEdit={presence.canEdit}
+                currentUserId={currentUserId}
+                editor={presence.editor}
+                isEditor={presence.isEditor}
+                onPassControl={presence.passControl}
+                onTakeOver={presence.takeOver}
+                present={presence.present}
+              />
+            )}
           </div>
         )}
       </div>
     )
   }
 
-  // VIEWER MODE
+  // VIEWER & PREVIEW MODE: Kat secici sol ustte
   return (
-    <div className="flex items-center gap-2">
-      {/* The user requested we REMOVE the Collapse Sidebar button from Viewer Mode to keep it clean */}
+    <div className={TOOLBAR_CONTAINER}>
+      <LevelModeToggle />
+      <WallModeToggle />
     </div>
   )
 }
@@ -916,56 +926,52 @@ export function CommunityViewerToolbarCenter({
   const isEditor = presence?.isEditor ?? false
   const isPreviewMode = useEditor((s) => s.isPreviewMode)
 
+  if (isEditor && !isPreviewMode) {
+    // EDITOR MODE: Center is empty
+    return null
+  }
+
   if (isPreviewMode) {
     // PREVIEW MODE: Center is empty because ViewerStageSwitcher handles the center natively
     return null
   }
 
-  // BOTH EDITOR AND VIEWER MODE
+  // VIEWER MODE
   return (
     <div className="flex items-center justify-center gap-2 w-full">
       <ViewModeControl />
-      
-      {presence?.loaded && presence.present.length > 0 ? (
-        <PresencePopover
-          canEdit={presence.canEdit}
-          currentUserId={currentUserId}
-          editor={presence.editor}
-          isEditor={presence.isEditor}
-          onPassControl={presence.passControl}
-          onTakeOver={presence.takeOver}
-          present={presence.present}
-        />
-      ) : null}
     </div>
   )
 }
 
 export function CommunityViewerToolbarRight({
   presence,
+  currentUserId,
 }: CommunityViewerToolbarLeftProps = {}) {
   const isEditor = presence?.isEditor ?? false
   const isPreviewMode = useEditor((s) => s.isPreviewMode)
 
-  if (isPreviewMode) {
-    // PREVIEW MODE: Hide all editor tools, keep only essentials
+  if (!isEditor || isPreviewMode) {
+    // VIEWER MODE & PREVIEW MODE: Avatar grubu sag ustte, diger butonlar (Screenshot/Preview) gizlenmeli
     return (
       <div className={TOOLBAR_CONTAINER}>
-        <ScreenshotButton />
-        <PreviewButton />
-      </div>
-    )
-  }
-
-  if (!isEditor) {
-    // VIEWER MODE: They need LevelModeToggle and WallModeToggle
-    return (
-      <div className={TOOLBAR_CONTAINER}>
-        <LevelModeToggle />
-        <WallModeToggle />
-        <div className="my-1.5 w-px bg-border/50" />
-        <ScreenshotButton />
-        <PreviewButton />
+        {presence?.loaded && presence.present.length > 0 ? (
+          <PresencePopover
+            canEdit={presence.canEdit}
+            currentUserId={currentUserId}
+            editor={presence.editor}
+            isEditor={presence.isEditor}
+            onPassControl={presence.passControl}
+            onTakeOver={presence.takeOver}
+            present={presence.present}
+          />
+        ) : null}
+        {isEditor && isPreviewMode && (
+          <>
+            <div className="my-1.5 w-px bg-border/50" />
+            <PreviewButton />
+          </>
+        )}
       </div>
     )
   }
