@@ -153,8 +153,8 @@ const CROP_LABELS: Record<CropMode, string> = {
 }
 
 export function SnapshotCaptureOverlay({ projectId }: { projectId: string }) {
-  const isCaptureMode = useEditor((s) => s.isCaptureMode)
-  const captureMode = useEditor((s) => s.captureMode)
+  const isCaptureMode = useEditor((s) => s.isCaptureMode) || useEditor.getState().isCaptureMode
+  const captureMode = useEditor((s) => s.captureMode) ?? useEditor.getState().captureMode
   const setCaptureMode = useEditor((s) => s.setCaptureMode)
   const isMobile = useIsMobile()
   // `preset` capture mode locks the overlay to a square area crop with

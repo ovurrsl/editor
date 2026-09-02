@@ -3,7 +3,7 @@ import {
   type AnyNodeId,
   type CeilingNode,
   getZoneTakeoffExtensions,
-  type ItemNode,
+  isPluginContributedKind,
   pointInPolygon2D,
   pointOnSegment,
   type SlabNode,
@@ -104,21 +104,18 @@ function wallLiesOnZoneBoundary(wall: WallNode, polygon: Point2D[]): boolean {
  *
  * Separate from `collectZoneContentIds`, which answers a different question.
  * That one gathers the fabric a zone is made of — its boundary walls and the
- * slab and ceiling that match its footprint — plus `item` nodes, and it drives
- * "Delete with contents". This one answers "what is standing in here", which is
- * what a contents list shows.
+ * slab and ceiling that match its footprint — plus `item` and plugin-contributed
+ * nodes, and it drives "Delete with contents". This one answers "what is standing
+ * in here", which is what a contents list shows.
  *
- * Kind-agnostic on purpose. `collectZoneContentIds` tests `node.type === 'item'`
- * and so sees none of the objects a plugin contributes — a rack is
- * `warehouse:pallet-rack`, not `item` — which is why a zone full of racking
- * reported nothing inside it. Anything parented to the zone's level that has a
+ * Kind-agnostic on purpose. Anything parented to the zone's level that has a
  * position and is not part of the zone's own fabric is tested here, so a kind
  * added later is included without this function being touched again.
  *
  * Containment is `pointInPolygonWithTolerance`, the same predicate the delete
- * path uses for items. The repo has several point-in-polygon implementations
- * with different boundary rules; reusing this one keeps the list agreeing with
- * the action the user reaches for next.
+ * path uses for items and plugin-contributed objects. The repo has several
+ * point-in-polygon implementations with different boundary rules; reusing
+ * this one keeps the list agreeing with the action the user reaches for next.
  */
 export function collectZoneObjectIds(
   nodes: Readonly<Record<AnyNodeId, AnyNode>>,
@@ -141,7 +138,9 @@ export function collectZoneObjectIds(
       const position = (node as { position?: unknown }).position
       if (!Array.isArray(position) || position.length < 3) return false
       const [x, , z] = position as number[]
-      if (typeof x !== 'number' || typeof z !== 'number') return false
+      if (typeof x !== 'number' || typeof z !== 'number' || Number.isNaN(x) || Number.isNaN(z)) {
+        return false
+      }
       return pointInPolygonWithTolerance([x, z], footprint)
     })
     .map((node) => node.id as AnyNodeId)
@@ -192,15 +191,23 @@ export function collectZoneContentIds(
       const polygon = surface.polygon.map((point) => [point[0], point[1]] as Point2D)
       return polygonMatchesZoneFootprint(polygon, footprint)
     })
-  const floorItems = Object.values(nodes)
-    .filter((node): node is ItemNode => node.type === 'item' && node.parentId === levelId)
-    .filter((item) => pointInPolygonWithTolerance([item.position[0], item.position[2]], footprint))
+  const floorObjects = Object.values(nodes).filter((node) => {
+    if (node.parentId !== levelId) return false
+    if (node.type !== 'item' && !isPluginContributedKind(node.type)) return false
+    const position = (node as { position?: unknown }).position
+    if (!Array.isArray(position) || position.length < 3) return false
+    const [x, , z] = position as number[]
+    if (typeof x !== 'number' || typeof z !== 'number' || Number.isNaN(x) || Number.isNaN(z)) {
+      return false
+    }
+    return pointInPolygonWithTolerance([x, z], footprint)
+  })
 
   return Array.from(
     new Set<AnyNodeId>([
       ...boundaryWalls.map((wall) => wall.id as AnyNodeId),
       ...surfaces.map((surface) => surface.id as AnyNodeId),
-      ...floorItems.map((item) => item.id as AnyNodeId),
+      ...floorObjects.map((node) => node.id as AnyNodeId),
     ]),
   )
 }

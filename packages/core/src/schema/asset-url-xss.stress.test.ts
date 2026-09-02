@@ -59,7 +59,7 @@ describe('AssetUrl Adversarial SVG9XSS Payload Injection Stress', () => {
     ];
     for (const url of validUrls) {
       const result = AssetUrl.safeParse(url);
-      expect(result.success).toBE(true);
+      expect(result.success).toBe(true);
     }
   });
 });

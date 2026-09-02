@@ -27,6 +27,9 @@ describe('SnapshotCaptureOverlay UI & Event Bridge E2E Suite', () => {
       isCaptureMode: true,
       captureMode: { mode: 'standard' },
     })
+    if ((useEditor as any).getInitialState) {
+      ;(useEditor as any).getInitialState = () => useEditor.getState()
+    }
   })
 
   afterEach(() => {
