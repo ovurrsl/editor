@@ -25,30 +25,28 @@ import { backdropGradient, deepSkyColor, horizonHazeColor } from './backdrop'
 import { type EdgeMode, edgeColorFor, edgeOpacityScaleFor } from './edge-style'
 import { inkedEdges } from './ink-edges'
 import { getSceneTheme } from './scene-themes'
+import {
+  encodeSnapshot,
+  type SnapshotEncodeRequest,
+} from './snapshot-encoder-client'
 import { packNormalToRGB, unpackRGBToNormal } from './tsl-compat'
 
 export const THUMBNAIL_WIDTH = 1920
 export const THUMBNAIL_HEIGHT = 1080
 
 /**
- * Captures are re-renderable artifacts, not user originals, so they encode as
+ * Captures are re-renderable artifacts, not user originals, so they default to
  * webp: a 1920×1080 hero shot lands roughly an order of magnitude under PNG,
  * which is what listings and the catalog actually ship over the wire. Alpha
  * survives, so transparent item/preset captures keep working.
  */
 export const SNAPSHOT_MIME = 'image/webp'
 export const SNAPSHOT_QUALITY = 0.9
-// Retina canvases make viewport/area captures multi-MB; 2048 keeps them near the 1920 presets.
+// Retina canvases make viewport/area captures multi-MB; 2048 keeps them near the 1920 presets in Fast mode.
 export const SNAPSHOT_MAX_EDGE = 2048
 
-function clampSnapshotSize(width: number, height: number): { w: number; h: number } {
-  const maxEdge = Math.max(width, height)
-  if (maxEdge <= SNAPSHOT_MAX_EDGE) return { w: width, h: height }
-
-  const scale = SNAPSHOT_MAX_EDGE / maxEdge
-  return { w: Math.round(width * scale), h: Math.round(height * scale) }
-}
-
+export type SnapshotQualityMode = 'fast' | 'quality'
+export type SnapshotAntiAliasing = 'fxaa' | 'ssaa' | 'taa' | 'none'
 export type SnapshotCaptureMode = 'standard' | 'viewport' | 'area'
 
 export type SnapshotCropRegion = {
@@ -69,6 +67,35 @@ export type SnapshotCaptureResult = {
   outH: number
 }
 
+export interface SnapshotCaptureOptions {
+  captureMode?: SnapshotCaptureMode
+  cropRegion?: SnapshotCropRegion
+  standardSize?: SnapshotSize
+  transparent?: boolean
+  mime?: string
+  quality?: number
+  qualityMode?: SnapshotQualityMode
+  antiAliasing?: SnapshotAntiAliasing
+  scale?: number
+  maxEdge?: number
+}
+
+export function clampSnapshotSize(
+  width: number,
+  height: number,
+  qualityMode: SnapshotQualityMode = 'fast',
+  ceiling = SNAPSHOT_MAX_EDGE,
+): { w: number; h: number } {
+  // In Quality mode, bypass the 2048px ceiling completely (up to hardware limits)
+  if (qualityMode === 'quality') return { w: width, h: height }
+
+  const maxEdge = Math.max(width, height)
+  if (maxEdge <= ceiling) return { w: width, h: height }
+
+  const scale = ceiling / maxEdge
+  return { w: Math.round(width * scale), h: Math.round(height * scale) }
+}
+
 export type SnapshotPipeline = {
   applyEnvironment: ({
     theme,
@@ -83,15 +110,7 @@ export type SnapshotPipeline = {
     edges: EdgeMode
     camera: Camera
   }) => void
-  capture: ({
-    captureMode,
-    cropRegion,
-    standardSize,
-  }: {
-    captureMode?: SnapshotCaptureMode
-    cropRegion?: SnapshotCropRegion
-    standardSize?: SnapshotSize
-  }) => Promise<SnapshotCaptureResult>
+  capture: (options?: SnapshotCaptureOptions) => Promise<SnapshotCaptureResult>
   dispose: () => void
 }
 
@@ -123,6 +142,7 @@ export async function createSnapshotPipeline({
     const inkColorUniform = uniform(new Color('#1a1d24'))
     const inkOpacityUniform = uniform(0.5)
     const inkOpacityScaleUniform = uniform(1)
+    const inkRadiusUniform = uniform(1)
 
     // pass() handles MRT internally for all material types, including custom
     // shaders — unlike renderer.setMRT() which crashes on non-NodeMaterials.
@@ -174,16 +194,13 @@ export async function createSnapshotPipeline({
 
     // Ink edges, mirroring the viewport pipeline (AO → ink → grade) so
     // captures carry the same soft/strong edge look the canvas shows.
-    // Uniform-gated like grade/backdrop: one cached pipeline serves all modes.
-    // Radius scales with render height: a supersampled capture (4K → 1080p)
-    // would otherwise halve the apparent line weight vs the viewport's 1px.
-    const inkRadius = Math.max(1, Math.round(renderer.domElement.height / 1080))
+    // Dynamic uniform radius scales with render target height.
     const inkedRgb = inkedEdges({
       sceneRgb: aoRgb,
       depthTex: scenePassDepth,
       normalTex: scenePassNormal,
       inkColor: inkColorUniform,
-      radius: inkRadius,
+      radius: inkRadiusUniform as any,
       opacity: float(inkOpacityUniform).mul(inkOpacityScaleUniform),
     })
     const ungradedSceneRgb = mix(aoRgb, inkedRgb, inkMixUniform)
@@ -211,17 +228,16 @@ export async function createSnapshotPipeline({
       mix(alpha, float(1), bgMixUniform),
     )
 
-    // FXAA requires a texture node as input; convertToTexture renders finalOutput
-    // into an intermediate RT so FXAA can sample it with neighbour UV offsets.
-    const aaOutput = fxaa(convertToTexture(finalOutput))
+    // FXAA node for Fast Mode: requires a texture node as input
+    const fxaaOutput = fxaa(convertToTexture(finalOutput))
 
     const pipeline = new RenderPipeline(renderer)
-    pipeline.outputNode = aaOutput
+    pipeline.outputNode = fxaaOutput
 
-    // Dedicated render target — pipeline outputs here instead of the canvas,
-    // so R3F's main render loop can never overwrite our capture.
-    const { width, height } = renderer.domElement
-    const renderTarget = new RenderTarget(width, height, { depthBuffer: true })
+    // Dedicated render target — dynamically resized per capture call
+    const initialWidth = renderer.domElement.width || 1920
+    const initialHeight = renderer.domElement.height || 1080
+    const renderTarget = new RenderTarget(initialWidth, initialHeight, { depthBuffer: true })
 
     return {
       applyEnvironment: ({ theme, transparent, grade, edges, camera: captureCamera }) => {
@@ -249,14 +265,78 @@ export async function createSnapshotPipeline({
         bgProjInvUniform.value.copy(captureCamera.projectionMatrixInverse)
         bgCamWorldUniform.value.copy(captureCamera.matrixWorld)
       },
-      capture: async ({ captureMode, cropRegion, standardSize }) => {
+      capture: async (options?: SnapshotCaptureOptions) => {
+        const {
+          captureMode = 'standard',
+          cropRegion,
+          standardSize,
+          mime = SNAPSHOT_MIME,
+          quality = SNAPSHOT_QUALITY,
+          qualityMode = 'fast',
+          antiAliasing = qualityMode === 'quality' ? 'ssaa' : 'fxaa',
+          scale = 1,
+          maxEdge = qualityMode === 'quality' ? 8192 : SNAPSHOT_MAX_EDGE,
+        } = options ?? {}
+
         const standardW = standardSize?.w ?? THUMBNAIL_WIDTH
         const standardH = standardSize?.h ?? THUMBNAIL_HEIGHT
-        const { width: captureWidth, height: captureHeight } = renderer.domElement
+        const domWidth = renderer.domElement.width || 1920
+        const domHeight = renderer.domElement.height || 1080
 
-        // Resize RT if the canvas dimensions changed
-        if (renderTarget.width !== captureWidth || renderTarget.height !== captureHeight) {
-          renderTarget.setSize(captureWidth, captureHeight)
+        let targetWidth: number
+        let targetHeight: number
+
+        if (captureMode === 'viewport') {
+          const baseW = Math.round(domWidth * scale)
+          const baseH = Math.round(domHeight * scale)
+          ;({ w: targetWidth, h: targetHeight } = clampSnapshotSize(
+            baseW,
+            baseH,
+            qualityMode,
+            maxEdge,
+          ))
+        } else if (captureMode === 'area' && cropRegion) {
+          const baseW = Math.round(cropRegion.width * domWidth * scale)
+          const baseH = Math.round(cropRegion.height * domHeight * scale)
+          ;({ w: targetWidth, h: targetHeight } = clampSnapshotSize(
+            baseW,
+            baseH,
+            qualityMode,
+            maxEdge,
+          ))
+        } else {
+          // Standard mode
+          targetWidth = standardW
+          targetHeight = standardH
+        }
+
+        // Determine SSAA scale factor
+        // In Quality mode with SSAA/TAA, render at 2x resolution and downsample in worker
+        const ssaaScale =
+          qualityMode === 'quality' &&
+          (antiAliasing === 'ssaa' || antiAliasing === 'taa') &&
+          targetWidth * 2 <= 8192 &&
+          targetHeight * 2 <= 8192
+            ? 2
+            : 1
+
+        const renderWidth = targetWidth * ssaaScale
+        const renderHeight = targetHeight * ssaaScale
+
+        // Switch anti-aliasing output node:
+        // In Quality mode, bypass FXAA node to maintain crisp ink lines and fine geometric detail
+        if (qualityMode === 'quality' && antiAliasing !== 'fxaa') {
+          pipeline.outputNode = finalOutput
+        } else {
+          pipeline.outputNode = fxaaOutput
+        }
+
+        // Dynamically scale ink radius proportional to render target height
+        inkRadiusUniform.value = Math.max(1, Math.round(renderHeight / 1080))
+
+        // Resize RenderTarget to match exact render dimensions
+        if (renderTarget.width !== renderWidth || renderTarget.height !== renderHeight) {
+          renderTarget.setSize(renderWidth, renderHeight)
         }
 
         try {
@@ -271,121 +351,51 @@ export async function createSnapshotPipeline({
         // after the render, before the asynchronous GPU readback begins.
         await Promise.resolve()
 
-        // Read pixels from the RT asynchronously.
-        // WebGPU copyTextureToBuffer aligns each row to 256 bytes, so we must
-        // depad the rows before constructing ImageData.
+        // Read pixels from the RT asynchronously via WebGPU buffer mapping
         const pixels = (await (renderer as any).readRenderTargetPixelsAsync(
           renderTarget,
           0,
           0,
-          captureWidth,
-          captureHeight,
+          renderWidth,
+          renderHeight,
         )) as Uint8Array
 
-        const actualBytesPerRow = captureWidth * 4
-        const tightTotal = actualBytesPerRow * captureHeight
+        const actualBytesPerRow = renderWidth * 4
         const paddedBytesPerRow = Math.ceil(actualBytesPerRow / 256) * 256
-        // Two readback shapes to handle:
-        // - WebGPU (`copyTextureToBuffer`): top-down + 256-byte row padding
-        //   when width*4 isn't already a multiple of 256.
-        // - WebGL2 fallback (iOS Chrome, etc.): tightly-packed but bottom-up
-        //   (OpenGL framebuffer convention).
-        // `isWebGPURenderer` lies — it stays true even when the renderer
-        // falls back to the WebGL backend. Inspect the actual backend
-        // instead (presence of a GPU device, or backend constructor name).
+
         const backend = (renderer as any).backend
         const isWebGPU =
           !!backend?.device ||
           backend?.isWebGPUBackend === true ||
           backend?.constructor?.name === 'WebGPUBackend'
-        let tightPixels: Uint8ClampedArray
-        if (isWebGPU) {
-          // WebGPU: depad rows if needed; orientation is already top-down.
-          if (paddedBytesPerRow === actualBytesPerRow) {
-            tightPixels = new Uint8ClampedArray(
-              pixels.buffer,
-              pixels.byteOffset,
-              Math.min(pixels.byteLength, tightTotal),
-            )
-          } else {
-            tightPixels = new Uint8ClampedArray(tightTotal)
-            for (let row = 0; row < captureHeight; row++) {
-              tightPixels.set(
-                pixels.subarray(
-                  row * paddedBytesPerRow,
-                  row * paddedBytesPerRow + actualBytesPerRow,
-                ),
-                row * actualBytesPerRow,
-              )
-            }
-          }
-        } else {
-          // WebGL2: tight buffer in bottom-up order — flip rows.
-          tightPixels = new Uint8ClampedArray(tightTotal)
-          for (let row = 0; row < captureHeight; row++) {
-            const srcStart = (captureHeight - 1 - row) * actualBytesPerRow
-            tightPixels.set(
-              pixels.subarray(srcStart, srcStart + actualBytesPerRow),
-              row * actualBytesPerRow,
-            )
-          }
+
+        const encodeRequest: SnapshotEncodeRequest = {
+          id: `snap_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+          pixels,
+          srcWidth: renderWidth,
+          srcHeight: renderHeight,
+          bytesPerRow: isWebGPU ? paddedBytesPerRow : actualBytesPerRow,
+          targetWidth,
+          targetHeight,
+          cropRegion: captureMode === 'area' ? cropRegion : undefined,
+          ssaaScale,
+          isWebGPU,
+          mime,
+          quality,
+          captureMode,
         }
 
-        const imageData = new ImageData(
-          tightPixels as unknown as Uint8ClampedArray<ArrayBuffer>,
-          captureWidth,
-          captureHeight,
-        )
-        const srcCanvas = new OffscreenCanvas(captureWidth, captureHeight)
-        srcCanvas.getContext('2d')!.putImageData(imageData, 0, 0)
-
-        let outW: number
-        let outH: number
-        let blob: Blob
-
-        if (captureMode === 'viewport') {
-          ;({ w: outW, h: outH } = clampSnapshotSize(captureWidth, captureHeight))
-          const offscreen = new OffscreenCanvas(outW, outH)
-          const ctx = offscreen.getContext('2d')!
-          if (outW !== captureWidth || outH !== captureHeight) ctx.imageSmoothingQuality = 'high'
-          ctx.drawImage(srcCanvas, 0, 0, captureWidth, captureHeight, 0, 0, outW, outH)
-          blob = await offscreen.convertToBlob({ type: SNAPSHOT_MIME, quality: SNAPSHOT_QUALITY })
-        } else if (captureMode === 'area' && cropRegion) {
-          const sx = Math.round(cropRegion.x * captureWidth)
-          const sy = Math.round(cropRegion.y * captureHeight)
-          const sourceW = Math.round(cropRegion.width * captureWidth)
-          const sourceH = Math.round(cropRegion.height * captureHeight)
-          ;({ w: outW, h: outH } = clampSnapshotSize(sourceW, sourceH))
-          const offscreen = new OffscreenCanvas(outW, outH)
-          const ctx = offscreen.getContext('2d')!
-          if (outW !== sourceW || outH !== sourceH) ctx.imageSmoothingQuality = 'high'
-          ctx.drawImage(srcCanvas, sx, sy, sourceW, sourceH, 0, 0, outW, outH)
-          blob = await offscreen.convertToBlob({ type: SNAPSHOT_MIME, quality: SNAPSHOT_QUALITY })
-        } else {
-          // Standard: center-crop to the requested aspect (default 1920×1080)
-          const srcAspect = captureWidth / captureHeight
-          const dstAspect = standardW / standardH
-          let sx = 0
-          let sy = 0
-          let sWidth = captureWidth
-          let sHeight = captureHeight
-          if (srcAspect > dstAspect) {
-            sWidth = Math.round(captureHeight * dstAspect)
-            sx = Math.round((captureWidth - sWidth) / 2)
-          } else if (srcAspect < dstAspect) {
-            sHeight = Math.round(captureWidth / dstAspect)
-            sy = Math.round((captureHeight - sHeight) / 2)
-          }
-          outW = standardW
-          outH = standardH
-          const offscreen = new OffscreenCanvas(outW, outH)
-          offscreen
-            .getContext('2d')!
-            .drawImage(srcCanvas, sx, sy, sWidth, sHeight, 0, 0, outW, outH)
-          blob = await offscreen.convertToBlob({ type: SNAPSHOT_MIME, quality: SNAPSHOT_QUALITY })
+        // Offload image processing & encoding to Web Worker
+        const response = await encodeSnapshot(encodeRequest)
+        if (!response.success || !response.blob) {
+          throw new Error(response.error || 'Failed to encode snapshot in worker')
         }
 
-        return { blob, outW, outH }
+        return {
+          blob: response.blob,
+          outW: response.width ?? targetWidth,
+          outH: response.height ?? targetHeight,
+        }
       },
       dispose: () => {
         pipeline.dispose()

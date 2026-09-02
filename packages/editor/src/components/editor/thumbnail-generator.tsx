@@ -32,6 +32,21 @@ export interface SnapshotCameraData {
   resolution?: { w: number; h: number }
 }
 
+export interface ThumbnailGenerateEvent {
+  projectId?: string
+  captureMode?: 'standard' | 'viewport' | 'area'
+  cropRegion?: { x: number; y: number; width: number; height: number }
+  standardSize?: { w: number; h: number }
+  snapLevels?: boolean
+  transparent?: boolean
+  intent?: 'scene-preview' | 'download'
+  mime?: string
+  quality?: number
+  maxEdge?: number
+  qualityMode?: 'fast' | 'quality'
+  scale?: number
+}
+
 interface ThumbnailGeneratorProps {
   onThumbnailCapture?: (blob: Blob, cameraData: SnapshotCameraData) => void
 }
@@ -122,13 +137,21 @@ export const ThumbnailGenerator = ({ onThumbnailCapture }: ThumbnailGeneratorPro
       standardSize?: { w: number; h: number },
       transparent = false,
       intent: 'scene-preview' | 'download' = 'scene-preview',
-      encoding?: { mime?: string; quality?: number; maxEdge?: number },
+      encoding?: {
+        mime?: string
+        quality?: number
+        maxEdge?: number
+        qualityMode?: 'fast' | 'quality'
+        scale?: number
+      },
     ) => {
       const standardW = standardSize?.w ?? THUMBNAIL_WIDTH
       const standardH = standardSize?.h ?? THUMBNAIL_HEIGHT
       const mime = encoding?.mime ?? SNAPSHOT_MIME
       const quality = encoding?.quality ?? SNAPSHOT_QUALITY
       const maxEdge = encoding?.maxEdge ?? SNAPSHOT_MAX_EDGE
+      const qualityMode = encoding?.qualityMode ?? 'fast'
+      const scale = encoding?.scale ?? 1
       if (isGenerating.current) return
       // A download needs nowhere to put the image but the user's disk, so it
       // runs whether or not the host wired up a preview handler.
@@ -240,10 +263,15 @@ export const ThumbnailGenerator = ({ onThumbnailCapture }: ThumbnailGeneratorPro
           // their overrides before capture and re-apply them after.
           try {
             emitter.emit('thumbnail:before-capture', undefined)
-            capturePromise = pipeline.capture({
+            capturePromise = (pipeline.capture as any)({
               captureMode,
               cropRegion,
               standardSize,
+              transparent,
+              mime,
+              quality,
+              qualityMode,
+              maxEdge,
             })
           } finally {
             // Restore level positions, levelMode, and node visibility immediately
@@ -274,9 +302,10 @@ export const ThumbnailGenerator = ({ onThumbnailCapture }: ThumbnailGeneratorPro
 
           let outW: number
           let outH: number
+          const effectiveMaxEdge = qualityMode === 'quality' ? Math.round(8192 * scale) : maxEdge
 
           if (captureMode === 'viewport') {
-            ;({ w: outW, h: outH } = clampSnapshotSize(width, height, maxEdge))
+            ;({ w: outW, h: outH } = clampSnapshotSize(width, height, effectiveMaxEdge))
             const offscreen = document.createElement('canvas')
             offscreen.width = outW
             offscreen.height = outH
@@ -295,7 +324,7 @@ export const ThumbnailGenerator = ({ onThumbnailCapture }: ThumbnailGeneratorPro
             const sy = Math.round(cropRegion.y * height)
             const sourceW = Math.round(cropRegion.width * width)
             const sourceH = Math.round(cropRegion.height * height)
-            ;({ w: outW, h: outH } = clampSnapshotSize(sourceW, sourceH, maxEdge))
+            ;({ w: outW, h: outH } = clampSnapshotSize(sourceW, sourceH, effectiveMaxEdge))
             const offscreen = document.createElement('canvas')
             offscreen.width = outW
             offscreen.height = outH
@@ -328,9 +357,9 @@ export const ThumbnailGenerator = ({ onThumbnailCapture }: ThumbnailGeneratorPro
             const offscreen = document.createElement('canvas')
             offscreen.width = outW
             offscreen.height = outH
-            offscreen
-              .getContext('2d')!
-              .drawImage(gl.domElement, sx, sy, sWidth, sHeight, 0, 0, outW, outH)
+            const ctx = offscreen.getContext('2d')!
+            if (outW !== sWidth || outH !== sHeight) ctx.imageSmoothingQuality = 'high'
+            ctx.drawImage(gl.domElement, sx, sy, sWidth, sHeight, 0, 0, outW, outH)
             blob = await new Promise<Blob>((resolve, reject) =>
               offscreen.toBlob(
                 (b) => (b ? resolve(b) : reject(new Error('Canvas capture failed'))),
@@ -379,20 +408,7 @@ export const ThumbnailGenerator = ({ onThumbnailCapture }: ThumbnailGeneratorPro
   useEffect(() => {
     if (!onThumbnailCapture) return
 
-    const handleGenerateThumbnail = async (event: {
-      captureMode?: 'standard' | 'viewport' | 'area'
-      cropRegion?: { x: number; y: number; width: number; height: number }
-      standardSize?: { w: number; h: number }
-      snapLevels?: boolean
-      // Preset/item captures keep the alpha channel (their thumbnails compose
-      // onto arbitrary palette backgrounds); scene snapshots — studio renders
-      // and project thumbnails — composite the theme backdrop + sky.
-      transparent?: boolean
-      intent?: 'scene-preview' | 'download'
-      mime?: string
-      quality?: number
-      maxEdge?: number
-    }) => {
+    const handleGenerateThumbnail = async (event: ThumbnailGenerateEvent) => {
       await generate(
         event.snapLevels === true,
         event.captureMode,
@@ -400,12 +416,18 @@ export const ThumbnailGenerator = ({ onThumbnailCapture }: ThumbnailGeneratorPro
         event.standardSize,
         event.transparent === true,
         event.intent ?? 'scene-preview',
-        { mime: event.mime, quality: event.quality, maxEdge: event.maxEdge },
+        {
+          mime: event.mime,
+          quality: event.quality,
+          maxEdge: event.maxEdge,
+          qualityMode: event.qualityMode,
+          scale: event.scale,
+        },
       )
     }
 
-    emitter.on('camera-controls:generate-thumbnail', handleGenerateThumbnail)
-    return () => emitter.off('camera-controls:generate-thumbnail', handleGenerateThumbnail)
+    emitter.on('camera-controls:generate-thumbnail', handleGenerateThumbnail as any)
+    return () => emitter.off('camera-controls:generate-thumbnail', handleGenerateThumbnail as any)
   }, [generate, onThumbnailCapture])
 
   // Go-to-camera: animate camera to a saved snapshot position/target

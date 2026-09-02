@@ -38,6 +38,7 @@ const RESOLUTION_SCALES = [
   { id: '1x', label: '1080p', scale: 1 },
   { id: '2x', label: '1440p', scale: 4 / 3 },
   { id: '4x', label: '4K', scale: 2 },
+  { id: '8x', label: '8K', scale: 4 },
 ] as const
 type ResolutionId = (typeof RESOLUTION_SCALES)[number]['id']
 
@@ -63,11 +64,18 @@ const STANDARD_SIZES: Record<SnapshotStandardAspect, { w: number; h: number }> =
 }
 type StandardAspect = SnapshotStandardAspect
 
-function clampSnapshotSize(width: number, height: number): { w: number; h: number } {
-  const maxEdge = Math.max(width, height)
-  if (maxEdge <= SNAPSHOT_MAX_EDGE) return { w: width, h: height }
+function clampSnapshotSize(
+  width: number,
+  height: number,
+  qualityMode: 'fast' | 'quality' = 'fast',
+  ceiling: number = SNAPSHOT_MAX_EDGE,
+): { w: number; h: number } {
+  if (qualityMode === 'quality') return { w: width, h: height }
 
-  const scale = SNAPSHOT_MAX_EDGE / maxEdge
+  const maxEdge = Math.max(width, height)
+  if (maxEdge <= ceiling) return { w: width, h: height }
+
+  const scale = ceiling / maxEdge
   return { w: Math.round(width * scale), h: Math.round(height * scale) }
 }
 
@@ -76,22 +84,34 @@ function getResolution(
   overlayEl: HTMLDivElement | null,
   drag: Drag | null,
   standardAspect: StandardAspect,
+  resolutionScale: number = 1,
+  qualityMode: 'fast' | 'quality' = 'fast',
 ): { w: number; h: number } | null {
-  if (mode === 'standard') return STANDARD_SIZES[standardAspect]
+  if (mode === 'standard') {
+    const base = STANDARD_SIZES[standardAspect]
+    return {
+      w: Math.round(base.w * resolutionScale),
+      h: Math.round(base.h * resolutionScale),
+    }
+  }
 
   if (!overlayEl) return null
   const rect = overlayEl.getBoundingClientRect()
   const dpr = Math.min(window.devicePixelRatio, 1.5)
 
   if (mode === 'viewport') {
-    return clampSnapshotSize(Math.round(rect.width * dpr), Math.round(rect.height * dpr))
+    const rawW = Math.round(rect.width * dpr * (qualityMode === 'quality' ? resolutionScale : 1))
+    const rawH = Math.round(rect.height * dpr * (qualityMode === 'quality' ? resolutionScale : 1))
+    return clampSnapshotSize(rawW, rawH, qualityMode, SNAPSHOT_MAX_EDGE * resolutionScale)
   }
 
   if (mode === 'area' && drag) {
     const w = Math.abs(drag.end.x - drag.start.x)
     const h = Math.abs(drag.end.y - drag.start.y)
     if (w < 4 || h < 4) return null
-    return clampSnapshotSize(Math.round(w * dpr), Math.round(h * dpr))
+    const rawW = Math.round(w * dpr * (qualityMode === 'quality' ? resolutionScale : 1))
+    const rawH = Math.round(h * dpr * (qualityMode === 'quality' ? resolutionScale : 1))
+    return clampSnapshotSize(rawW, rawH, qualityMode, SNAPSHOT_MAX_EDGE * resolutionScale)
   }
 
   return null
@@ -147,6 +167,7 @@ export function SnapshotCaptureOverlay({ projectId }: { projectId: string }) {
   // (e.g. the publish-cover capture) — hide the crop/aspect switcher.
   const isCropLocked = isPreset || requestedCrop !== undefined
 
+  const [qualityMode, setQualityMode] = useState<'fast' | 'quality'>('fast')
   const [mode, setMode] = useState<CropMode>('standard')
   const [standardAspect, setStandardAspect] = useState<StandardAspect>('16:9')
   const [aspectMenuOpen, setAspectMenuOpen] = useState(false)
@@ -192,6 +213,7 @@ export function SnapshotCaptureOverlay({ projectId }: { projectId: string }) {
     setAspectMenuOpen(false)
     setIsDragging(false)
     setCaptureState('idle')
+    setQualityMode('fast')
     if (isPreset && overlayRef.current) {
       const rect = overlayRef.current.getBoundingClientRect()
       const side = Math.min(rect.width, rect.height) * 0.75
@@ -396,18 +418,37 @@ export function SnapshotCaptureOverlay({ projectId }: { projectId: string }) {
         intent,
         mime: encoding.mime,
         quality: encoding.quality,
-        // Viewport and area captures clamp to keep a retina grab from landing
-        // multi-megabyte; the chosen resolution raises that ceiling with them,
-        // or asking for 4K would silently return the same 2048px image.
-        maxEdge: Math.round(2048 * scale),
-      })
+        qualityMode,
+        scale,
+        // Viewport and area captures clamp in fast mode to keep a retina grab from landing
+        // multi-megabyte; in quality mode, unconstrained or raised ceiling is passed.
+        maxEdge: qualityMode === 'quality' ? Math.round(8192 * scale) : Math.round(2048 * scale),
+      } as any)
     },
-    [captureState, mode, drag, projectId, isPreset, standardAspect, resolutionId, encodingId],
+    [
+      captureState,
+      mode,
+      drag,
+      projectId,
+      isPreset,
+      standardAspect,
+      resolutionId,
+      encodingId,
+      qualityMode,
+    ],
   )
 
   if (!isCaptureMode) return null
 
-  const resolution = getResolution(mode, overlayRef.current, drag, standardAspect)
+  const currentScale = RESOLUTION_SCALES.find((r) => r.id === resolutionId)?.scale ?? 1
+  const resolution = getResolution(
+    mode,
+    overlayRef.current,
+    drag,
+    standardAspect,
+    currentScale,
+    qualityMode,
+  )
 
   // Standard mode framing: the output is a center-crop of the canvas to the
   // chosen aspect (see ThumbnailGenerator) — show exactly that region as a
@@ -581,6 +622,14 @@ export function SnapshotCaptureOverlay({ projectId }: { projectId: string }) {
               {resolution ? `${resolution.w} × ${resolution.h}` : '—'}
             </span>
           </div>
+          <div className={HUD_CHIP_CLASS}>
+            <span className="font-mono text-[8.5px] text-white/50 uppercase tracking-[0.14em]">
+              Engine
+            </span>
+            <span className="font-semibold text-white text-xs">
+              {qualityMode === 'quality' ? '✨ High Quality' : '⚡ Fast'}
+            </span>
+          </div>
         </div>
       )}
 
@@ -713,6 +762,15 @@ export function SnapshotCaptureOverlay({ projectId }: { projectId: string }) {
             what its shutter already does. */}
         {!isPreset && (
           <div className="pointer-events-auto flex flex-wrap items-center justify-center gap-1.5">
+            <SegmentedRow
+              label="Mode"
+              onSelect={(id) => setQualityMode(id as 'fast' | 'quality')}
+              options={[
+                { id: 'fast', label: '⚡ Fast' },
+                { id: 'quality', label: '✨ Quality' },
+              ]}
+              selected={qualityMode}
+            />
             <SegmentedRow
               label="Size"
               onSelect={(id) => setResolutionId(id as ResolutionId)}

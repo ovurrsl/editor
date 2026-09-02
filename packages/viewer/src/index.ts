@@ -159,18 +159,30 @@ export {
 } from './lib/scene-bvh-maintainer'
 export { type HiddenReason, hideFromScene, showInScene } from './lib/scene-visibility'
 export {
+  clampSnapshotSize,
   createSnapshotPipeline,
   SNAPSHOT_MAX_EDGE,
   SNAPSHOT_MIME,
   SNAPSHOT_QUALITY,
+  type SnapshotAntiAliasing,
   type SnapshotCaptureMode,
+  type SnapshotCaptureOptions,
   type SnapshotCaptureResult,
   type SnapshotCropRegion,
   type SnapshotPipeline,
+  type SnapshotQualityMode,
   type SnapshotSize,
   THUMBNAIL_HEIGHT,
   THUMBNAIL_WIDTH,
 } from './lib/snapshot-pipeline'
+export {
+  disposeSnapshotEncoder,
+  encodeSnapshot,
+  getSnapshotEncoderClient,
+  SnapshotEncoderClient,
+  type SnapshotEncodeRequest,
+  type SnapshotEncodeResponse,
+} from './lib/snapshot-encoder-client'
 export {
   buildTerrainPerimeterFillGeometry,
   type TerrainPerimeterPoint,
