@@ -1,52 +1,42 @@
-﻿import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { pluginManager, useScene } from '@pascal-app/core'
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
+import { useScene } from '@pascal-app/core'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { editorHostPanelRegistry } from '../../../../lib/plugin-panels'
+import { editorHostPanelRegistry, registerEditorHostPanel } from '../../../../lib/plugin-panels'
 import { PluginsPanel } from './plugins-panel'
 
 describe('PluginsPanel Native Sidebar Component', () => {
   beforeEach(() => {
-    pluginManager._reset()
     editorHostPanelRegistry.reset()
+    useScene.setState({ readOnly: false })
     useScene.getState().setInstalledPlugins([], { explicit: true })
 
-    pluginManager.registerDescriptors([
-      {
-        id: 'pascal:boots',
-        name: 'PascalOrg Boots',
-        description: 'Industrial safety equipment and footwear.',
-        icon: '/icons/boots.webp',
-        author: { name: 'PascalOrg', url: 'https://pascal.org' },
-        pluginUrl: 'https://editor.pascal.app/plugins/boots',
-        loadPlugin: async () => ({
-          id: 'pascal:boots',
-          name: 'PascalOrg Boots',
-          version: '1.0.0',
-          apiVersion: 1,
-        }),
-      },
-      {
-        id: 'pascal:trees',
-        name: 'Nature and Trees',
-        description: 'Parametric procedural greenery and vegetation.',
-        icon: { kind: 'url', src: '/nature.webp' },
-        author: 'Pascal Green',
-        loadPlugin: async () => ({
-          id: 'pascal:trees',
-          name: 'Nature and Trees',
-          version: '1.0.0',
-          apiVersion: 1,
-        }),
-      },
-    ])
+    registerEditorHostPanel({
+      id: 'pascal:boots:panel',
+      pluginId: 'pascal:boots',
+      label: 'PascalOrg Boots',
+      description: 'Industrial safety equipment and footwear.',
+      icon: { kind: 'url', src: '/icons/boots.webp' },
+      creator: { name: 'PascalOrg', url: 'https://pascal.org' },
+      pluginUrl: 'https://editor.pascal.app/plugins/boots',
+      component: async () => ({ default: () => null }),
+    })
+
+    registerEditorHostPanel({
+      id: 'pascal:trees:trees',
+      pluginId: 'pascal:trees',
+      label: 'Nature and Trees',
+      description: 'Parametric procedural greenery and vegetation.',
+      icon: { kind: 'url', src: '/nature.webp' },
+      creator: { name: 'Pascal Green' },
+      component: async () => ({ default: () => null }),
+    })
   })
 
   afterEach(() => {
-    pluginManager._reset()
     editorHostPanelRegistry.reset()
   })
 
-  it('renders all plugins from pluginManager descriptors in native card layout', () => {
+  it('renders all plugins from editorHostPanelRegistry in native card layout', () => {
     const html = renderToStaticMarkup(<PluginsPanel />)
 
     expect(html).toContain('Plugins')
@@ -73,8 +63,8 @@ describe('PluginsPanel Native Sidebar Component', () => {
     expect(html).toContain('src="/nature.webp"')
   })
 
-  it('reflects installed plugin state when installed via pluginManager', async () => {
-    await pluginManager.installPlugin('pascal:boots')
+  it('reflects installed plugin state when installed via useScene', async () => {
+    useScene.getState().setInstalledPlugins(['pascal:boots'], { explicit: true })
 
     const html = renderToStaticMarkup(<PluginsPanel />)
 

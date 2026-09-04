@@ -1,22 +1,26 @@
+import { mintHostPanel, mintPlugin } from '@mint/pascal-plugin'
 import {
   type AnyNodeDefinition,
   discoverPlugins,
+  extendPluginDiscovery,
   loadPlugin,
   nodeRegistry,
-  pluginManager,
   registerNode,
 } from '@pascal-app/core'
 import { registerEditorHostPanel } from '@pascal-app/editor'
 import { builtinPlugin } from '@pascal-app/nodes'
-import { PLUGIN_CATALOG } from './plugins/catalog'
-import { usePluginManager } from './plugins/use-plugin-manager'
+import { articraftHostPanel, articraftPlugin } from '@pascal-app/plugin-articraft'
+import { bonesHostPanel, bonesPlugin } from '@pascal-app/plugin-bones'
+import { bootsHostPanel, bootsPlugin } from '@pascal-app/plugin-boots'
+import { streetscapeHostPanel, streetscapePlugin } from '@pascal-app/plugin-streetscape'
+import { treesHostPanel, treesPlugin } from '@pascal-app/plugin-trees'
+import { warehouseCatalogPanel, warehousePlugin } from '@ovurrsl/plugin-warehouse'
 
 // Idempotency guards: HMR can reload this module, but `registerNode`
 // throws on duplicate kinds. Flags live in the module closure so they
 // reset on a hard reload but survive within a session.
 let builtinsLoaded = false
 let externalsKickedOff = false
-let catalogInitialized = false
 
 function isDev(): boolean {
   const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process
@@ -65,27 +69,6 @@ function loadBuiltinsSync(): void {
 }
 
 /**
- * Initialize dynamic lazy plugin catalog and hook panel registration.
- */
-export function initPlugins(): void {
-  if (catalogInitialized) return
-  catalogInitialized = true
-
-  // Connect plugin manager panel notifications to editor host panel registry
-  pluginManager.setPanelRegistrar((panel) => {
-    registerEditorHostPanel(panel)
-  })
-
-  // Register lazy plugin descriptors into pluginManager
-  pluginManager.registerDescriptors(PLUGIN_CATALOG)
-
-  // Kick off loading default plugins
-  if (typeof window !== 'undefined') {
-    void usePluginManager.getState().loadDefaultPlugins()
-  }
-}
-
-/**
  * Phase 6 plugin discovery hook — runs once, asynchronously, after the
  * synchronous builtins are already registered. Apps that ship external
  * node packs override the discovery via `setPluginDiscovery(...)`
@@ -103,6 +86,73 @@ export async function loadExternalPlugins(): Promise<void> {
   }
 }
 
+// -----------------------------------------------------------------------------
+// Native Plugin Registrations with Turkish Localized Labels & Descriptions
+// -----------------------------------------------------------------------------
+
+// 1. Boots (PascalOrg Boots)
+extendPluginDiscovery(async () => [bootsPlugin])
+registerEditorHostPanel({
+  ...bootsHostPanel,
+  defaultInstalled: false,
+  label: 'PascalOrg Boots',
+  description: 'Birinci şahıs (FPS) inşa ve AI robot tehditlerine karşı saha koruma simülasyonu.',
+})
+
+// 2. Nature & Trees
+extendPluginDiscovery(async () => [treesPlugin])
+registerEditorHostPanel({
+  ...treesHostPanel,
+  defaultInstalled: false,
+  label: 'Nature & Trees',
+  description: 'Dış mekan sahneleri için prosedürel ağaçlar, çiçekler ve çim örtüleri.',
+})
+
+// 3. Bones (Mühendislik Röntgeni)
+extendPluginDiscovery(async () => [bonesPlugin])
+registerEditorHostPanel({
+  ...bonesHostPanel,
+  defaultInstalled: false,
+  label: 'Bones (Mühendislik Röntgeni)',
+  description: 'Duvar karkasları, döşeme, çatı ve elektrik altyapısını gösteren mühendislik röntgeni.',
+})
+
+// 4. Articraft 3D & AI
+extendPluginDiscovery(async () => [articraftPlugin])
+registerEditorHostPanel({
+  ...articraftHostPanel,
+  defaultInstalled: false,
+  label: 'Articraft 3D & AI',
+  description: 'Articraft-10K varlık kütüphanesi ve prompt tabanlı 3D eklemli varlık üretimi.',
+})
+
+// 5. Streetscape & Kentsel Altyapı
+extendPluginDiscovery(async () => [streetscapePlugin])
+registerEditorHostPanel({
+  ...streetscapeHostPanel,
+  defaultInstalled: false,
+  creator: { name: 'Sudhir Yadav', url: 'https://github.com/sudhir9297' },
+  label: 'Streetscape & Kentsel Altyapı',
+  description: 'Yollar, sokak lambaları, trafik işaretleri ve kentsel altyapı araçları.',
+})
+
+// 6. Warehouse & Lojistik Donatıları (Default Installed)
+extendPluginDiscovery(async () => [warehousePlugin])
+registerEditorHostPanel({
+  ...warehouseCatalogPanel,
+  defaultInstalled: true,
+  label: 'Warehouse & Lojistik Donatıları',
+  description: 'Endüstriyel depolama, palet rafları, konveyör sistemleri ve lojistik planlama.',
+})
+
+// 7. Mint 3D Asset Studio
+extendPluginDiscovery(async () => [mintPlugin])
+registerEditorHostPanel({
+  ...mintHostPanel,
+  defaultInstalled: false,
+  label: 'Mint 3D Asset Studio',
+  description: 'Mint 3D varlık tarama, üretim ve sahneye doğrudan yerleştirme paneli.',
+})
+
 loadBuiltinsSync()
-initPlugins()
 void loadExternalPlugins()

@@ -25,7 +25,6 @@ import { AccountSettingsSection } from '@/components/account-settings-section'
 import { useSession } from '@/components/auth/session-provider'
 import { countGraphNodes, isEmptyGraphOverwrite } from '@/lib/empty-graph-guard'
 import { type PersistedSceneGraph, sceneGraphSignature } from '@/lib/scene-signature'
-import { usePluginManager } from '@/lib/plugins/use-plugin-manager'
 import { EDITOR_SIDEBAR_TABS } from './editor-sidebar-tabs'
 import { useScenePresence } from './use-scene-presence'
 import {
@@ -170,11 +169,6 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
     useViewer.getState().setSceneLocked(false)
   }, [forcedReadOnly])
 
-  useEffect(() => {
-    if (initialScene.installedPlugins && initialScene.installedPlugins.length > 0) {
-      void usePluginManager.getState().syncWithScene(initialScene.installedPlugins)
-    }
-  }, [initialScene])
 
   const lightPreview = isLightPreviewQuery(searchParams)
 
@@ -306,9 +300,6 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
             )
             serverNodeCountRef.current = Object.keys(lastSavedGraphRef.current.nodes ?? {}).length
           }
-          if (payload.patch.installedPlugins && payload.patch.installedPlugins.length > 0) {
-            void usePluginManager.getState().syncWithScene(payload.patch.installedPlugins)
-          }
           setConflict(false)
           setSaveError(null)
           return
@@ -322,9 +313,6 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
         lastSavedGraphRef.current = payload.graph as SceneGraph
         lastRemoteGraphJsonRef.current = sceneGraphSignature(payload.graph)
         applySceneGraphToEditor(payload.graph)
-        if (payload.graph.installedPlugins && payload.graph.installedPlugins.length > 0) {
-          void usePluginManager.getState().syncWithScene(payload.graph.installedPlugins)
-        }
         setConflict(false)
         setSaveError(null)
       } else {
@@ -345,12 +333,6 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
               lastSavedGraphRef.current = fullScene.graph
               lastRemoteGraphJsonRef.current = sceneGraphSignature(fullScene.graph)
               applySceneGraphToEditor(fullScene.graph)
-              if (
-                fullScene.graph.installedPlugins &&
-                fullScene.graph.installedPlugins.length > 0
-              ) {
-                void usePluginManager.getState().syncWithScene(fullScene.graph.installedPlugins)
-              }
               setConflict(false)
               setSaveError(null)
             }
