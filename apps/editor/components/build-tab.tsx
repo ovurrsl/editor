@@ -92,6 +92,8 @@ function collectBuildTypes(floorplanMode: FloorplanMode): BuildType[] {
     const extension = getFloorplanNodeExtension(definition)
     if (
       baseKinds.has(kind) ||
+      kind.startsWith('streetscape:') ||
+      kind.includes('road') ||
       definition.presentation?.paletteGroup === 'roof-features' ||
       !extension?.tool ||
       !isFloorplanToolAvailableInMode(extension.availableModes, floorplanMode) ||
