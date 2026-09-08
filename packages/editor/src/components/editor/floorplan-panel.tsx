@@ -6260,26 +6260,40 @@ export function FloorplanPanel({
     let mutationVersion = 0
     let observedVersion = 0
     const measure = () => {
-      let bbox: { x: number; y: number; width: number; height: number }
-      try {
-        const measured = el.getBBox()
-        bbox = {
-          x: measured.x,
-          y: measured.y,
-          width: measured.width,
-          height: measured.height,
-        }
-      } catch {
-        return
+      const nodes = useScene.getState().nodes
+      let minX = Infinity
+      let maxX = -Infinity
+      let minZ = Infinity
+      let maxZ = -Infinity
+
+      for (const node of Object.values(nodes)) {
+        if (!node.position) continue
+        const x = node.position[0] ?? 0
+        const z = node.position[2] ?? 0
+        const w = (node as any).width ?? 10
+        const l = (node as any).length ?? 10
+        minX = Math.min(minX, x - w / 2)
+        maxX = Math.max(maxX, x + w / 2)
+        minZ = Math.min(minZ, z - l / 2)
+        maxZ = Math.max(maxZ, z + l / 2)
       }
-      if (bbox.width <= 0 && bbox.height <= 0) return
+
+      if (minX === Infinity) return
+
+      const bbox = {
+        x: minX,
+        y: minZ,
+        width: maxX - minX,
+        height: maxZ - minZ,
+      }
+
       setMeasuredSceneBBox((prev) => {
         if (
           prev &&
-          prev.x === bbox.x &&
-          prev.y === bbox.y &&
-          prev.width === bbox.width &&
-          prev.height === bbox.height
+          Math.abs(prev.x - bbox.x) < 1 &&
+          Math.abs(prev.y - bbox.y) < 1 &&
+          Math.abs(prev.width - bbox.width) < 1 &&
+          Math.abs(prev.height - bbox.height) < 1
         ) {
           return prev
         }
