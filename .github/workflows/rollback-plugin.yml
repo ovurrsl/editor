@@ -1,0 +1,179 @@
+name: Roll back the warehouse plugin
+
+# The plugin is compiled INTO the bundle, so "roll back the plugin" means
+# exactly one thing: move the pin in `apps/editor/package.json` to the last
+# known-good sha, rebuild, and republish. There was no button for that — the
+# pin had to be edited by hand, relocked by hand (the lockfile records each
+# tarball's sha512, so it cannot be edited), and the deploy dispatched by hand,
+# under the time pressure of a live site being wrong.
+#
+# This is `bump-plugin` run backwards, deliberately sharing its shape: same
+# relock, same type-check gate, same explicit dispatch. A rollback that skipped
+# the gate could put a bundle on the site that does not compile, which is a
+# worse outage than the one it is undoing.
+#
+# THE HOLD is the part that is easy to miss. `bump-plugin` runs at :42 every
+# hour and moves the pin to the plugin's `main` — so a rollback with nothing
+# else done would be silently undone within the hour, and the site would break
+# again for no visible reason. Rolling back therefore writes
+# `.github/plugin-pin-hold`, which `bump-plugin` checks first and stands down
+# on. Re-run this workflow with `hold: false` (usually together with a forward
+# sha) to hand the pin back to the automation.
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'plugin-warehouse commit to pin (40 hex chars)'
+        required: true
+        type: string
+      hold:
+        description: 'Stop the hourly bump from moving the pin again'
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  # Shared with `bump-plugin`: the two must never write the pin at once.
+  group: bump-plugin
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  # To hand off to the deploy — see the last step.
+  actions: write
+
+env:
+  PLUGIN_REPO: https://github.com/ovurrsl/plugin-warehouse.git
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ vars.INTEGRATION_BRANCH || 'integration' }}
+
+      # `inputs.sha` reaches the script through the ENVIRONMENT, never through
+      # `${{ }}` inside a `run:` block. An Actions expression is textual
+      # substitution performed before bash parses the line, so
+      # `target='${{ inputs.sha }}'` with the input `x'; rm -rf /; #` assigns
+      # `x` and then RUNS the rest — before any validation on the lines below
+      # can possibly execute. No check placed after the assignment can defend
+      # it; the value has to arrive as data.
+      - name: Read the current pin and validate the target
+        id: pin
+        env:
+          SHA: ${{ inputs.sha }}
+        run: |
+          # Rejects a non-hex character ANYWHERE, not just at the front: the
+          # earlier `[0-9a-f]*` glob only constrained the FIRST character, so a
+          # 40-character payload beginning with a letter passed both this and
+          # the length check and went on to be interpolated into `sed`.
+          case "$SHA" in
+            *[!0-9a-f]*) echo "sha must be lowercase hex" >&2; exit 1 ;;
+            '') echo 'sha is empty' >&2; exit 1 ;;
+          esac
+          if [ ${#SHA} -ne 40 ]; then
+            echo "sha must be the full 40 characters, not ${#SHA}" >&2
+            echo 'A short sha silently fails to match the pin and the rollback would no-op.' >&2
+            exit 1
+          fi
+          target="$SHA"
+          # Both spellings — see the same read in `bump-plugin`.
+          pinned=$(grep -oE 'plugin-warehouse(\.git)?#[0-9a-f]{40}' apps/editor/package.json \
+            | head -1 | cut -d'#' -f2)
+          if [ -z "$pinned" ]; then
+            echo 'could not read the current pin from apps/editor/package.json' >&2
+            exit 1
+          fi
+          echo "pinned=$pinned" >> "$GITHUB_OUTPUT"
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+          if [ "$pinned" = "$target" ]; then
+            echo "already pinned at $target"
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+          else
+            echo "rolling $pinned -> $target"
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.0
+
+      # The sha is replaced on the plugin's line only, so whichever URL form
+      # the file uses survives. `bun install` both relocks and proves the sha
+      # exists — a typo fails here rather than at build time.
+      # Same rule as above, and it is NOT redundant: a tainted value that reached
+      # `GITHUB_OUTPUT` would be interpolated here just as dangerously, so both
+      # ends are closed — the validation that stops it entering, and the env
+      # that stops it being parsed as shell if it ever did.
+      - name: Move the pin and relock
+        if: steps.pin.outputs.changed == 'true'
+        env:
+          PINNED: ${{ steps.pin.outputs.pinned }}
+          TARGET: ${{ steps.pin.outputs.target }}
+        run: |
+          sed -i "/plugin-warehouse/ s|#$PINNED|#$TARGET|" apps/editor/package.json
+          grep -q "#$TARGET" apps/editor/package.json
+          bun install
+
+      # The same gate `bump-plugin` uses, for the same reason.
+      - name: Type check
+        if: steps.pin.outputs.changed == 'true'
+        run: bun run check-types
+
+      # The file is written either way rather than deleted, because the hold is
+      # tested with `-s` (exists AND non-empty): an empty file reads as "no
+      # hold" and keeps the staging rules below trivial. It is also its own
+      # documentation sitting in the tree.
+      - name: Set or clear the hold
+        env:
+          HOLD: ${{ inputs.hold }}
+          TARGET: ${{ steps.pin.outputs.target }}
+        run: |
+          if [ "$HOLD" = 'true' ]; then
+            printf '%s\n' "$TARGET" > .github/plugin-pin-hold
+            echo 'hold set — bump-plugin stands down until this file is emptied'
+          else
+            : > .github/plugin-pin-hold
+            echo 'hold cleared — bump-plugin resumes at the next run'
+          fi
+
+      # **The push and the deploy dispatch are ONE step, deliberately.**
+      #
+      # A push made with GITHUB_TOKEN starts no workflow runs, so the dispatch
+      # below is the only thing that rebuilds the site. Split across two steps,
+      # a cancellation landing between them leaves the worst possible state:
+      # `integration` carries the reverted pin AND the hold, nothing is red,
+      # every later hourly bump reads the hold and reports success — and
+      # production keeps serving the bundle this run existed to remove. Silent,
+      # green, and wrong. One step does not make that impossible, but it shrinks
+      # the window from "a whole job step" to "two adjacent commands", and the
+      # concurrency fix in `bump-plugin` removes the thing that was doing the
+      # cancelling.
+      - name: Commit, push and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET: ${{ steps.pin.outputs.target }}
+          PINNED: ${{ steps.pin.outputs.pinned }}
+          BRANCH: ${{ vars.INTEGRATION_BRANCH || 'integration' }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add apps/editor/package.json bun.lock .github/plugin-pin-hold
+          if git diff --cached --quiet; then
+            echo 'nothing to commit — the pin and the hold already say what was asked for'
+          else
+            git commit -m "$(printf 'revert: pin plugin-warehouse %s\n\nWas %s. Rolled back from the Actions tab.' \
+              "$(printf '%s' "$TARGET" | cut -c1-7)" \
+              "$(printf '%s' "$PINNED" | cut -c1-7)")"
+            git push
+          fi
+          # Dispatched even when there was nothing to commit, and that case is
+          # the one that matters: a rollback whose push landed but whose deploy
+          # did not leaves the branch already correct and the SITE STILL WRONG.
+          # Exiting early there would make re-running this workflow — the
+          # obvious thing to try — do nothing at all. Unconditional, it is also
+          # the "just rebuild the current pin" button, which did not exist.
+          gh workflow run deploy-bundle.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"
