@@ -6267,9 +6267,9 @@ export function FloorplanPanel({
       let maxZ = -Infinity
 
       for (const node of Object.values(nodes)) {
-        if (!node.position) continue
-        const x = node.position[0] ?? 0
-        const z = node.position[2] ?? 0
+        if (!('position' in node) || !node.position) continue
+        const x = (node.position as [number, number, number])[0] ?? 0
+        const z = (node.position as [number, number, number])[2] ?? 0
         const w = (node as any).width ?? 10
         const l = (node as any).length ?? 10
         minX = Math.min(minX, x - w / 2)
