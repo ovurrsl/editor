@@ -127,7 +127,21 @@ jobs:
       # tested with `-s` (exists AND non-empty): an empty file reads as "no
       # hold" and keeps the staging rules below trivial. It is also its own
       # documentation sitting in the tree.
+      # **The guard the other pin steps have, and this one was missing.**
+      #
+      # `hold` is pre-checked, and a run whose sha already matches the pin moves
+      # nothing — that is the "just rebuild the current pin" case the runbook
+      # promotes. Without this condition such a run still wrote and pushed the
+      # hold, standing the hourly bump down for a rebuild nobody asked to
+      # freeze; and because the file then records the sha that is ALREADY LIVE,
+      # the `held at <sha>` line it produces is indistinguishable from a real
+      # rollback's. Every later bump then reports success while plugin releases
+      # quietly stop — the exact failure `bump-plugin` was written to end.
+      #
+      # Clearing is always allowed: `hold: false` can only re-enable the
+      # automation, so it is safe on a run that moved nothing.
       - name: Set or clear the hold
+        if: steps.pin.outputs.changed == 'true' || inputs.hold != true
         env:
           HOLD: ${{ inputs.hold }}
           TARGET: ${{ steps.pin.outputs.target }}
@@ -168,7 +182,21 @@ jobs:
             git commit -m "$(printf 'revert: pin plugin-warehouse %s\n\nWas %s. Rolled back from the Actions tab.' \
               "$(printf '%s' "$TARGET" | cut -c1-7)" \
               "$(printf '%s' "$PINNED" | cut -c1-7)")"
-            git push
+            # The shared `bump-plugin` concurrency group serialises this
+            # against the hourly bump and nothing else. `pull-panel` (group
+            # `pull-console`, cron '17 * * * *') and `relock` (no group at all)
+            # push to this same branch, so a plain push can lose a race — and
+            # losing it here means the pin never moves while the run still goes
+            # on to dispatch a deploy and report success.
+            for attempt in 1 2 3; do
+              git push && break
+              if [ "$attempt" = 3 ]; then
+                echo 'could not push after 3 attempts' >&2
+                exit 1
+              fi
+              echo "push rejected (attempt $attempt) — another workflow moved the branch; rebasing"
+              git pull --rebase origin "$BRANCH"
+            done
           fi
           # Dispatched even when there was nothing to commit, and that case is
           # the one that matters: a rollback whose push landed but whose deploy

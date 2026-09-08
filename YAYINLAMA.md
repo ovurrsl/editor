@@ -136,6 +136,13 @@ ve siteyi bozuk bırakır; orada erken çıkmak, denenecek en doğal şeyi — a
 akışını tekrar çalıştırmayı — hiçbir işe yaramaz hâle getirirdi. Yan faydası,
 "mevcut pini yeniden derle" düğmesinin de artık var olması.
 
+O yeniden derleme koşusunda **tutma yazılmaz**, `hold` kutusu işaretli kalsa
+bile. Yazılsaydı, hiç kimsenin dondurmak istemediği bir yeniden derleme saatlik
+`bump-plugin`'i durdururdu — ve dosyaya *zaten canlıda olan* SHA yazılacağı
+için, ortaya çıkan `held at …` satırı gerçek bir geri almanınkinden ayırt
+edilemezdi. Tutma yalnızca pin gerçekten taşındığında yazılır; `hold: false` ise
+her koşuda çalışır, çünkü tutmayı kaldırmak yalnızca otomasyonu geri açar.
+
 ### `hold` neden var
 
 `bump-plugin` her saat `:42`'de pini eklentinin `main`'ine taşır. Tutma olmadan
