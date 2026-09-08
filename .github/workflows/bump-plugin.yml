@@ -19,7 +19,15 @@ on:
 
 concurrency:
   group: bump-plugin
-  cancel-in-progress: true
+  # **false, and the direction matters.** `cancel-in-progress` is a property of
+  # the INCOMING run, so `true` here meant the hourly schedule cancelled an
+  # in-flight `rollback-plugin` — the routine job killing the incident job. The
+  # worst interleaving left the reverted pin pushed but the deploy never
+  # dispatched: production still broken, nothing red, and every later run
+  # reading the hold and reporting success. A bump that queues behind a rollback
+  # costs nothing — it re-reads the plugin head next hour and then correctly
+  # finds the hold and stands down.
+  cancel-in-progress: false
 
 permissions:
   contents: write

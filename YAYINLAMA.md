@@ -130,6 +130,12 @@ tazeler, **aynı tip denetimi kapısından** geçirir, `integration`'a yazar ve
 deploy'u tetikler. Kapı bilerek atlanmıyor — derlenmeyen bir bundle,
 düzeltmeye çalıştığınız arızadan daha kötüdür.
 
+Pin zaten istediğiniz SHA'daysa iş akışı commit atmaz **ama deploy'u yine de
+tetikler.** Bu bilerek: push'u geçip deploy'u kaçıran bir geri alma, dalı doğru
+ve siteyi bozuk bırakır; orada erken çıkmak, denenecek en doğal şeyi — aynı iş
+akışını tekrar çalıştırmayı — hiçbir işe yaramaz hâle getirirdi. Yan faydası,
+"mevcut pini yeniden derle" düğmesinin de artık var olması.
+
 ### `hold` neden var
 
 `bump-plugin` her saat `:42`'de pini eklentinin `main`'ine taşır. Tutma olmadan
