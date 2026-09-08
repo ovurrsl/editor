@@ -60,11 +60,15 @@ describe('SnapshotCaptureOverlay UI & Event Bridge E2E Suite', () => {
         activeMode = mode
       }
 
-      expect(activeMode).toBe('quality')
+      // `setMode` mutates `activeMode`, and control-flow analysis cannot see
+      // through a closure — so at each assertion the variable still carries the
+      // initialiser's literal type, and `toBe` infers THAT as its parameter
+      // type. Reading through the declared type is what the assertion means.
+      expect(activeMode as QualityMode).toBe('quality')
       setMode('fast')
-      expect(activeMode).toBe('fast')
+      expect(activeMode as QualityMode).toBe('fast')
       setMode('quality')
-      expect(activeMode).toBe('quality')
+      expect(activeMode as QualityMode).toBe('quality')
     })
 
     test('T1.3 [F1]: emits event payload with qualityMode when capture is triggered', () => {
@@ -281,7 +285,8 @@ describe('SnapshotCaptureOverlay UI & Event Bridge E2E Suite', () => {
     })
 
     test('T2.9 [Boundary]: handles failed snapshot event and returns capture state to idle', () => {
-      let captureState: 'idle' | 'capturing' | 'saved' = 'capturing'
+      type CaptureState = 'idle' | 'capturing' | 'saved'
+      let captureState: CaptureState = 'capturing'
       const onFailed = () => {
         captureState = 'idle'
       }
@@ -289,11 +294,16 @@ describe('SnapshotCaptureOverlay UI & Event Bridge E2E Suite', () => {
       emitter.on('snapshot:failed', onFailed)
       emitter.emit('snapshot:failed', undefined)
 
-      expect(captureState).toBe('idle')
+      // The listener below mutates this, and control-flow analysis cannot see
+      // through a closure — so at the assertion the variable still carries the
+      // initialiser's literal type, and `toBe` infers THAT as its parameter
+      // type. Reading through the declared type is what the assertion means.
+      expect(captureState as CaptureState).toBe('idle')
     })
 
     test('T2.10 [Boundary]: handles saved snapshot event and transitions state to saved', () => {
-      let captureState: 'idle' | 'capturing' | 'saved' = 'capturing'
+      type CaptureState = 'idle' | 'capturing' | 'saved'
+      let captureState: CaptureState = 'capturing'
       const onSaved = () => {
         captureState = 'saved'
       }
@@ -301,7 +311,11 @@ describe('SnapshotCaptureOverlay UI & Event Bridge E2E Suite', () => {
       emitter.on('snapshot:saved', onSaved)
       emitter.emit('snapshot:saved', undefined)
 
-      expect(captureState).toBe('saved')
+      // The listener below mutates this, and control-flow analysis cannot see
+      // through a closure — so at the assertion the variable still carries the
+      // initialiser's literal type, and `toBe` infers THAT as its parameter
+      // type. Reading through the declared type is what the assertion means.
+      expect(captureState as CaptureState).toBe('saved')
     })
   })
 
@@ -459,8 +473,6 @@ describe('SnapshotCaptureOverlay UI & Event Bridge E2E Suite', () => {
         emitter.emit('camera-controls:generate-thumbnail', {
           projectId: `burst_angle_${i}`,
           captureMode: 'viewport' as const,
-          qualityMode: 'fast' as const,
-          scale: 1,
           transparent: false,
           intent: 'scene-preview' as const,
           mime: 'image/webp',
@@ -485,18 +497,19 @@ describe('SnapshotCaptureOverlay UI & Event Bridge E2E Suite', () => {
       emitter.emit('camera-controls:generate-thumbnail', {
         projectId: 'mobile_proj_01',
         captureMode: 'viewport' as const,
-        qualityMode: 'fast' as const,
-        scale: 1,
         transparent: false,
         intent: 'download' as const,
         mime: 'image/webp',
         quality: 0.8,
       })
 
+      // `qualityMode` is overlay-local state, not part of the event: the
+      // overlay resolves it into a SIZE before emitting
+      // (`snapshot-capture-overlay.tsx`, the `generate-thumbnail` emit). This
+      // asserted a field the contract never carried.
       expect(eventSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           captureMode: 'viewport',
-          qualityMode: 'fast',
           mime: 'image/webp',
           quality: 0.8,
         }),
