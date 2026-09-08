@@ -37,7 +37,7 @@
         "@mint/pascal-plugin": "github:mintdotgg/mint-pascal-plugin#902c546dbaece6b31455c0dc394afe6b9cd136fe",
         "@node-rs/argon2": "^2.0.2",
         "@number-flow/react": "^0.6.0",
-        "@ovurrsl/plugin-warehouse": "git+https://github.com/ovurrsl/plugin-warehouse.git#b7d0aad61c84d0dea880d52acff3492488d41717",
+        "@ovurrsl/plugin-warehouse": "git+https://github.com/ovurrsl/plugin-warehouse.git#5eccf93a80cbd569c9348f3e7a69d5a5b6b9acfe",
         "@pascal-app/core": "*",
         "@pascal-app/editor": "*",
         "@pascal-app/ifc-converter": "*",
@@ -778,7 +778,7 @@
 
     "@opentelemetry/semantic-conventions": ["@opentelemetry/semantic-conventions@1.43.0", "", {}, "sha512-eSYWTm620tTk45EKSedaUL8MFYI8hW164hIXsgIHyxu3VobUB3fFCu5t0hQby6OoWRPsG1KkKUG2M5UadiLiVg=="],
 
-    "@ovurrsl/plugin-warehouse": ["@ovurrsl/plugin-warehouse@github:ovurrsl/plugin-warehouse#b7d0aad", { "dependencies": { "dompurify": "^3.2.4", "pdfkit": "^0.16.0" }, "peerDependencies": { "@iconify/react": "^6", "@pascal-app/core": ">=1.0.0-beta.1 <2", "@pascal-app/editor": ">=1.0.0-beta.1 <2", "@pascal-app/viewer": ">=1.0.0-beta.1 <2", "@react-three/fiber": "^9", "react": "^18 || ^19", "react-dom": "^18 || ^19", "three": "^0.185", "zod": "^4", "zustand": "^5" } }, "ovurrsl-plugin-warehouse-b7d0aad", "sha512-mTko3t16T/Uwo0n83JDIEC8OulTF9JWp6UFb6orxCOAMlICl6SeSsKqI2spsMFMSuJ+08JZN97MqC7RD9145zg=="],
+    "@ovurrsl/plugin-warehouse": ["@ovurrsl/plugin-warehouse@github:ovurrsl/plugin-warehouse#5eccf93", { "dependencies": { "dompurify": "^3.2.4", "pdfkit": "^0.16.0" }, "peerDependencies": { "@iconify/react": "^6", "@pascal-app/core": ">=1.0.0-beta.1 <2", "@pascal-app/editor": ">=1.0.0-beta.1 <2", "@pascal-app/viewer": ">=1.0.0-beta.1 <2", "@react-three/fiber": "^9", "react": "^18 || ^19", "react-dom": "^18 || ^19", "three": "^0.185", "zod": "^4", "zustand": "^5" } }, "ovurrsl-plugin-warehouse-5eccf93", "sha512-HecFimioMQR7IuJAUhGEqlEiiJIjX6EfbNIgsxDU+a4Ojm1SBJW3mWZIcBFNPRmlvT6Nbyy+q/oLh99Dh/8F9A=="],
 
     "@oxc-parser/binding-android-arm-eabi": ["@oxc-parser/binding-android-arm-eabi@0.143.0", "", { "os": "android", "cpu": "arm" }, "sha512-n9uozULWflPqBtdmI8lAabLqGKNgLVNN0ZH8HfgCwpKGNtzRzauB76jTiW/3YLkcA7N1zskpi9GdVnZuu1SAvg=="],
 

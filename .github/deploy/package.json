@@ -1,6 +1,6 @@
 {
   "name": "digitaltwin",
-  "version": "2.15.3",
+  "version": "2.15.4",
   "private": true,
   "type": "module",
   "description": "DigitalTwin, compiled and ready to run. Nothing is built at deploy time.",
