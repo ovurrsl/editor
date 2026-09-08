@@ -1,0 +1,147 @@
+name: Roll back the warehouse plugin
+
+# The plugin is compiled INTO the bundle, so "roll back the plugin" means
+# exactly one thing: move the pin in `apps/editor/package.json` to the last
+# known-good sha, rebuild, and republish. There was no button for that — the
+# pin had to be edited by hand, relocked by hand (the lockfile records each
+# tarball's sha512, so it cannot be edited), and the deploy dispatched by hand,
+# under the time pressure of a live site being wrong.
+#
+# This is `bump-plugin` run backwards, deliberately sharing its shape: same
+# relock, same type-check gate, same explicit dispatch. A rollback that skipped
+# the gate could put a bundle on the site that does not compile, which is a
+# worse outage than the one it is undoing.
+#
+# THE HOLD is the part that is easy to miss. `bump-plugin` runs at :42 every
+# hour and moves the pin to the plugin's `main` — so a rollback with nothing
+# else done would be silently undone within the hour, and the site would break
+# again for no visible reason. Rolling back therefore writes
+# `.github/plugin-pin-hold`, which `bump-plugin` checks first and stands down
+# on. Re-run this workflow with `hold: false` (usually together with a forward
+# sha) to hand the pin back to the automation.
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'plugin-warehouse commit to pin (40 hex chars)'
+        required: true
+        type: string
+      hold:
+        description: 'Stop the hourly bump from moving the pin again'
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  # Shared with `bump-plugin`: the two must never write the pin at once.
+  group: bump-plugin
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  # To hand off to the deploy — see the last step.
+  actions: write
+
+env:
+  PLUGIN_REPO: https://github.com/ovurrsl/plugin-warehouse.git
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ vars.INTEGRATION_BRANCH || 'integration' }}
+
+      - name: Read the current pin and validate the target
+        id: pin
+        run: |
+          target='${{ inputs.sha }}'
+          case "$target" in
+            [0-9a-f]*) ;;
+            *) echo "sha must be lowercase hex: '$target'" >&2; exit 1 ;;
+          esac
+          if [ ${#target} -ne 40 ]; then
+            echo "sha must be the full 40 characters, not ${#target}: '$target'" >&2
+            echo 'A short sha silently fails to match the pin and the rollback would no-op.' >&2
+            exit 1
+          fi
+          # Both spellings — see the same read in `bump-plugin`.
+          pinned=$(grep -oE 'plugin-warehouse(\.git)?#[0-9a-f]{40}' apps/editor/package.json \
+            | head -1 | cut -d'#' -f2)
+          if [ -z "$pinned" ]; then
+            echo 'could not read the current pin from apps/editor/package.json' >&2
+            exit 1
+          fi
+          echo "pinned=$pinned" >> "$GITHUB_OUTPUT"
+          echo "target=$target" >> "$GITHUB_OUTPUT"
+          if [ "$pinned" = "$target" ]; then
+            echo "already pinned at $target"
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+          else
+            echo "rolling $pinned -> $target"
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.0
+
+      # The sha is replaced on the plugin's line only, so whichever URL form
+      # the file uses survives. `bun install` both relocks and proves the sha
+      # exists — a typo fails here rather than at build time.
+      - name: Move the pin and relock
+        if: steps.pin.outputs.changed == 'true'
+        run: |
+          sed -i "/plugin-warehouse/ s|#${{ steps.pin.outputs.pinned }}|#${{ steps.pin.outputs.target }}|" \
+            apps/editor/package.json
+          grep -q "#${{ steps.pin.outputs.target }}" apps/editor/package.json
+          bun install
+
+      # The same gate `bump-plugin` uses, for the same reason.
+      - name: Type check
+        if: steps.pin.outputs.changed == 'true'
+        run: bun run check-types
+
+      # The file is written either way rather than deleted, because the hold is
+      # tested with `-s` (exists AND non-empty): an empty file reads as "no
+      # hold" and keeps the staging rules below trivial. It is also its own
+      # documentation sitting in the tree.
+      - name: Set or clear the hold
+        run: |
+          if [ '${{ inputs.hold }}' = 'true' ]; then
+            printf '%s\n' '${{ steps.pin.outputs.target }}' > .github/plugin-pin-hold
+            echo 'hold set — bump-plugin stands down until this file is emptied'
+          else
+            : > .github/plugin-pin-hold
+            echo 'hold cleared — bump-plugin resumes at the next run'
+          fi
+
+      - name: Commit to the integration branch
+        id: commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add apps/editor/package.json bun.lock .github/plugin-pin-hold
+          if git diff --cached --quiet; then
+            echo 'nothing to commit'
+            echo 'pushed=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "$(printf 'revert: pin plugin-warehouse %s\n\nWas %s. Rolled back from the Actions tab.' \
+            "$(echo '${{ steps.pin.outputs.target }}' | cut -c1-7)" \
+            "$(echo '${{ steps.pin.outputs.pinned }}' | cut -c1-7)")"
+          git push
+          echo 'pushed=true' >> "$GITHUB_OUTPUT"
+
+      # A push made with GITHUB_TOKEN starts no workflow runs, so without this
+      # the pin moves back and the site keeps serving the bad bundle.
+      - name: Build and publish
+        if: steps.commit.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run deploy-bundle.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref "${{ vars.INTEGRATION_BRANCH || 'integration' }}"

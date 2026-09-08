@@ -105,6 +105,43 @@ Beklenen: `"conclusion":"success"`, `Build from <sha7>` başlıklı yeni commit 
 
 Hostinger dağıtımı birkaç dakika sürer. Tarayıcıda sert yenileme yapın.
 
+## Geri alma
+
+Canlıdaki bundle bozuksa geri dönüş **eklenti pinini** geri almaktır: eklenti
+uygulamanın içine derlendiği için, eski pinle yeniden derlenen bundle eski
+davranışı geri getirir. Deploy deposuna elle dokunmayın — her yayın onu
+force-push'la baştan yazar.
+
+1. **Son iyi SHA'yı bulun.** `apps/editor/package.json` geçmişi zaten pin
+   günlüğüdür:
+
+   ```bash
+   git log -p --follow -- apps/editor/package.json | grep -n 'plugin-warehouse'
+   ```
+
+   Ya da canlıda çalıştığını bildiğiniz yayının commit'indeki pini okuyun.
+
+2. **Actions → *Roll back the warehouse plugin* → Run workflow.** `sha` alanına
+   **40 karakterin tamamını** yazın (kısa SHA pini bulamaz ve iş akışı sessizce
+   hiçbir şey yapmaz — bu yüzden reddediliyor). `hold` işaretli kalsın.
+
+İş akışı `bump-plugin`'in aynısını ters yönde yapar: pini taşır, kilidi
+tazeler, **aynı tip denetimi kapısından** geçirir, `integration`'a yazar ve
+deploy'u tetikler. Kapı bilerek atlanmıyor — derlenmeyen bir bundle,
+düzeltmeye çalıştığınız arızadan daha kötüdür.
+
+### `hold` neden var
+
+`bump-plugin` her saat `:42`'de pini eklentinin `main`'ine taşır. Tutma olmadan
+yaptığınız geri alma bir saat içinde sessizce geri alınır ve site görünür bir
+sebep olmadan yeniden bozulur. `hold`, `.github/plugin-pin-hold` dosyasını
+yazar; `bump-plugin` önce ona bakar ve DOLUYSA hiçbir şey yapmaz.
+
+**Tutmayı kaldırmayı unutmayın.** Eklentide düzeltme yayınlandıktan sonra ya
+dosyayı boşaltın ya da bu iş akışını yeni SHA ve `hold: false` ile çalıştırın —
+aksi hâlde eklenti güncellemeleri kalıcı olarak durur ve bunun tek belirtisi
+`bump-plugin` günlüğündeki `held at …` satırıdır.
+
 ## Sorun giderme
 
 | Log'da gördüğünüz | Anlamı | Çözüm |

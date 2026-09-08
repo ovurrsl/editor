@@ -40,11 +40,32 @@ jobs:
         with:
           ref: ${{ vars.INTEGRATION_BRANCH || 'integration' }}
 
+      # A rollback pins the plugin back and must not be undone by the next
+      # hourly run. `rollback-plugin` writes the sha into this file; emptying it
+      # (that workflow with `hold: false`) hands the pin back here.
+      - name: Respect a rollback hold
+        id: hold
+        run: |
+          if [ -s .github/plugin-pin-hold ]; then
+            echo "held at $(tr -d '[:space:]' < .github/plugin-pin-hold) — empty .github/plugin-pin-hold to resume"
+            echo 'held=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'held=false' >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Compare the pin with the plugin's head
         id: compare
+        if: steps.hold.outputs.held == 'false'
         run: |
           head=$(git ls-remote "$PLUGIN_REPO" refs/heads/main | cut -f1)
-          pinned=$(grep -o 'plugin-warehouse\.git#[0-9a-f]\{40\}' apps/editor/package.json | cut -d'#' -f2)
+          # Both spellings, because the pin has been written both ways: the long
+          # `git+https://…/plugin-warehouse.git#SHA` this workflow was built
+          # against, and the short `github:owner/repo#SHA` that `bun add` and a
+          # hand edit produce. Reading only the long one is why every run since
+          # the pin was last rewritten by hand died right here, with an empty
+          # `pinned` and no explanation beyond "could not read one of them".
+          pinned=$(grep -oE 'plugin-warehouse(\.git)?#[0-9a-f]{40}' apps/editor/package.json \
+            | head -1 | cut -d'#' -f2)
           echo "head=$head"     >> "$GITHUB_OUTPUT"
           echo "pinned=$pinned" >> "$GITHUB_OUTPUT"
           if [ -z "$head" ] || [ -z "$pinned" ]; then
@@ -70,8 +91,9 @@ jobs:
       - name: Move the pin and relock
         if: steps.compare.outputs.changed == 'true'
         run: |
-          sed -i "s|plugin-warehouse\.git#${{ steps.compare.outputs.pinned }}|plugin-warehouse.git#${{ steps.compare.outputs.head }}|" \
+          sed -i "/plugin-warehouse/ s|#${{ steps.compare.outputs.pinned }}|#${{ steps.compare.outputs.head }}|" \
             apps/editor/package.json
+          grep -q "#${{ steps.compare.outputs.head }}" apps/editor/package.json
           bun install
 
       # The gate. A plugin release that does not compile against this editor
