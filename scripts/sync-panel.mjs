@@ -78,10 +78,41 @@ const ROUTES = [
  * into a base the console owns and an extension the editor adds would remove
  * the conflict properly, and is the real fix when someone has the appetite.
  *
- * Every entry here was found by running `tsc --noEmit` in a checkout of
- * ovurrsl/panel with the sync applied. The test suite passed with all of them
- * still missing, so the type checker is the only thing that catches this class
- * of breakage — keep using it when this list changes.
+ * Every entry in the first two groups was found by running `tsc --noEmit` in a
+ * checkout of ovurrsl/panel with the sync applied. The test suite passed with
+ * all of them still missing, so the type checker is the only thing that catches
+ * that class of breakage — keep using it when this list changes.
+ *
+ * THE THIRD GROUP IS NOT A COMPILE PROBLEM, AND THAT IS THE POINT.
+ *
+ * `console/[tab]/page.tsx` and `api/users/route.ts` type-check perfectly on both
+ * sides. What differs is an authorisation gate that commit fb20d273 added HERE
+ * and that upstream never received — panel's `main` is an orphan root commit, so
+ * it is not a considered decision upstream, it is a tree that never had the fix:
+ *
+ *   page.tsx     `if (!session.user.permissions.includes('admin_access')) redirect('/')`
+ *   users/route  `requirePermission('admin_access')`, where upstream has `requireSession()`
+ *
+ * Pulling either one over deletes that gate. Nothing re-imposes it: eight of the
+ * console tabs carry `permission: undefined` in `console-tabs.ts` (itself
+ * editor-owned, so it does not come across), and `console/layout.tsx` checks only
+ * session and MFA. The result is that any signed-in account — a global Viewer
+ * included — reaches the console shell, and `GET /api/users` hands back every
+ * colleague's name, work email, username, role, org and status. Upstream's
+ * sanitiser strips MFA state, lastSeen, siteRoles and invitation tokens; it does
+ * not strip the directory itself.
+ *
+ * So this group is guarded by nothing automatic. `tsc` is silent, `next.config.ts`
+ * sets `typescript: { ignoreBuildErrors: true }`, `pull-panel` runs no lint and no
+ * tests, its GITHUB_TOKEN push starts no CI run, and the deploy's smoke tests only
+ * curl `/api/health` (editor-owned, never pulled) and `/`. The only reason the
+ * regression has not shipped is that the pull gate has been red for five weeks on
+ * an unrelated `noUncheckedIndexedAccess` mismatch. That is luck, not a control —
+ * hence this list.
+ *
+ * The real fix is upstream: carry the gate in ovurrsl/panel so both deployments
+ * have it, then drop these two entries. Until then they stay, and anyone removing
+ * one should re-read fb20d273 first.
  */
 const EDITOR_OWNED = new Set([
   'src/app/layout.tsx',
@@ -91,6 +122,10 @@ const EDITOR_OWNED = new Set([
   'src/components/console/tab-content.tsx',
   'src/components/console/scenes-tab.tsx',
   'src/components/console/guides-tab.tsx',
+  // Third group, and a different reason again: these two carry an editor-only
+  // authorisation gate that upstream has never had. See the block below.
+  'src/app/console/[tab]/page.tsx',
+  'src/app/api/users/route.ts',
 ])
 
 const SYNCABLE = /\.(ts|tsx|css|sql)$/
