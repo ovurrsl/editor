@@ -133,10 +133,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           'SELECT scene_id, name FROM sites WHERE public_id = ? OR name = ? LIMIT 1',
           [id, id],
         )
-        if (siteRows.length > 0) {
-          siteName = siteRows[0].name
-          if (siteRows[0].scene_id) {
-            stored = await operations.loadStoredScene(siteRows[0].scene_id)
+        const firstSite = siteRows[0]
+        if (firstSite) {
+          siteName = firstSite.name
+          if (firstSite.scene_id) {
+            stored = await operations.loadStoredScene(firstSite.scene_id)
           }
         }
       } catch {

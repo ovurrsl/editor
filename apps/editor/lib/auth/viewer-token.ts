@@ -66,6 +66,8 @@ export function verifyViewerLaunchToken(token: string): ViewerTokenPayload | nul
   if (parts.length !== 2) return null
 
   const [encodedData, signature] = parts
+  if (!encodedData || !signature) return null
+
   const secret = getSecret()
   const expectedSignature = createHmac('sha256', secret).update(encodedData).digest('base64url')
 

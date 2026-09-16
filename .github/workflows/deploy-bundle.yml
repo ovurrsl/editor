@@ -39,7 +39,7 @@ jobs:
 
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.3.0
+          bun-version: 1.3.14
 
 
       # The hoisted linker keeps the standalone output free of symlinks, which

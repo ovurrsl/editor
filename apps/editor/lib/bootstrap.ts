@@ -91,7 +91,7 @@ export async function loadExternalPlugins(): Promise<void> {
 // -----------------------------------------------------------------------------
 
 // 1. Boots (PascalOrg Boots)
-extendPluginDiscovery(async () => [bootsPlugin])
+extendPluginDiscovery(async () => [bootsPlugin as any])
 registerEditorHostPanel({
   ...bootsHostPanel,
   defaultInstalled: false,
@@ -100,7 +100,7 @@ registerEditorHostPanel({
 })
 
 // 2. Nature & Trees
-extendPluginDiscovery(async () => [treesPlugin])
+extendPluginDiscovery(async () => [treesPlugin as any])
 registerEditorHostPanel({
   ...treesHostPanel,
   defaultInstalled: false,
@@ -109,7 +109,7 @@ registerEditorHostPanel({
 })
 
 // 3. Bones (Mühendislik Röntgeni)
-extendPluginDiscovery(async () => [bonesPlugin])
+extendPluginDiscovery(async () => [bonesPlugin as any])
 registerEditorHostPanel({
   ...bonesHostPanel,
   defaultInstalled: false,
@@ -118,7 +118,7 @@ registerEditorHostPanel({
 })
 
 // 4. Articraft 3D & AI
-extendPluginDiscovery(async () => [articraftPlugin])
+extendPluginDiscovery(async () => [articraftPlugin as any])
 registerEditorHostPanel({
   ...articraftHostPanel,
   defaultInstalled: false,
@@ -127,7 +127,7 @@ registerEditorHostPanel({
 })
 
 // 5. Streetscape & Kentsel Altyapı
-extendPluginDiscovery(async () => [streetscapePlugin])
+extendPluginDiscovery(async () => [streetscapePlugin as any])
 registerEditorHostPanel({
   ...streetscapeHostPanel,
   defaultInstalled: false,
@@ -137,7 +137,7 @@ registerEditorHostPanel({
 })
 
 // 6. Warehouse & Lojistik Donatıları (Default Installed)
-extendPluginDiscovery(async () => [warehousePlugin])
+extendPluginDiscovery(async () => [warehousePlugin as any])
 registerEditorHostPanel({
   ...warehouseCatalogPanel,
   defaultInstalled: true,
@@ -146,7 +146,7 @@ registerEditorHostPanel({
 })
 
 // 7. Mint 3D Asset Studio
-extendPluginDiscovery(async () => [mintPlugin])
+extendPluginDiscovery(async () => [mintPlugin as any])
 registerEditorHostPanel({
   ...mintHostPanel,
   defaultInstalled: false,
