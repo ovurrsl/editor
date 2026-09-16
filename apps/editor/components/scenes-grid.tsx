@@ -37,24 +37,44 @@ export function SceneGrid({
   scenes,
   currentUserId,
   isAdmin,
+  userRole = 'viewer',
+  launchToken,
+  viewerUrl = 'https://viewer.opex.help',
 }: {
   scenes: SceneMeta[]
   currentUserId: string | null
   isAdmin: boolean
+  userRole?: string
+  launchToken?: string
+  viewerUrl?: string
 }) {
   const router = useRouter()
   const [dialog, setDialog] = useState<Dialog | null>(null)
 
-  // Owner-or-admin manages (rename / delete / share / backups); preview reads
-  // only the stored thumbnail, so it is open to anyone who can see the scene.
+  const isViewer = userRole === 'viewer'
+  // Owner-or-admin manages (rename / delete / share / backups), but ONLY if not a viewer.
+  // Viewers are strictly read-only regardless of ownership.
   const canManage = (scene: SceneMeta): boolean =>
-    currentUserId != null && (scene.ownerId === currentUserId || isAdmin)
+    !isViewer && currentUserId != null && (scene.ownerId === currentUserId || isAdmin)
+
+  const handleCardClick = (sceneId: string) => {
+    if (isViewer) {
+      const targetUrl = `${viewerUrl}/?launch_token=${encodeURIComponent(launchToken || '')}&sceneId=${encodeURIComponent(sceneId)}`
+      window.location.assign(targetUrl)
+    } else {
+      router.push(`/scene/${sceneId}`)
+    }
+  }
+
+  const DISABLED_TOOLTIP = 'Bu işlem için Editör veya Yönetici yetkisi gereklidir'
 
   return (
     <>
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {scenes.map((scene) => {
           const manage = canManage(scene)
+          const vitrinUrl = `${viewerUrl}/?launch_token=${encodeURIComponent(launchToken || '')}&sceneId=${encodeURIComponent(scene.id)}`
+
           return (
             <li
               key={scene.id}
@@ -62,8 +82,9 @@ export function SceneGrid({
             >
               <button
                 className="group block rounded-t-xl p-4 text-left transition-colors hover:bg-accent/30"
-                onClick={() => router.push(`/scene/${scene.id}`)}
+                onClick={() => handleCardClick(scene.id)}
                 type="button"
+                title={isViewer ? '3D Vitrinde Aç' : 'Editörde Aç'}
               >
                 <div className="flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-accent/30">
                   {scene.thumbnailUrl ? (
@@ -89,7 +110,18 @@ export function SceneGrid({
               </button>
 
               <div className="flex items-center gap-1 border-border/60 border-t px-3 py-2">
-                {manage && (
+                <a
+                  href={vitrinUrl}
+                  className="flex items-center gap-1 rounded-md px-2 py-1 text-primary text-xs font-medium transition-colors hover:bg-primary/10"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Yeni 3D Vitrinde Görüntüle"
+                >
+                  <Eye className="size-3.5" />
+                  3D Vitrin
+                </a>
+
+                {manage ? (
                   <button
                     className="flex items-center gap-1 rounded-md px-1.5 py-1 text-muted-foreground text-xs transition-colors hover:bg-muted hover:text-foreground"
                     onClick={() => setDialog({ kind: 'backups', scene })}
@@ -98,46 +130,89 @@ export function SceneGrid({
                     <History className="size-3.5" />
                     Yedekler
                   </button>
+                ) : (
+                  <button
+                    className="flex items-center gap-1 rounded-md px-1.5 py-1 text-muted-foreground/40 text-xs cursor-not-allowed"
+                    disabled
+                    title={DISABLED_TOOLTIP}
+                    type="button"
+                  >
+                    <History className="size-3.5" />
+                    Yedekler
+                  </button>
                 )}
+
                 <button
                   className="flex items-center gap-1 rounded-md px-1.5 py-1 text-muted-foreground text-xs transition-colors hover:bg-muted hover:text-foreground"
                   onClick={() => setDialog({ kind: 'preview', scene })}
                   type="button"
                 >
-                  <Eye className="size-3.5" />
                   Önizle
                 </button>
-                {manage && (
-                  <div className="ml-auto flex items-center gap-0.5">
-                    <button
-                      aria-label="Yeniden adlandır"
-                      className={ICON_BTN}
-                      onClick={() => setDialog({ kind: 'rename', scene })}
-                      title="Yeniden adlandır"
-                      type="button"
-                    >
-                      <Pencil className="size-3.5" />
-                    </button>
-                    <button
-                      aria-label="Paylaş"
-                      className={ICON_BTN}
-                      onClick={() => setDialog({ kind: 'share', scene })}
-                      title="Paylaş"
-                      type="button"
-                    >
-                      <Share2 className="size-3.5" />
-                    </button>
-                    <button
-                      aria-label="Sil"
-                      className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive"
-                      onClick={() => setDialog({ kind: 'delete', scene })}
-                      title="Sil"
-                      type="button"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
-                  </div>
-                )}
+
+                <div className="ml-auto flex items-center gap-0.5">
+                  {manage ? (
+                    <>
+                      <button
+                        aria-label="Yeniden adlandır"
+                        className={ICON_BTN}
+                        onClick={() => setDialog({ kind: 'rename', scene })}
+                        title="Yeniden adlandır"
+                        type="button"
+                      >
+                        <Pencil className="size-3.5" />
+                      </button>
+                      <button
+                        aria-label="Paylaş"
+                        className={ICON_BTN}
+                        onClick={() => setDialog({ kind: 'share', scene })}
+                        title="Paylaş"
+                        type="button"
+                      >
+                        <Share2 className="size-3.5" />
+                      </button>
+                      <button
+                        aria-label="Sil"
+                        className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-destructive"
+                        onClick={() => setDialog({ kind: 'delete', scene })}
+                        title="Sil"
+                        type="button"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        aria-label="Yeniden adlandır (Yetki yok)"
+                        className="rounded-md p-1.5 text-muted-foreground/40 cursor-not-allowed"
+                        disabled
+                        title={DISABLED_TOOLTIP}
+                        type="button"
+                      >
+                        <Pencil className="size-3.5" />
+                      </button>
+                      <button
+                        aria-label="Paylaş (Yetki yok)"
+                        className="rounded-md p-1.5 text-muted-foreground/40 cursor-not-allowed"
+                        disabled
+                        title={DISABLED_TOOLTIP}
+                        type="button"
+                      >
+                        <Share2 className="size-3.5" />
+                      </button>
+                      <button
+                        aria-label="Sil (Yetki yok)"
+                        className="rounded-md p-1.5 text-muted-foreground/40 cursor-not-allowed"
+                        disabled
+                        title={DISABLED_TOOLTIP}
+                        type="button"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </li>
           )

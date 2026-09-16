@@ -286,7 +286,7 @@ function pick(lang: string, tr: string, en: string): string {
  * this file is editor-owned and its keys do not exist in the console's own
  * dictionary, so a `t.*` reference would break the panel repo on sync.
  */
-function SceneShareManager({
+export function SceneShareManager({
   lang,
   scene,
   onClose,
@@ -294,7 +294,7 @@ function SceneShareManager({
   onError,
 }: {
   lang: string
-  scene: AdminSceneRow
+  scene: { id: string; name: string }
   onClose: () => void
   onSaved: () => void
   onError: (message: string) => void

@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { SceneLoader, type SceneMeta } from '@/components/scene-loader'
 import { authAvailable } from '@/lib/auth/db'
 import { canEdit, getSessionUser } from '@/lib/auth/session'
+import { createViewerLaunchToken } from '@/lib/auth/viewer-token'
 import { getSceneOperations } from '@/lib/scene-store-server'
 
 export const dynamic = 'force-dynamic'
@@ -25,6 +26,13 @@ export default async function ScenePage({ params }: { params: Promise<{ id: stri
   // so anyone holding a scene id could open the drawing without an account.
   const viewer = authAvailable() ? await getSessionUser() : null
   if (authAvailable() && !viewer) redirect('/signin')
+
+  // Viewers must be seamlessly redirected to the standalone 3D showcase rather than the heavy editor
+  if (viewer && viewer.role === 'viewer') {
+    const launchToken = createViewerLaunchToken(viewer, { sceneId: id })
+    const viewerUrl = process.env.NEXT_PUBLIC_VIEWER_URL || 'https://viewer.opex.help'
+    redirect(`${viewerUrl}/?launch_token=${encodeURIComponent(launchToken)}&sceneId=${encodeURIComponent(id)}`)
+  }
 
   const scene = await fetchScene(id)
 

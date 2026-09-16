@@ -34,6 +34,8 @@ async function authorizeOwnerOrAdmin(ownerId: string | null): Promise<OwnerOrAdm
   if (!authAvailable()) return { ok: true, userId: null }
   const user = await getSessionUser()
   if (!user) return { ok: false, status: 401, error: 'auth_required' }
+  // Viewers are strictly read-only and may never configure shares
+  if (user.role === 'viewer') return { ok: false, status: 403, error: 'forbidden' }
   if (user.role === 'admin' || (ownerId && ownerId === user.id)) {
     return { ok: true, userId: user.id }
   }

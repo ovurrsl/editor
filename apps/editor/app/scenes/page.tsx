@@ -7,6 +7,7 @@ import { SceneGrid } from '@/components/scenes-grid'
 import { SignOutButton } from '@/components/sign-out-button'
 import { authAvailable } from '@/lib/auth/db'
 import { getSessionUser, type SessionUser } from '@/lib/auth/session'
+import { createViewerLaunchToken } from '@/lib/auth/viewer-token'
 import { getSceneOperations } from '@/lib/scene-store-server'
 
 export const dynamic = 'force-dynamic'
@@ -34,6 +35,8 @@ export default async function ScenesPage() {
   const user = await requireUser()
   const editingAllowed = user?.role !== 'viewer'
   const scenes = await fetchScenes(user?.id)
+  const launchToken = user ? createViewerLaunchToken(user) : undefined
+  const viewerUrl = process.env.NEXT_PUBLIC_VIEWER_URL || 'https://viewer.opex.help'
 
   return (
     <div className="min-h-screen bg-background">
@@ -98,6 +101,9 @@ export default async function ScenesPage() {
             scenes={scenes}
             currentUserId={user?.id ?? null}
             isAdmin={user?.role === 'admin'}
+            userRole={user?.role ?? 'viewer'}
+            launchToken={launchToken}
+            viewerUrl={viewerUrl}
           />
         )}
       </main>
