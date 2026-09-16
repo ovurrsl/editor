@@ -38,6 +38,29 @@ export default async function ScenesPage() {
   const launchToken = user ? createViewerLaunchToken(user) : undefined
   const viewerUrl = process.env.NEXT_PUBLIC_VIEWER_URL || 'https://viewer.opex.help'
 
+  const editableSceneIds: string[] = []
+  if (user && user.role !== 'viewer') {
+    if (user.role === 'admin') {
+      editableSceneIds.push(...scenes.map((s) => s.id))
+    } else {
+      const operations = await getSceneOperations()
+      for (const s of scenes) {
+        if (s.ownerId === user.id) {
+          editableSceneIds.push(s.id)
+        } else if (operations.canShareScenes) {
+          try {
+            const shareRole = await operations.getSceneShareRole(s.id, user.id)
+            if (shareRole === 'editor') {
+              editableSceneIds.push(s.id)
+            }
+          } catch {
+            // fallback
+          }
+        }
+      }
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-10 border-border border-b bg-background/95 backdrop-blur">
@@ -102,6 +125,7 @@ export default async function ScenesPage() {
             currentUserId={user?.id ?? null}
             isAdmin={user?.role === 'admin'}
             userRole={user?.role ?? 'viewer'}
+            editableSceneIds={editableSceneIds}
             launchToken={launchToken}
             viewerUrl={viewerUrl}
           />

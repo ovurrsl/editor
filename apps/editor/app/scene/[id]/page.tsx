@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { SceneLoader, type SceneMeta } from '@/components/scene-loader'
 import { authAvailable } from '@/lib/auth/db'
+import { authorizeSceneMutation } from '@/lib/auth/guard'
 import { canEdit, getSessionUser } from '@/lib/auth/session'
 import { createViewerLaunchToken } from '@/lib/auth/viewer-token'
 import { getSceneOperations } from '@/lib/scene-store-server'
@@ -26,13 +27,6 @@ export default async function ScenePage({ params }: { params: Promise<{ id: stri
   // so anyone holding a scene id could open the drawing without an account.
   const viewer = authAvailable() ? await getSessionUser() : null
   if (authAvailable() && !viewer) redirect('/signin')
-
-  // Viewers must be seamlessly redirected to the standalone 3D showcase rather than the heavy editor
-  if (viewer && viewer.role === 'viewer') {
-    const launchToken = createViewerLaunchToken(viewer, { sceneId: id })
-    const viewerUrl = process.env.NEXT_PUBLIC_VIEWER_URL || 'https://viewer.opex.help'
-    redirect(`${viewerUrl}/?launch_token=${encodeURIComponent(launchToken)}&sceneId=${encodeURIComponent(id)}`)
-  }
 
   const scene = await fetchScene(id)
 
@@ -64,10 +58,21 @@ export default async function ScenePage({ params }: { params: Promise<{ id: stri
     )
   }
 
-  // A view-only account gets the scene in preview; the server refuses its
-  // writes regardless. Without auth (SQLite dev) everything stays editable.
-  const readOnly = authAvailable() && (!viewer || !canEdit(viewer))
+  // Check whether the current user has permission to edit this specific scene.
+  // If the user only has viewer permissions on this scene (e.g. shared as viewer or global viewer role),
+  // redirect them seamlessly to the dedicated 3D showcase (viewer.opex.help) rather than loading the editor in preview mode.
+  if (authAvailable()) {
+    const auth = await authorizeSceneMutation(id, scene.ownerId)
+    if (!auth.ok) {
+      const launchToken = viewer ? createViewerLaunchToken(viewer, { sceneId: id }) : undefined
+      const viewerUrl = process.env.NEXT_PUBLIC_VIEWER_URL || 'https://viewer.opex.help'
+      const target = launchToken
+        ? `${viewerUrl}/?launch_token=${encodeURIComponent(launchToken)}&sceneId=${encodeURIComponent(id)}`
+        : `${viewerUrl}/?sceneId=${encodeURIComponent(id)}`
+      redirect(target)
+    }
+  }
 
   const { graph, ...meta } = scene
-  return <SceneLoader initialScene={graph} meta={meta} readOnly={readOnly} />
+  return <SceneLoader initialScene={graph} meta={meta} readOnly={false} />
 }

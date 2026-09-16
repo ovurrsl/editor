@@ -38,6 +38,7 @@ export function SceneGrid({
   currentUserId,
   isAdmin,
   userRole = 'viewer',
+  editableSceneIds,
   launchToken,
   viewerUrl = 'https://viewer.opex.help',
 }: {
@@ -45,24 +46,29 @@ export function SceneGrid({
   currentUserId: string | null
   isAdmin: boolean
   userRole?: string
+  editableSceneIds?: string[]
   launchToken?: string
   viewerUrl?: string
 }) {
   const router = useRouter()
   const [dialog, setDialog] = useState<Dialog | null>(null)
 
-  const isViewer = userRole === 'viewer'
-  // Owner-or-admin manages (rename / delete / share / backups), but ONLY if not a viewer.
-  // Viewers are strictly read-only regardless of ownership.
-  const canManage = (scene: SceneMeta): boolean =>
-    !isViewer && currentUserId != null && (scene.ownerId === currentUserId || isAdmin)
+  const editableSet = new Set(editableSceneIds ?? [])
+  // A scene is manageable by the user if it is in editableSceneIds (explicit per-scene permission),
+  // or (fallback) owner/admin and not global viewer.
+  const canManage = (scene: SceneMeta): boolean => {
+    if (editableSceneIds !== undefined) {
+      return editableSet.has(scene.id)
+    }
+    return userRole !== 'viewer' && currentUserId != null && (scene.ownerId === currentUserId || isAdmin)
+  }
 
-  const handleCardClick = (sceneId: string) => {
-    if (isViewer) {
-      const targetUrl = `${viewerUrl}/?launch_token=${encodeURIComponent(launchToken || '')}&sceneId=${encodeURIComponent(sceneId)}`
+  const handleCardClick = (scene: SceneMeta) => {
+    if (!canManage(scene)) {
+      const targetUrl = `${viewerUrl}/?launch_token=${encodeURIComponent(launchToken || '')}&sceneId=${encodeURIComponent(scene.id)}`
       window.location.assign(targetUrl)
     } else {
-      router.push(`/scene/${sceneId}`)
+      router.push(`/scene/${scene.id}`)
     }
   }
 
@@ -82,9 +88,9 @@ export function SceneGrid({
             >
               <button
                 className="group block rounded-t-xl p-4 text-left transition-colors hover:bg-accent/30"
-                onClick={() => handleCardClick(scene.id)}
+                onClick={() => handleCardClick(scene)}
                 type="button"
-                title={isViewer ? '3D Vitrinde Aç' : 'Editörde Aç'}
+                title={manage ? 'Editörde Aç' : '3D Vitrinde Aç'}
               >
                 <div className="flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-accent/30">
                   {scene.thumbnailUrl ? (
