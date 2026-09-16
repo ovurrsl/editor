@@ -96,6 +96,99 @@ export function clampSnapshotSize(
   return { w: Math.round(width * scale), h: Math.round(height * scale) }
 }
 
+/**
+ * Computes target and render dimensions for snapshots.
+ * For area capture mode, sizes the full viewport at base scale for camera projection parity,
+ * and sets target dimensions to the exact cropped region without double-scaling.
+ */
+export function computeSnapshotDimensions(
+  domWidth: number,
+  domHeight: number,
+  options?: SnapshotCaptureOptions,
+): {
+  targetWidth: number
+  targetHeight: number
+  renderWidth: number
+  renderHeight: number
+  renderBaseW: number
+  renderBaseH: number
+  ssaaScale: number
+} {
+  const {
+    captureMode = 'standard',
+    cropRegion,
+    standardSize,
+    qualityMode = 'fast',
+    antiAliasing = qualityMode === 'quality' ? 'ssaa' : 'fxaa',
+    scale = 1,
+    maxEdge = qualityMode === 'quality' ? 8192 : SNAPSHOT_MAX_EDGE,
+  } = options ?? {}
+
+  const standardW = standardSize?.w ?? THUMBNAIL_WIDTH
+  const standardH = standardSize?.h ?? THUMBNAIL_HEIGHT
+
+  let targetWidth: number
+  let targetHeight: number
+  let renderBaseW: number
+  let renderBaseH: number
+
+  if (captureMode === 'viewport') {
+    const baseW = Math.round(domWidth * scale)
+    const baseH = Math.round(domHeight * scale)
+    ;({ w: targetWidth, h: targetHeight } = clampSnapshotSize(
+      baseW,
+      baseH,
+      qualityMode,
+      maxEdge,
+    ))
+    renderBaseW = targetWidth
+    renderBaseH = targetHeight
+  } else if (captureMode === 'area' && cropRegion) {
+    const fullW = Math.round(domWidth * scale)
+    const fullH = Math.round(domHeight * scale)
+    const clamped = clampSnapshotSize(
+      fullW,
+      fullH,
+      qualityMode,
+      maxEdge,
+    )
+    renderBaseW = clamped.w
+    renderBaseH = clamped.h
+    targetWidth = Math.max(1, Math.round(cropRegion.width * clamped.w))
+    targetHeight = Math.max(1, Math.round(cropRegion.height * clamped.h))
+  } else {
+    // Standard mode
+    targetWidth = standardW
+    targetHeight = standardH
+    renderBaseW = targetWidth
+    renderBaseH = targetHeight
+  }
+
+  // Determine SSAA scale factor
+  // In Quality mode with SSAA/TAA, render at 2x resolution and downsample in worker
+  const ssaaScale =
+    qualityMode === 'quality' &&
+    (antiAliasing === 'ssaa' || antiAliasing === 'taa') &&
+    renderBaseW * 2 <= 8192 &&
+    renderBaseH * 2 <= 8192
+      ? 2
+      : 1
+
+  const renderWidth = renderBaseW * ssaaScale
+  const renderHeight = renderBaseH * ssaaScale
+
+  return {
+    targetWidth,
+    targetHeight,
+    renderWidth,
+    renderHeight,
+    renderBaseW,
+    renderBaseH,
+    ssaaScale,
+  }
+}
+
+
 export type SnapshotPipeline = {
   applyEnvironment: ({
     theme,
@@ -269,59 +362,22 @@ export async function createSnapshotPipeline({
         const {
           captureMode = 'standard',
           cropRegion,
-          standardSize,
           mime = SNAPSHOT_MIME,
           quality = SNAPSHOT_QUALITY,
           qualityMode = 'fast',
           antiAliasing = qualityMode === 'quality' ? 'ssaa' : 'fxaa',
-          scale = 1,
-          maxEdge = qualityMode === 'quality' ? 8192 : SNAPSHOT_MAX_EDGE,
         } = options ?? {}
 
-        const standardW = standardSize?.w ?? THUMBNAIL_WIDTH
-        const standardH = standardSize?.h ?? THUMBNAIL_HEIGHT
         const domWidth = renderer.domElement.width || 1920
         const domHeight = renderer.domElement.height || 1080
 
-        let targetWidth: number
-        let targetHeight: number
-
-        if (captureMode === 'viewport') {
-          const baseW = Math.round(domWidth * scale)
-          const baseH = Math.round(domHeight * scale)
-          ;({ w: targetWidth, h: targetHeight } = clampSnapshotSize(
-            baseW,
-            baseH,
-            qualityMode,
-            maxEdge,
-          ))
-        } else if (captureMode === 'area' && cropRegion) {
-          const baseW = Math.round(cropRegion.width * domWidth * scale)
-          const baseH = Math.round(cropRegion.height * domHeight * scale)
-          ;({ w: targetWidth, h: targetHeight } = clampSnapshotSize(
-            baseW,
-            baseH,
-            qualityMode,
-            maxEdge,
-          ))
-        } else {
-          // Standard mode
-          targetWidth = standardW
-          targetHeight = standardH
-        }
-
-        // Determine SSAA scale factor
-        // In Quality mode with SSAA/TAA, render at 2x resolution and downsample in worker
-        const ssaaScale =
-          qualityMode === 'quality' &&
-          (antiAliasing === 'ssaa' || antiAliasing === 'taa') &&
-          targetWidth * 2 <= 8192 &&
-          targetHeight * 2 <= 8192
-            ? 2
-            : 1
-
-        const renderWidth = targetWidth * ssaaScale
-        const renderHeight = targetHeight * ssaaScale
+        const {
+          targetWidth,
+          targetHeight,
+          renderWidth,
+          renderHeight,
+          ssaaScale,
+        } = computeSnapshotDimensions(domWidth, domHeight, options)
 
         // Switch anti-aliasing output node:
         // In Quality mode, bypass FXAA node to maintain crisp ink lines and fine geometric detail

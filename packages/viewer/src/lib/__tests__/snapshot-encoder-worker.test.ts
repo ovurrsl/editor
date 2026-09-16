@@ -1,4 +1,9 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
+import {
+  encodeRgbaToPng,
+  processSnapshotRequest as actualProcessSnapshotRequest,
+} from '../snapshot-encoder.worker'
+import { computeSnapshotDimensions } from '../snapshot-pipeline'
 
 // Interface contracts defined in PROJECT.md
 export interface SnapshotEncodeRequest {
@@ -452,4 +457,130 @@ describe('SnapshotEncoder Worker & Client Pipeline Suite (F7)', () => {
       }
     })
   })
+
+  describe('H9 & H10 Regression: Area Cropping Dimensions & Valid PNG Encoding', () => {
+    test('H10: encodeRgbaToPng produces a valid PNG binary with correct 8-byte signature and chunks', () => {
+      const pixels = new Uint8Array(4 * 4 * 4)
+      pixels.fill(200)
+      const png = encodeRgbaToPng(pixels, 4, 4)
+
+      // Must start with PNG 8-byte signature [137, 80, 78, 71, 13, 10, 26, 10]
+      expect(Array.from(png.subarray(0, 8))).toEqual([137, 80, 78, 71, 13, 10, 26, 10])
+
+      // Check IHDR chunk type at offset 12..16
+      const ihdrChunkType = String.fromCharCode(...png.subarray(12, 16))
+      expect(ihdrChunkType).toBe('IHDR')
+
+      // Check IEND chunk type near the end of file
+      const iendChunkType = String.fromCharCode(...png.subarray(png.length - 8, png.length - 4))
+      expect(iendChunkType).toBe('IEND')
+    })
+
+    test('H10: actualProcessSnapshotRequest emits Blob starting with 8-byte PNG signature in headless environment', async () => {
+      const w = 16
+      const h = 16
+      const pixels = new Uint8Array(w * h * 4)
+      pixels.fill(128)
+
+      const req = {
+        id: 'test_fallback_png',
+        pixels,
+        srcWidth: w,
+        srcHeight: h,
+        bytesPerRow: w * 4,
+        targetWidth: w,
+        targetHeight: h,
+        isWebGPU: false,
+        mime: 'image/png',
+        quality: 0.9,
+        captureMode: 'standard' as const,
+      }
+
+      const res = await actualProcessSnapshotRequest(req)
+      expect(res.success).toBe(true)
+      expect(res.blob).toBeDefined()
+      expect(res.blob!.type).toBe('image/png')
+
+      const buffer = new Uint8Array(await res.blob!.arrayBuffer())
+      // Must contain valid PNG signature, NOT raw RGBA bytes
+      expect(Array.from(buffer.subarray(0, 8))).toEqual([137, 80, 78, 71, 13, 10, 26, 10])
+    })
+
+    test('H9: computeSnapshotDimensions area mode sizes full viewport for render and exact crop for target', () => {
+      // Area selection covering 50% width and 40% height of 1920x1080
+      const dims = computeSnapshotDimensions(1920, 1080, {
+        captureMode: 'area',
+        cropRegion: { x: 0.25, y: 0.25, width: 0.5, height: 0.4 },
+        qualityMode: 'fast',
+        scale: 1,
+      })
+
+      // Target must be exactly 0.5 * 1920 = 960 and 0.4 * 1080 = 432 (NOT squared/double-scaled)
+      expect(dims.targetWidth).toBe(960)
+      expect(dims.targetHeight).toBe(432)
+      // Render target must render the full uncropped viewport to avoid camera projection squash
+      expect(dims.renderWidth).toBe(1920)
+      expect(dims.renderHeight).toBe(1080)
+    })
+
+    test('H9: actualProcessSnapshotRequest area crop outputs exact requested dimensions without double-scaling', async () => {
+      const srcW = 100
+      const srcH = 100
+      const pixels = new Uint8Array(srcW * srcH * 4)
+      pixels.fill(75)
+
+      // User requested 50% width crop region: target dimensions are 50x50
+      const req = {
+        id: 'test_crop_exact_dimensions',
+        pixels,
+        srcWidth: srcW,
+        srcHeight: srcH,
+        bytesPerRow: srcW * 4,
+        targetWidth: 50,
+        targetHeight: 50,
+        cropRegion: { x: 0.2, y: 0.2, width: 0.5, height: 0.5 },
+        ssaaScale: 1,
+        isWebGPU: false,
+        mime: 'image/png',
+        quality: 0.9,
+        captureMode: 'area' as const,
+      }
+
+      const res = await actualProcessSnapshotRequest(req)
+      expect(res.success).toBe(true)
+      // Must be 50x50, NOT 25x25 (which would happen if cropRegion was applied twice)
+      expect(res.width).toBe(50)
+      expect(res.height).toBe(50)
+    })
+
+    test('H9: area crop with 2x SSAA downsampling converges to exact target dimensions', async () => {
+      // SSAA 2x: render target is 200x200, crop region is 50% (100x100), 2x downsample -> 50x50
+      const srcW = 200
+      const srcH = 200
+      const pixels = new Uint8Array(srcW * srcH * 4)
+      pixels.fill(100)
+
+      const req = {
+        id: 'test_crop_ssaa_2x',
+        pixels,
+        srcWidth: srcW,
+        srcHeight: srcH,
+        bytesPerRow: srcW * 4,
+        targetWidth: 50,
+        targetHeight: 50,
+        cropRegion: { x: 0.25, y: 0.25, width: 0.5, height: 0.5 },
+        ssaaScale: 2,
+        isWebGPU: false,
+        mime: 'image/png',
+        quality: 0.9,
+        captureMode: 'area' as const,
+      }
+
+      const res = await actualProcessSnapshotRequest(req)
+      expect(res.success).toBe(true)
+      expect(res.width).toBe(50)
+      expect(res.height).toBe(50)
+    })
+  })
 })
+

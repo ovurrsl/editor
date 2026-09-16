@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'bun:test'
-import { createFrameClock } from './frame-limiter'
+import { OrthographicCamera, PerspectiveCamera } from 'three'
+import {
+  createFrameClock,
+  hasCameraTransformChanged,
+  shouldPauseForIdle,
+} from './frame-limiter'
 
 describe('createFrameClock Monotonic Clock & Frame Limiting', () => {
   test('uses the first rAF sample only as a wall-time baseline without advancing time', () => {
@@ -102,4 +107,108 @@ describe('createFrameClock Monotonic Clock & Frame Limiting', () => {
     expect(resolveEffectiveFps(60)).toBe(60)
     expect(resolveEffectiveFps(120)).toBe(120)
   })
+
+  test('resetBaseline clears wall-time anchor to prevent delta warp after long idle sleep', () => {
+    const clock = createFrameClock(0)
+    clock.sample(1000, 20) // baseline at 1000ms
+    expect(clock.sample(1020, 20)).toBeCloseTo(0.02)
+
+    // Idle sleep occurs for 10 seconds
+    clock.resetBaseline()
+
+    // First tick after waking up re-baselines without advancing time
+    expect(clock.sample(11020, 20)).toBeNull()
+    // Next frame advances by 20ms delta only
+    expect(clock.sample(11040, 20)).toBeCloseTo(0.04)
+  })
+
+  test('hasCameraTransformChanged detects position changes exceeding epsilon', () => {
+    const cam = new PerspectiveCamera()
+    cam.position.set(0, 0, 0)
+    cam.quaternion.set(0, 0, 0, 1)
+    const prev = { x: 0, y: 0, z: 0, qx: 0, qy: 0, qz: 0, qw: 1, zoom: 1 }
+
+    expect(hasCameraTransformChanged(cam, prev)).toBe(false)
+
+    // Sub-epsilon jitter ignored
+    cam.position.set(1e-7, 0, 0)
+    expect(hasCameraTransformChanged(cam, prev)).toBe(false)
+
+    // Position change detected
+    cam.position.set(0.01, 0, 0)
+    expect(hasCameraTransformChanged(cam, prev)).toBe(true)
+
+    cam.position.set(0, 0.01, 0)
+    expect(hasCameraTransformChanged(cam, prev)).toBe(true)
+
+    cam.position.set(0, 0, 0.01)
+    expect(hasCameraTransformChanged(cam, prev)).toBe(true)
+  })
+
+  test('hasCameraTransformChanged detects rotation changes exceeding epsilon', () => {
+    const cam = new PerspectiveCamera()
+    cam.position.set(0, 0, 0)
+    cam.quaternion.set(0, 0, 0, 1)
+    const prev = { x: 0, y: 0, z: 0, qx: 0, qy: 0, qz: 0, qw: 1, zoom: 1 }
+
+    // Sub-epsilon rotation jitter ignored
+    cam.quaternion.set(1e-7, 0, 0, 1)
+    expect(hasCameraTransformChanged(cam, prev)).toBe(false)
+
+    // Meaningful rotation change detected
+    cam.quaternion.set(0.1, 0, 0, 0.995)
+    expect(hasCameraTransformChanged(cam, prev)).toBe(true)
+  })
+
+  test('hasCameraTransformChanged detects zoom changes in orthographic camera', () => {
+    const cam = new OrthographicCamera()
+    cam.zoom = 1
+    const prev = { x: 0, y: 0, z: 0, qx: 0, qy: 0, qz: 0, qw: 1, zoom: 1 }
+
+    expect(hasCameraTransformChanged(cam, prev)).toBe(false)
+
+    // Sub-epsilon zoom jitter ignored
+    cam.zoom = 1 + 1e-7
+    expect(hasCameraTransformChanged(cam, prev)).toBe(false)
+
+    // Zoom change detected
+    cam.zoom = 1.05
+    expect(hasCameraTransformChanged(cam, prev)).toBe(true)
+  })
+
+  test('shouldPauseForIdle enforces 1.5s dampening window and pauses rAF when static', () => {
+    const lastActive = 1000
+    const idleWindow = 1500
+
+    // Within dampening window (active/camera damping in progress)
+    expect(shouldPauseForIdle(lastActive, 1500, idleWindow, false)).toBe(false) // 500ms elapsed
+    expect(shouldPauseForIdle(lastActive, 2000, idleWindow, false)).toBe(false) // 1000ms elapsed
+    expect(shouldPauseForIdle(lastActive, 2499, idleWindow, false)).toBe(false) // 1499ms elapsed
+
+    // At or past 1.5s window -> pauses
+    expect(shouldPauseForIdle(lastActive, 2500, idleWindow, false)).toBe(true) // exactly 1500ms
+    expect(shouldPauseForIdle(lastActive, 5000, idleWindow, false)).toBe(true) // 4000ms elapsed
+  })
+
+  test('shouldPauseForIdle preserves DRAW_DISABLED for headless bake passes', () => {
+    const lastActive = 1000
+    const idleWindow = 1500
+
+    // Even after 100 seconds of no user interaction, DRAW_DISABLED never pauses
+    expect(shouldPauseForIdle(lastActive, 100_000, idleWindow, true)).toBe(false)
+  })
+
+  test('shouldPauseForIdle respects custom or disabled idle windows', () => {
+    const lastActive = 1000
+
+    // Custom 3000ms window
+    expect(shouldPauseForIdle(lastActive, 3000, 3000, false)).toBe(false) // 2000ms < 3000ms
+    expect(shouldPauseForIdle(lastActive, 4000, 3000, false)).toBe(true) // 3000ms >= 3000ms
+
+    // Disabled window (<= 0 or non-finite) never pauses
+    expect(shouldPauseForIdle(lastActive, 100_000, 0, false)).toBe(false)
+    expect(shouldPauseForIdle(lastActive, 100_000, -1, false)).toBe(false)
+    expect(shouldPauseForIdle(lastActive, 100_000, Number.NaN, false)).toBe(false)
+  })
 })
+

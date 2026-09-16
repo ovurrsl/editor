@@ -4934,6 +4934,9 @@ const EMPTY_DRAFT_ANCHOR_POINTS: Array<{ x: number; y: number; isPrimary: boolea
 /** World-space half-length of the 2D draft axis guide lines (matches the 3D tools' 2000 m guides). */
 const DRAFT_AXIS_GUIDE_EXTENT = 1000
 
+import { computeFloorplanAnalyticalBounds } from '../../lib/floorplan-bounds'
+export { computeFloorplanAnalyticalBounds } from '../../lib/floorplan-bounds'
+
 export function FloorplanPanel({
   /**
    * Element to portal the compass button into. The 2D/3D navigation poses stay
@@ -6261,31 +6264,8 @@ export function FloorplanPanel({
     let observedVersion = 0
     const measure = () => {
       const nodes = useScene.getState().nodes
-      let minX = Infinity
-      let maxX = -Infinity
-      let minZ = Infinity
-      let maxZ = -Infinity
-
-      for (const node of Object.values(nodes)) {
-        if (!('position' in node) || !node.position) continue
-        const x = (node.position as [number, number, number])[0] ?? 0
-        const z = (node.position as [number, number, number])[2] ?? 0
-        const w = (node as any).width ?? 10
-        const l = (node as any).length ?? 10
-        minX = Math.min(minX, x - w / 2)
-        maxX = Math.max(maxX, x + w / 2)
-        minZ = Math.min(minZ, z - l / 2)
-        maxZ = Math.max(maxZ, z + l / 2)
-      }
-
-      if (minX === Infinity) return
-
-      const bbox = {
-        x: minX,
-        y: minZ,
-        width: maxX - minX,
-        height: maxZ - minZ,
-      }
+      const bbox = computeFloorplanAnalyticalBounds(nodes)
+      if (!bbox) return
 
       setMeasuredSceneBBox((prev) => {
         if (

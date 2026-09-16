@@ -48,24 +48,61 @@ const _ray = new Ray()
 const _direction = new Vector3()
 const _worldScale = new Vector3()
 
-function ensureObject3DVersionTracked(mesh: Object3D): void {
+function checkAndUpdateMatrixWorldVersion(obj: any): void {
+  const mw = obj.matrixWorld
+  if (!mw) return
+  const e = mw.elements
+  if (!e) return
+  let prev = obj._prevMatrixWorldElements as Float32Array | undefined
+  if (!prev) {
+    prev = new Float32Array(16)
+    obj._prevMatrixWorldElements = prev
+    for (let i = 0; i < 16; i++) {
+      prev[i] = e[i]!
+    }
+    mw._v = (mw._v ?? 0) + 1
+    return
+  }
+
+  if (
+    prev[12] !== e[12] ||
+    prev[13] !== e[13] ||
+    prev[14] !== e[14] ||
+    prev[0] !== e[0] ||
+    prev[5] !== e[5] ||
+    prev[10] !== e[10] ||
+    prev[1] !== e[1] ||
+    prev[2] !== e[2] ||
+    prev[3] !== e[3] ||
+    prev[4] !== e[4] ||
+    prev[6] !== e[6] ||
+    prev[7] !== e[7] ||
+    prev[8] !== e[8] ||
+    prev[9] !== e[9] ||
+    prev[11] !== e[11] ||
+    prev[15] !== e[15]
+  ) {
+    for (let i = 0; i < 16; i++) {
+      prev[i] = e[i]!
+    }
+    mw._v = (mw._v ?? 0) + 1
+  }
+}
+
+export function ensureObject3DVersionTracked(mesh: Object3D): void {
   let proto = Object.getPrototypeOf(mesh)
   while (proto && proto !== Object.prototype) {
     if (typeof proto.updateMatrixWorld === 'function' && !proto._isVersionTracked) {
       const origUpdateMatrixWorld = proto.updateMatrixWorld
       proto.updateMatrixWorld = function (force?: boolean) {
         origUpdateMatrixWorld.call(this, force)
-        if (this.matrixWorld) {
-          this.matrixWorld._v = (this.matrixWorld._v ?? 0) + 1
-        }
+        checkAndUpdateMatrixWorldVersion(this)
       }
       const origUpdateWorldMatrix = proto.updateWorldMatrix
       if (typeof origUpdateWorldMatrix === 'function') {
         proto.updateWorldMatrix = function (updateParents?: boolean, updateChildren?: boolean) {
           origUpdateWorldMatrix.call(this, updateParents, updateChildren)
-          if (this.matrixWorld) {
-            this.matrixWorld._v = (this.matrixWorld._v ?? 0) + 1
-          }
+          checkAndUpdateMatrixWorldVersion(this)
         }
       }
       proto._isVersionTracked = true
@@ -90,6 +127,11 @@ export function getMeshWorldInverseMatrix(mesh: Object3D): Matrix4 {
     ensureObject3DVersionTracked(mesh)
     if ((mesh.matrixWorld as any)._v === undefined) {
       ;(mesh.matrixWorld as any)._v = 0
+      const prev = new Float32Array(16)
+      for (let i = 0; i < 16; i++) {
+        prev[i] = mesh.matrixWorld.elements[i]!
+      }
+      ;(mesh as any)._prevMatrixWorldElements = prev
     }
   }
 

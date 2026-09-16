@@ -12,6 +12,8 @@ import {
 import { acceleratedRaycast } from 'three-mesh-bvh'
 import {
   createSceneBvhMaintainer,
+  ensureObject3DVersionTracked,
+  getMeshWorldInverseMatrix,
   isSceneBvhExcluded,
 } from './scene-bvh-maintainer'
 
@@ -222,4 +224,67 @@ describe('createSceneBvhMaintainer', () => {
       expect(intersects[0].point.z).toBeCloseTo(1, 2) // Front face at z = 1
     })
   })
+
+  describe('Matrix World Versioning & Inverse Matrix Caching (H11)', () => {
+    test('matrixWorld._v remains unchanged on repeated updateMatrixWorld calls when mesh is stationary', () => {
+      const mesh = makeMesh('stationary')
+      mesh.position.set(10, 20, 30)
+      mesh.updateMatrixWorld(true)
+
+      ensureObject3DVersionTracked(mesh)
+      const v0 = (mesh.matrixWorld as any)._v
+
+      // Call updateMatrixWorld multiple times without changing transform
+      mesh.updateMatrixWorld()
+      mesh.updateMatrixWorld()
+      mesh.updateMatrixWorld(true)
+
+      const v1 = (mesh.matrixWorld as any)._v
+      expect(v1).toBe(v0)
+    })
+
+    test('getMeshWorldInverseMatrix caches inverse matrix and only recomputes when matrix changes', () => {
+      const mesh = makeMesh('moving')
+      mesh.position.set(5, 0, 0)
+      mesh.updateMatrixWorld(true)
+
+      const inv1 = getMeshWorldInverseMatrix(mesh)
+      const vBefore = (mesh.matrixWorld as any)._v
+
+      // Repeated update on stationary mesh
+      mesh.updateMatrixWorld()
+      const inv2 = getMeshWorldInverseMatrix(mesh)
+
+      expect((mesh.matrixWorld as any)._v).toBe(vBefore)
+      expect(inv2).toBe(inv1)
+      expect(inv2.elements[12]).toBeCloseTo(-5)
+
+      // Move mesh
+      mesh.position.set(15, 0, 0)
+      mesh.updateMatrixWorld()
+
+      expect((mesh.matrixWorld as any)._v).toBeGreaterThan(vBefore)
+
+      const inv3 = getMeshWorldInverseMatrix(mesh)
+      expect(inv3).toBe(inv1) // Same cached instance updated in place
+      expect(inv3.elements[12]).toBeCloseTo(-15) // Reflects new inverse translation
+    })
+
+    test('updateWorldMatrix also preserves matrixWorld._v when stationary', () => {
+      const parent = new Group()
+      const child = makeMesh('child')
+      parent.add(child)
+      parent.position.set(1, 2, 3)
+      parent.updateMatrixWorld(true)
+
+      ensureObject3DVersionTracked(child)
+      const v0 = (child.matrixWorld as any)._v
+
+      child.updateWorldMatrix(true, true)
+      child.updateWorldMatrix(true, true)
+
+      expect((child.matrixWorld as any)._v).toBe(v0)
+    })
+  })
 })
+

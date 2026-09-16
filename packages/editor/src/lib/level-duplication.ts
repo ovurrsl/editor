@@ -45,8 +45,9 @@ function shouldKeepNode(node: AnyNode, preset: LevelDuplicatePreset) {
  * in a uniform way (each kind's panel reads / writes them directly), so
  * this map mirrors the legacy behavior 1:1.
  */
-const MATERIAL_FIELDS_BY_KIND: Record<string, ReadonlyArray<string>> = {
+export const MATERIAL_FIELDS_BY_KIND: Record<string, ReadonlyArray<string>> = {
   wall: [
+    'slots',
     'material',
     'materialPreset',
     'interiorMaterial',
@@ -54,15 +55,16 @@ const MATERIAL_FIELDS_BY_KIND: Record<string, ReadonlyArray<string>> = {
     'exteriorMaterial',
     'exteriorMaterialPreset',
   ],
-  slab: ['material', 'materialPreset'],
-  ceiling: ['material', 'materialPreset'],
-  fence: ['material', 'materialPreset'],
-  shelf: ['material', 'materialPreset'],
-  'roof-segment': ['material', 'materialPreset'],
-  'stair-segment': ['material', 'materialPreset'],
-  window: ['material', 'materialPreset'],
-  door: ['material', 'materialPreset'],
+  slab: ['slots', 'material', 'materialPreset'],
+  ceiling: ['slots', 'material', 'materialPreset'],
+  fence: ['slots', 'material', 'materialPreset'],
+  shelf: ['slots', 'material', 'materialPreset'],
+  'roof-segment': ['slots', 'material', 'materialPreset'],
+  'stair-segment': ['slots', 'material', 'materialPreset'],
+  window: ['slots', 'material', 'materialPreset'],
+  door: ['slots', 'material', 'materialPreset'],
   roof: [
+    'slots',
     'material',
     'materialPreset',
     'topMaterial',
@@ -73,6 +75,7 @@ const MATERIAL_FIELDS_BY_KIND: Record<string, ReadonlyArray<string>> = {
     'wallMaterialPreset',
   ],
   stair: [
+    'slots',
     'material',
     'materialPreset',
     'railingMaterial',
@@ -82,9 +85,12 @@ const MATERIAL_FIELDS_BY_KIND: Record<string, ReadonlyArray<string>> = {
     'sideMaterial',
     'sideMaterialPreset',
   ],
+  column: ['slots', 'material', 'materialPreset'],
+  item: ['slots', 'material', 'materialPreset'],
+  block: ['slots', 'material', 'materialPreset'],
 }
 
-function stripMaterials(node: AnyNode): AnyNode {
+export function stripMaterials(node: AnyNode): AnyNode {
   const fields = MATERIAL_FIELDS_BY_KIND[node.type]
   if (!fields) return node
   const next = { ...node } as Record<string, unknown>
