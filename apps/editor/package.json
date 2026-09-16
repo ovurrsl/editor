@@ -18,7 +18,7 @@
     "@mint/pascal-plugin": "github:mintdotgg/mint-pascal-plugin#902c546dbaece6b31455c0dc394afe6b9cd136fe",
     "@node-rs/argon2": "^2.0.2",
     "@number-flow/react": "^0.6.0",
-    "@ovurrsl/plugin-warehouse": "github:ovurrsl/plugin-warehouse#b1894e0ce3232bbc089a361739c7120204982847",
+    "@ovurrsl/plugin-warehouse": "github:ovurrsl/plugin-warehouse#338b078cff35d02bdced8d93389b48ed331f0678",
     "@pascal-app/core": "*",
     "@pascal-app/editor": "*",
     "@pascal-app/ifc-converter": "*",
