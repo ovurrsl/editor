@@ -1,14 +1,15 @@
 'use client'
 
-import { LayoutDashboard, LogOut } from 'lucide-react'
+import { LayoutDashboard, LogIn, LogOut } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useState } from 'react'
 import { useSession } from '@/components/auth/session-provider'
 
-const ROLE_LABEL: Record<'admin' | 'editor' | 'viewer', string> = {
+const ROLE_LABEL: Record<string, string> = {
   admin: 'Administrator',
   editor: 'Editor',
   viewer: 'Viewer (read-only)',
+  supervisor: 'Supervisor',
 }
 
 /**
@@ -21,7 +22,7 @@ const ROLE_LABEL: Record<'admin' | 'editor' | 'viewer', string> = {
  */
 export function AccountSettingsSection() {
   const router = useRouter()
-  const { user, signOut } = useSession()
+  const { user, loading, signOut } = useSession()
   const [signingOut, setSigningOut] = useState(false)
 
   const handleSignOut = useCallback(async () => {
@@ -30,7 +31,35 @@ export function AccountSettingsSection() {
     router.push('/signin')
   }, [router, signOut])
 
-  if (!user) return null
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        <label className="font-medium text-muted-foreground text-xs uppercase">Account</label>
+        <div className="flex animate-pulse items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-3">
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="h-3.5 w-3/4 rounded bg-muted/60" />
+            <div className="h-3 w-1/2 rounded bg-muted/40" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="space-y-3">
+        <label className="font-medium text-muted-foreground text-xs uppercase">Account</label>
+        <button
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-muted/40 px-3 py-2 font-medium text-sm transition-colors hover:bg-muted"
+          onClick={() => router.push('/signin')}
+          type="button"
+        >
+          <LogIn className="size-4" />
+          Sign in
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-3">
@@ -39,7 +68,9 @@ export function AccountSettingsSection() {
       <div className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-2">
         <div className="min-w-0">
           <div className="truncate font-medium text-sm">{user.email}</div>
-          <div className="text-muted-foreground text-xs">{ROLE_LABEL[user.role]}</div>
+          <div className="text-muted-foreground text-xs">
+            {ROLE_LABEL[user.role] ?? user.role ?? 'User'}
+          </div>
         </div>
       </div>
 
@@ -68,3 +99,4 @@ export function AccountSettingsSection() {
     </div>
   )
 }
+

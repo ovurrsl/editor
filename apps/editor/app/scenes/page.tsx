@@ -4,6 +4,7 @@ import { IfcImportButton } from '@/components/ifc-import-button'
 import { CreateSceneButton } from '@/components/save-button'
 import type { SceneMeta } from '@/components/scene-loader'
 import { SceneGrid } from '@/components/scenes-grid'
+import { SignOutButton } from '@/components/sign-out-button'
 import { authAvailable } from '@/lib/auth/db'
 import { getSessionUser, type SessionUser } from '@/lib/auth/session'
 import { getSceneOperations } from '@/lib/scene-store-server'
@@ -63,6 +64,7 @@ export default async function ScenesPage() {
                 <CreateSceneButton />
               </>
             )}
+            <SignOutButton />
           </div>
         </div>
       </header>

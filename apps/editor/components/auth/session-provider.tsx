@@ -2,11 +2,13 @@
 
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react'
 
-export interface SessionUser {
-  id: string
-  email: string
-  role: 'admin' | 'editor' | 'viewer'
-}
+import {
+  type ConsoleSessionResponse,
+  resolveSessionUser,
+  type SessionUser,
+} from './session-utils'
+
+export type { SessionUser }
 
 interface SessionValue {
   user: SessionUser | null
@@ -19,18 +21,11 @@ interface SessionValue {
 
 const SessionContext = createContext<SessionValue | null>(null)
 
-/** The console's /api/auth/session response, reduced to what the editor uses. */
-interface ConsoleSessionResponse {
-  state: 'anonymous' | 'signedIn' | 'mfaRequired' | 'firstSignIn'
-  user: { id: string; email: string; permissions?: string[] } | null
-}
-
 /**
- * Sign-in itself now lives in the console (/signin): it owns passwords, 2FA
- * and lockout, so the editor no longer renders its own dialog — gated actions
- * navigate to the console and come back signed in. Only a fully signed-in
- * session counts; a half-open one (2FA pending, forced password change) is
- * treated as signed out.
+ * Sign-in itself lives in the console (/signin): it owns passwords, 2FA
+ * and lockout. When a user has an active session (including firstSignIn or
+ * idleWarning), user details and sign-out capability must be accessible to the
+ * editor so the Account section and user-gated controls behave correctly.
  */
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null)
@@ -40,21 +35,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     try {
       const res = await fetch('/api/auth/session', { cache: 'no-store' })
       const body = (await res.json()) as ConsoleSessionResponse
-      if (body.state === 'signedIn' && body.user) {
-        const permissions = body.user.permissions ?? []
-        setUser({
-          id: body.user.id,
-          email: body.user.email,
-          // Mirrors the server-side fold in lib/auth/session.ts.
-          role: permissions.includes('admin_access')
-            ? 'admin'
-            : permissions.includes('edit_projects') || permissions.includes('create_projects')
-              ? 'editor'
-              : 'viewer',
-        })
-      } else {
-        setUser(null)
-      }
+      setUser(resolveSessionUser(body))
     } catch {
       setUser(null)
     } finally {

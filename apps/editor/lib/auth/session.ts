@@ -27,14 +27,18 @@ export function canEdit(user: SessionUser): boolean {
  */
 export async function getSessionUser(): Promise<SessionUser | null> {
   const session = await getSession()
-  if (session?.state !== 'signedIn') return null
+  if (!session) return null
+  if (session.state !== 'signedIn' && session.state !== 'firstSignIn') return null
   const user = session.user
-  const permissions = user.permissions
-  const role = permissions.includes('admin_access')
-    ? 'admin'
-    : permissions.includes('edit_projects') || permissions.includes('create_projects')
-      ? 'editor'
-      : 'viewer'
+  const permissions = user.permissions ?? []
+  const rawRole = (user.role ?? '').toLowerCase()
+  const isAdmin = permissions.includes('admin_access') || rawRole === 'admin'
+  const isEditor =
+    permissions.includes('edit_projects') ||
+    permissions.includes('create_projects') ||
+    rawRole === 'editor' ||
+    rawRole === 'supervisor'
+  const role: 'admin' | 'editor' | 'viewer' = isAdmin ? 'admin' : isEditor ? 'editor' : 'viewer'
   return { id: user.id, email: user.email, role }
 }
 
