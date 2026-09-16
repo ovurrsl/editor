@@ -3,6 +3,7 @@ import type { SceneGraph } from '@pascal-app/editor'
 import { redirect } from 'next/navigation'
 import { SceneLoader, type SceneMeta } from '@/components/scene-loader'
 import { canEdit, getSessionUser } from '@/lib/auth/session'
+import { createViewerLaunchToken } from '@/lib/auth/viewer-token'
 import { getSceneOperations } from '@/lib/scene-store-server'
 import { loadOrCreateWorkspaceScene } from '@/lib/workspace-scene'
 
@@ -31,10 +32,14 @@ export default async function Root() {
   if (session.user.mustChangePassword) redirect('/welcome')
 
   // View-only accounts have no business in the editing surface: they land on
-  // their scene list and open scenes in preview.
+  // their designated 3D showcase viewer (https://viewer.opex.help).
   const user = await getSessionUser()
   if (!user) redirect('/signin')
-  if (!canEdit(user)) redirect('/scenes')
+  if (!canEdit(user)) {
+    const token = createViewerLaunchToken(user)
+    const viewerUrl = process.env.NEXT_PUBLIC_VIEWER_URL || 'https://viewer.opex.help'
+    redirect(`${viewerUrl}/?launch_token=${token}`)
+  }
 
   const workspace = await loadOrCreateWorkspaceScene(user.id)
 
