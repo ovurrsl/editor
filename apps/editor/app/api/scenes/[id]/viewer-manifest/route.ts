@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
+import { query, type RowDataPacket } from '@panel/lib/db'
 import { getSceneOperations } from '@/lib/scene-store-server'
 
 export const dynamic = 'force-dynamic'
@@ -120,11 +121,30 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return withViewerCors(request, res)
   }
 
-  // Otherwise, load from scene store
+  // Otherwise, load from scene store or resolve through sites table
   try {
     const operations = await getSceneOperations()
-    const stored = await operations.loadStoredScene(id)
+    let stored = await operations.loadStoredScene(id)
+    let siteName = ''
+
     if (!stored) {
+      try {
+        const siteRows = await query<RowDataPacket & { scene_id: string | null; name: string }>(
+          'SELECT scene_id, name FROM sites WHERE public_id = ? OR name = ? LIMIT 1',
+          [id, id],
+        )
+        if (siteRows.length > 0) {
+          siteName = siteRows[0].name
+          if (siteRows[0].scene_id) {
+            stored = await operations.loadStoredScene(siteRows[0].scene_id)
+          }
+        }
+      } catch {
+        // Fall back gracefully if sites table query fails
+      }
+    }
+
+    if (!stored && !siteName) {
       const res = NextResponse.json(BURSA_MANIFEST) // Graceful fallback
       return withViewerCors(request, res)
     }
@@ -133,7 +153,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       version: '1.0',
       site: {
         id,
-        name: stored.name || 'Lojistik Depo',
+        name: siteName || stored?.name || 'Lojistik Depo',
         city: 'Türkiye',
       },
       assets: {
