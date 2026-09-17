@@ -7,14 +7,8 @@ import { call } from '@panel/lib/client-api'
 import { cn } from '@panel/lib/cn'
 import { useEscapeLayer } from '@panel/lib/escape-layers'
 import type { LocationStatus, WarehouseLocation } from '@panel/lib/types'
-import { Interactive2DCanvas } from '@panel/components/console/interactive-2d-canvas'
-import {
-  RackPropertyEditorCard,
-  type PalletRackNodeShape,
-} from '@panel/components/console/rack-property-editor-card'
-import { formatIndustrialAddress, generateBarcode } from '@panel/lib/excel-ingest'
-import type { PalletRackNode } from '@ovurrsl/plugin-warehouse'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { WarehousePlanSchematic } from '@panel/components/console/warehouse-plan-schematic'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 
 const ROW_HEIGHT = 36
 const OVERSCAN = 6
@@ -60,7 +54,7 @@ export function exportLocationsToCsv(locations: WarehouseLocation[], filename = 
   ]
 
   // Prepend \uFEFF UTF-8 BOM so Excel opens Turkish characters cleanly
-  const csvContent = `\uFEFF${lines.join('\r\n')}`
+  const csvContent = '\uFEFF' + lines.join('\r\n')
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
@@ -205,68 +199,13 @@ interface EditDraft {
   status: LocationStatus
 }
 
-/**
- * Synthesizes PalletRackNode entities from existing locations if site has no saved 3D scene.
- * Guarantees that the 2D canvas always renders interactive bays with 100% fidelity.
- */
-export function synthesizeSceneFromLocations(
-  locations: WarehouseLocation[],
-): Record<string, PalletRackNodeShape> {
-  const nodes: Record<string, PalletRackNodeShape> = {}
-  const aisleBayMap = new Map<string, WarehouseLocation[]>()
-
-  for (const loc of locations) {
-    const key = `${loc.aisle.trim().toUpperCase()}__${String(loc.bay).padStart(2, '0')}`
-    const list = aisleBayMap.get(key) ?? []
-    list.push(loc)
-    aisleBayMap.set(key, list)
-  }
-
-  const distinctAisles = Array.from(new Set(locations.map((l) => l.aisle.trim().toUpperCase()))).sort()
-  const aisleSpacing = 4.0
-  const bayPitch = 2.8
-
-  for (const [key, locs] of aisleBayMap.entries()) {
-    const parts = key.split('__')
-    const aisle = parts[0] ?? 'A'
-    const bayStr = parts[1] ?? '01'
-    const bayIndex = parseInt(bayStr, 10) || 1
-    const aisleIndex = Math.max(0, distinctAisles.indexOf(aisle))
-    const firstLoc = locs[0]
-    const nodeId = firstLoc?.nodeId || `pallet-rack-${aisle}-${bayStr}`
-
-    const posX = (bayIndex - 1) * bayPitch
-    const posZ = aisleIndex * aisleSpacing
-
-    nodes[nodeId] = {
-      id: nodeId,
-      type: 'warehouse:pallet-rack',
-      position: [posX, 0, posZ],
-      rotation: [0, 0, 0],
-      rowLabel: aisle,
-      bayIndex,
-      zoneCode: '',
-      accessMode: 'single-face',
-      frontAisleLabel: aisle,
-      rearAisleLabel: '',
-      namingStrategy: 'aisle-pairs',
-      signMountStyle: 'flag',
-      bayClearWidth: 2.7,
-      depth: 1.1,
-      uprightHeight: 5,
-    }
-  }
-
-  return nodes
-}
-
 export function AddressesTab() {
   const { t } = useApp()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const gridContainerRef = useRef<HTMLDivElement>(null)
 
   // Sites state
-  const [sites, setSites] = useState<Array<{ id: string; name: string; sceneId?: string | null }>>([
+  const [sites, setSites] = useState<Array<{ id: string; name: string }>>([
     { id: '01JM1SITE00000000000000001', name: 'Sakarya LM1' },
   ])
   const [selectedSiteId, setSelectedSiteId] = useState<string>('01JM1SITE00000000000000001')
@@ -275,21 +214,6 @@ export function AddressesTab() {
   const [locations, setLocations] = useState<WarehouseLocation[]>([])
   const [loading, setLoading] = useState(true)
   const [canEdit, setCanEdit] = useState(true)
-
-  // 2D Canvas and Rack Selection State
-  const [selectedRackNode, setSelectedRackNode] = useState<PalletRackNodeShape | null>(null)
-  const [sceneNodes, setSceneNodes] = useState<Record<string, PalletRackNodeShape>>({})
-  const [loadingScene, setLoadingScene] = useState(false)
-
-  // Compute effective scene
-  const effectiveSceneNodes = useMemo(() => {
-    if (Object.keys(sceneNodes).length > 0) return sceneNodes
-    return synthesizeSceneFromLocations(locations)
-  }, [sceneNodes, locations])
-
-  const previewScene = useMemo(() => {
-    return { nodes: effectiveSceneNodes }
-  }, [effectiveSceneNodes])
 
   // Filters
   const [search, setSearch] = useState('')
@@ -395,37 +319,6 @@ export function AddressesTab() {
     return Array.from(set).sort()
   }, [locations])
 
-  // Load site scene if available
-  useEffect(() => {
-    let active = true
-    async function loadSiteScene() {
-      const currentSite = sites.find((s) => s.id === selectedSiteId)
-      if (!currentSite?.sceneId) {
-        setSceneNodes({})
-        return
-      }
-      setLoadingScene(true)
-      try {
-        const res = await call<{
-          graph?: { nodes?: Record<string, PalletRackNodeShape> }
-          nodes?: Record<string, PalletRackNodeShape>
-        }>(`/api/scenes/${currentSite.sceneId}`)
-        if (active && res.ok && res.data) {
-          const rawNodes = res.data.graph?.nodes ?? res.data.nodes ?? {}
-          setSceneNodes(rawNodes)
-        }
-      } catch (_e) {
-        // Fallback to synthesized scene
-      } finally {
-        if (active) setLoadingScene(false)
-      }
-    }
-    void loadSiteScene()
-    return () => {
-      active = false
-    }
-  }, [selectedSiteId, sites])
-
   // Multi-column filtering
   const filteredLocations = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -458,59 +351,12 @@ export function AddressesTab() {
     setScrollTop(e.currentTarget.scrollTop)
   }
 
-  // 2D Canvas -> Grid Selection Handler
-  const handleSelectRackFromCanvas = useCallback(
-    (rack: PalletRackNodeShape | PalletRackNode | null) => {
-      setSelectedRackNode(rack as PalletRackNodeShape | null)
-      if (!rack) {
-        setBayFilter(null)
-        return
-      }
-
-      const rackAisle = (rack.rowLabel || rack.frontAisleLabel || '').trim()
-      const rackBay = String(rack.bayIndex).padStart(2, '0')
-
-      if (rackAisle) setAisleFilter(rackAisle)
-      if (rackBay) setBayFilter(rackBay)
-
-      // Highlight first matching location
-      const matching = locations.find((l) => {
-        if (l.nodeId && l.nodeId === rack.id) return true
-        return (
-          l.aisle.trim().toUpperCase() === rackAisle.toUpperCase() &&
-          String(l.bay).padStart(2, '0') === rackBay
-        )
-      })
-
-      if (matching) {
-        setSelectedLocation(matching)
-      }
-      setScrollTop(0)
-    },
-    [locations],
-  )
-
-  // Row selection handler (Grid -> 2D Canvas)
+  // Row selection handler (Grid -> Schematic)
   const handleSelectRow = (loc: WarehouseLocation) => {
     setSelectedLocation(loc)
-
-    // Lookup matching rack in canvas scene
-    const matching = Object.values(effectiveSceneNodes).find((node) => {
-      if (node.type !== 'warehouse:pallet-rack') return false
-      if (loc.nodeId && node.id === loc.nodeId) return true
-      const aisleMatch =
-        (node.rowLabel || node.frontAisleLabel || '').trim().toUpperCase() ===
-        loc.aisle.trim().toUpperCase()
-      const bayMatch = String(node.bayIndex).padStart(2, '0') === String(loc.bay).padStart(2, '0')
-      return aisleMatch && bayMatch
-    })
-
-    if (matching) {
-      setSelectedRackNode(matching)
-    }
   }
 
-  // Schematic / Bay click handler
+  // Schematic click handler (Schematic -> Grid)
   const handleSelectBay = (aisle: string, bay: string) => {
     setAisleFilter(aisle)
     setBayFilter(bay)
@@ -519,120 +365,6 @@ export function AddressesTab() {
     )
     if (match) {
       setSelectedLocation(match)
-      handleSelectRow(match)
-    }
-  }
-
-  // Matching locations for currently selected rack
-  const matchingLocationsForSelectedRack = useMemo(() => {
-    if (!selectedRackNode) return []
-    const rackAisle = (selectedRackNode.rowLabel || selectedRackNode.frontAisleLabel || '').trim().toUpperCase()
-    const rackBay = String(selectedRackNode.bayIndex).padStart(2, '0')
-    return locations.filter((l) => {
-      if (l.nodeId && l.nodeId === selectedRackNode.id) return true
-      return l.aisle.trim().toUpperCase() === rackAisle && String(l.bay).padStart(2, '0') === rackBay
-    })
-  }, [locations, selectedRackNode])
-
-  // Save Handler: Rack Properties & Location Address Cascading
-  const handleUpdateRack = async (changes: Partial<PalletRackNodeShape>) => {
-    if (!selectedRackNode) return
-    const rackId = selectedRackNode.id
-    const oldAisle = (selectedRackNode.rowLabel || selectedRackNode.frontAisleLabel || '').trim()
-    const oldBay = String(selectedRackNode.bayIndex).padStart(2, '0')
-
-    const newAisle = (changes.rowLabel ?? oldAisle).trim()
-    const newBay = changes.bayIndex !== undefined ? String(changes.bayIndex).padStart(2, '0') : oldBay
-
-    // 1. Optimistically update local scene graph
-    const updatedRack: PalletRackNodeShape = {
-      ...selectedRackNode,
-      ...changes,
-      rowLabel: newAisle,
-      bayIndex: parseInt(newBay, 10) || 1,
-    }
-
-    setSceneNodes((prev) => ({
-      ...prev,
-      [rackId]: updatedRack,
-    }))
-    setSelectedRackNode(updatedRack)
-
-    // 2. Identify affected locations
-    const affectedLocations = locations.filter((l) => {
-      if (l.nodeId && l.nodeId === rackId) return true
-      return (
-        l.aisle.trim().toUpperCase() === oldAisle.toUpperCase() &&
-        String(l.bay).padStart(2, '0') === oldBay
-      )
-    })
-
-    if (affectedLocations.length > 0) {
-      const updatedMap = new Map<string, WarehouseLocation>()
-      const patchItems: Partial<WarehouseLocation>[] = []
-
-      for (const loc of affectedLocations) {
-        const newAddressId = formatIndustrialAddress({
-          aisle: newAisle,
-          bay: newBay,
-          level: loc.level,
-          position: loc.position,
-        })
-        const newBarcode = generateBarcode(newAddressId)
-        const updatedLoc: WarehouseLocation = {
-          ...loc,
-          aisle: newAisle,
-          bay: newBay,
-          addressId: newAddressId,
-          barcode: newBarcode,
-          updatedAt: new Date().toISOString(),
-        }
-        updatedMap.set(loc.id, updatedLoc)
-        patchItems.push({
-          id: loc.id,
-          aisle: newAisle,
-          bay: newBay,
-          addressId: newAddressId,
-          barcode: newBarcode,
-        })
-      }
-
-      setLocations((prev) => prev.map((l) => updatedMap.get(l.id) ?? l))
-      if (selectedLocation && updatedMap.has(selectedLocation.id)) {
-        setSelectedLocation(updatedMap.get(selectedLocation.id)!)
-      }
-
-      // Persist to PATCH /api/locations/:id
-      try {
-        for (const item of patchItems) {
-          await call(`/api/locations/${item.id}`, {
-            method: 'PATCH',
-            body: item,
-          })
-        }
-        notify('Raf ve adres tanımları başarıyla kaydedildi', 'success')
-      } catch (_err) {
-        notify('Adres kayıtları güncellenirken hata oluştu', 'error')
-      }
-    } else {
-      notify('Raf özellikleri güncellendi', 'success')
-    }
-
-    // 3. Persist to scene API if site has sceneId
-    const currentSite = sites.find((s) => s.id === selectedSiteId)
-    if (currentSite?.sceneId) {
-      try {
-        await call(`/api/scenes/${currentSite.sceneId}`, {
-          method: 'PATCH',
-          body: {
-            patch: {
-              [rackId]: updatedRack,
-            },
-          },
-        })
-      } catch (_err) {
-        // Non-fatal
-      }
     }
   }
 
@@ -1047,7 +779,7 @@ export function AddressesTab() {
                                 if (e.key === 'Enter') void saveEdit(loc.id)
                               }}
                               className="w-full h-6 px-1 rounded bg-field border border-primary text-xs outline-none text-fg"
-                              ref={(el) => el?.focus()}
+                              autoFocus
                             />
                           ) : (
                             <span className={isSelected ? 'text-red-400 font-bold' : 'text-fg'}>
@@ -1195,27 +927,16 @@ export function AddressesTab() {
           </div>
         </div>
 
-        {/* Right Column: Interactive 2D Canvas + Rack Property Editor Card (approx 40%) */}
-        <div className="xl:col-span-5 sticky top-4 flex flex-col gap-4">
-          <Interactive2DCanvas
-            scene={previewScene as any}
-            selectedRackId={selectedRackNode?.id ?? null}
-            onSelectRack={handleSelectRackFromCanvas as any}
-            locations={locations}
+        {/* Right Column: 2D Pure SVG Warehouse Plan Schematic (approx 40%) */}
+        <div className="xl:col-span-5 sticky top-4">
+          <WarehousePlanSchematic
             siteName={selectedSite?.name || 'Sakarya LM1'}
-            height={selectedRackNode ? 420 : 640}
-            className="w-full"
+            selectedAisle={selectedLocation?.aisle}
+            selectedBay={selectedLocation?.bay}
+            selectedAddressId={selectedLocation?.addressId}
+            onSelectBay={handleSelectBay}
+            locations={locations}
           />
-
-          {selectedRackNode && (
-            <RackPropertyEditorCard
-              rack={selectedRackNode}
-              onUpdateRack={handleUpdateRack}
-              onClose={() => setSelectedRackNode(null)}
-              locations={matchingLocationsForSelectedRack}
-              canEdit={canEdit}
-            />
-          )}
         </div>
       </div>
 
