@@ -8,7 +8,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export const PATCH = handler(async (request: Request, ctx: { params: Promise<{ id: string }> }) => {
-  const isTest = process.env.NODE_ENV === 'test' || typeof Bun !== 'undefined'
+  const isTest = process.env.NODE_ENV === 'test' || typeof (globalThis as unknown as { Bun?: unknown }).Bun !== 'undefined'
   const guard = isTest ? { ok: true, session: {} as any } : await requireSession()
   if (!guard.ok) {
     return fail('unauthenticated', 'err.sessionExpired')
@@ -97,7 +97,7 @@ export const PATCH = handler(async (request: Request, ctx: { params: Promise<{ i
 })
 
 export const DELETE = handler(async (_request: Request, ctx: { params: Promise<{ id: string }> }) => {
-  const isTest = process.env.NODE_ENV === 'test' || typeof Bun !== 'undefined'
+  const isTest = process.env.NODE_ENV === 'test' || typeof (globalThis as unknown as { Bun?: unknown }).Bun !== 'undefined'
   const guard = isTest ? { ok: true, session: {} as any } : await requireSession()
   if (!guard.ok) {
     return fail('unauthenticated', 'err.sessionExpired')

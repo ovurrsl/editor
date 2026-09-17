@@ -1,11 +1,12 @@
 'use client'
 
+import type { LocationStatus } from '@panel/lib/types'
 import React, { useMemo, useState } from 'react'
 
 export interface WarehouseLocationSummary {
   aisle: string
   bay: string
-  status: 'Active' | 'Blocked' | 'Quarantine'
+  status: LocationStatus
   addressId?: string
 }
 

@@ -65,7 +65,7 @@ export interface Site {
   sceneId?: string | null
 }
 
-export type LocationStatus = 'Active' | 'Blocked' | 'Quarantine'
+export type LocationStatus = 'Active' | 'Blocked' | 'Quarantine' | 'Maintenance'
 
 export interface WarehouseLocation {
   id: string

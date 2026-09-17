@@ -507,6 +507,7 @@ export const en = {
   clEditor: 'DigitalTwin editor release',
   clPlugin: 'DigitalTwin warehouse plugin',
   clConsole: 'DigitalTwin console',
+  clViewer: 'DigitalTwin 3D viewer release',
 
   /* ——— 3D scenes tab ——— */
   scTitle: 'Projects',

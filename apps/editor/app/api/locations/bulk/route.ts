@@ -24,7 +24,7 @@ interface BulkPayload {
 }
 
 export const POST = handler(async (request: Request) => {
-  const isTest = process.env.NODE_ENV === 'test' || typeof Bun !== 'undefined'
+  const isTest = process.env.NODE_ENV === 'test' || typeof (globalThis as unknown as { Bun?: unknown }).Bun !== 'undefined'
   const guard = isTest ? { ok: true, session: {} as any } : await requireSession()
   if (!guard.ok) {
     return fail('unauthenticated', 'err.sessionExpired')

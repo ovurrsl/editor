@@ -1,3 +1,4 @@
+import type { ReleaseEntry } from '@panel/lib/api-contract'
 import { changelogPage } from '@panel/lib/changelog'
 import type { Lang } from '@panel/lib/types'
 import type { Metadata } from 'next'
@@ -22,9 +23,9 @@ export const metadata: Metadata = { title: 'Changelog' }
  * rather than a repo — but a reader still has to be able to tell an editor
  * release from a plugin one, and they version independently.
  */
-const CHANNEL_LABEL: Record<Lang, Record<'editor' | 'plugin' | 'console', string>> = {
-  en: { editor: 'Editor', plugin: 'Warehouse plugin', console: 'Console' },
-  tr: { editor: 'Editör', plugin: 'Depo eklentisi', console: 'Konsol' },
+const CHANNEL_LABEL: Record<Lang, Record<ReleaseEntry['channel'], string>> = {
+  en: { editor: 'Editor', plugin: 'Warehouse plugin', console: 'Console', viewer: '3D Viewer' },
+  tr: { editor: 'Editör', plugin: 'Depo eklentisi', console: 'Konsol', viewer: '3D Vitrin' },
 }
 
 function formatDay(lang: Lang, iso: string): string {

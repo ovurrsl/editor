@@ -552,7 +552,7 @@ export interface ReleaseEntry {
   tags: string[]
   authors: string[]
   /** Which product line the entry belongs to. */
-  channel: 'editor' | 'plugin' | 'console'
+  channel: 'editor' | 'plugin' | 'console' | 'viewer'
 }
 
 export interface ChangelogResponse {
