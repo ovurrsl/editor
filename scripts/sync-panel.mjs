@@ -122,6 +122,8 @@ const EDITOR_OWNED = new Set([
   'src/components/console/tab-content.tsx',
   'src/components/console/scenes-tab.tsx',
   'src/components/console/guides-tab.tsx',
+  'src/components/console/interactive-2d-canvas.tsx',
+  'src/components/console/rack-property-editor-card.tsx',
   // Third group, and a different reason again: these two carry an editor-only
   // authorisation gate that upstream has never had. See the block below.
   'src/app/console/[tab]/page.tsx',
