@@ -1,5 +1,6 @@
 'use client'
 
+import { AddressesTab } from '@panel/components/console/addresses-tab'
 import { AuditTab } from '@panel/components/console/audit-tab'
 import { GuidesTab } from '@panel/components/console/guides-tab'
 import { IntegrationsTab } from '@panel/components/console/integrations-tab'
@@ -29,6 +30,8 @@ export function TabContent({ tab }: { tab: ConsoleTab }) {
       return <SessionsTab />
     case 'sites':
       return <SitesTab />
+    case 'locations':
+      return <AddressesTab />
     case 'scenes':
       return <ScenesTab />
     case 'jobs':

@@ -42,95 +42,69 @@ const mockEditorPresence: ScenePresence = {
 }
 
 describe('R3 & R4: CommunityViewerToolbar & Active Editor Badge', () => {
-  it('R4: CommunityViewerToolbarCenter renders ViewModeControl with 2D, 3D, and Split view options', () => {
-    const markup = renderToStaticMarkup(<CommunityViewerToolbarCenter />)
+  it('R4: CommunityViewerToolbarLeft in editor mode renders ViewModeControl with 2D, 3D, and Split view options', () => {
+    const markup = renderToStaticMarkup(<CommunityViewerToolbarLeft presence={mockEditorPresence} />)
     expect(markup).toContain('3D')
     expect(markup).toContain('2D')
     expect(markup).toContain('Split')
   })
 
-  it('R4: CommunityViewerToolbarLeft does NOT render ViewModeControl buttons (decoupled to center slot)', () => {
+  it('R4: CommunityViewerToolbarLeft in viewer mode is completely hidden (null)', () => {
     const markup = renderToStaticMarkup(
       <CommunityViewerToolbarLeft
         currentUserId="user_bob_456"
         presence={mockViewerPresence}
       />,
     )
-    expect(markup).not.toContain('Split')
+    expect(markup).toBe('')
   })
 
-  it('R3: CommunityViewerToolbarLeft renders active editor badge with editor name and pulsating dot when viewing', () => {
-    const markup = renderToStaticMarkup(
-      <CommunityViewerToolbarLeft
-        currentUserId="user_bob_456"
-        presence={mockViewerPresence}
-      />,
-    )
-    // Should display "Düzenleyen:" and the editor's display name "alice"
-    expect(markup).toContain('Düzenleyen:')
-    expect(markup).toContain('alice')
-    expect(markup).toContain('animate-ping')
-    expect(markup).toContain('bg-emerald-400')
-    expect(markup).toContain('bg-emerald-500')
-  })
-
-  it('R3: CommunityViewerToolbarLeft renders "Düzenliyorsunuz (Aktif Editör)" with static indicator when user is the editor', () => {
+  it('R3: CommunityViewerToolbarLeft renders active editor badge when user is the editor', () => {
     const markup = renderToStaticMarkup(
       <CommunityViewerToolbarLeft
         currentUserId="user_alice_123"
         presence={mockEditorPresence}
       />,
     )
-    expect(markup).toContain('Düzenliyorsunuz (Aktif Editör)')
-    expect(markup).not.toContain('animate-ping')
-    expect(markup).toContain('border-emerald-500/30')
-    expect(markup).toContain('bg-emerald-500/10')
+    expect(markup).toContain('active-editor-badge')
+    expect(markup).toContain('Editor')
+    expect(markup).toContain('alice@example.com')
   })
 
   it('R3 Edge Case: Handles null/undefined presence gracefully without throwing or rendering badge', () => {
     const markupNull = renderToStaticMarkup(<CommunityViewerToolbarLeft presence={null} />)
-    expect(markupNull).not.toContain('active-editor-badge')
-    expect(markupNull).not.toContain('Düzenleyen:')
-    expect(markupNull).not.toContain('Düzenliyorsunuz')
+    expect(markupNull).toBe('')
 
     const markupUndefined = renderToStaticMarkup(<CommunityViewerToolbarLeft />)
-    expect(markupUndefined).not.toContain('active-editor-badge')
+    expect(markupUndefined).toBe('')
   })
 
-  it('R3 Edge Case: Does not render badge when presence.loaded is false', () => {
+  it('R3 Edge Case: Does not render toolbar when presence.loaded is false', () => {
     const unloadedPresence: ScenePresence = {
       ...mockViewerPresence,
       loaded: false,
     }
     const markup = renderToStaticMarkup(<CommunityViewerToolbarLeft presence={unloadedPresence} />)
-    expect(markup).not.toContain('active-editor-badge')
-    expect(markup).not.toContain('alice')
-  })
-
-  it('R3 Edge Case: Does not render badge when presence.loaded is true but editor is null', () => {
-    const noEditorPresence: ScenePresence = {
-      ...mockViewerPresence,
-      editor: null,
-    }
-    const markup = renderToStaticMarkup(<CommunityViewerToolbarLeft presence={noEditorPresence} />)
-    expect(markup).not.toContain('active-editor-badge')
-    expect(markup).not.toContain('Düzenleyen:')
+    expect(markup).toBe('')
   })
 
   it('R3 Edge Case: Handles email without @ by using raw identifier as fallback', () => {
     const rawIdPresence: ScenePresence = {
-      ...mockViewerPresence,
+      ...mockEditorPresence,
       editor: { userId: 'custom-arch-99', email: 'custom-arch-99' },
     }
     const markup = renderToStaticMarkup(<CommunityViewerToolbarLeft presence={rawIdPresence} />)
     expect(markup).toContain('custom-arch-99')
   })
 
-  it('CommunityViewerToolbarRight renders history, levels, wall mode and display controls', () => {
-    const markup = renderToStaticMarkup(<CommunityViewerToolbarRight />)
-    expect(markup).toContain('Undo')
-    expect(markup).toContain('Redo')
+  it('CommunityViewerToolbarRight renders display controls when in editor mode', () => {
+    const markup = renderToStaticMarkup(<CommunityViewerToolbarRight presence={mockEditorPresence} />)
     expect(markup).toContain('Display')
     expect(markup).toContain('Preview')
+  })
+
+  it('CommunityViewerToolbarRight hides controls when not in editor mode', () => {
+    const markup = renderToStaticMarkup(<CommunityViewerToolbarRight presence={mockViewerPresence} />)
+    expect(markup).toBe('')
   })
 })

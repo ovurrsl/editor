@@ -26,7 +26,7 @@ import {
   Matrix4,
 } from 'three'
 import { MeshBVH } from 'three-mesh-bvh'
-import { bvhFor } from '../node_modules/@pascal-app/plugin-boots/src/game/world'
+import { bvhFor } from '../../../node_modules/@pascal-app/plugin-boots/src/game/world'
 
 describe('Milestone 1 Adversarial Challenge: @pascal-app/plugin-boots', () => {
 
