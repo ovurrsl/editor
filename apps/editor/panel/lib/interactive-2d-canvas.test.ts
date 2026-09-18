@@ -775,6 +775,38 @@ describe('Admin 2D Canvas Security & Lockout Suite', () => {
 
       expect(onClose).toHaveBeenCalledTimes(1)
     })
+
+    test('5.6 exposes levels input and renders 3 pallet positions per level in preview', () => {
+      const targetRack = mockScene.nodes['rack-01'] as PalletRackNode
+      const markup = renderToStaticMarkup(
+        createElement(RackPropertyEditorCard, {
+          rack: targetRack,
+          onUpdateRack: () => {},
+          onClose: () => {},
+        }),
+      )
+
+      // Must have levels input
+      expect(markup).toContain('name="levels"')
+      // Must contain addresses for all 3 side-by-side pallet positions
+      expect(markup).toContain('01L-01-A1')
+      expect(markup).toContain('01L-01-A2')
+      expect(markup).toContain('01L-01-A3')
+    })
+
+    test('5.7 2D canvas renders 3 side-by-side pallet slot addresses when activeLevelFilter is active', () => {
+      const markup = renderToStaticMarkup(
+        createElement(Interactive2DCanvas, {
+          scene: mockScene,
+          activeLevelFilter: 'Kat A',
+        }),
+      )
+
+      // Bay 1 of rack-01 with 2.7m beam clear width must render all 3 positions
+      expect(markup).toContain('01L-01-A1')
+      expect(markup).toContain('01L-01-A2')
+      expect(markup).toContain('01L-01-A3')
+    })
   })
 
   // --------------------------------------------------------------------------
