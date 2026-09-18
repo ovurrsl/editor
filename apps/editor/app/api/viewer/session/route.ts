@@ -50,35 +50,82 @@ interface SiteAssignmentRow extends RowDataPacket {
   footprint_m2: number | null
 }
 
-async function resolveUserAllowedSites(userId: string): Promise<typeof BURSA_DEFAULT_SITE[]> {
+async function resolveUserAllowedSites(
+  userId: string,
+  role?: string,
+): Promise<Array<typeof BURSA_DEFAULT_SITE>> {
   try {
-    if (!authAvailable()) return [BURSA_DEFAULT_SITE]
+    if (!authAvailable()) return []
 
-    const rows = await query<SiteAssignmentRow>(
-      `SELECT s.id, s.public_id, s.name, s.scene_id, s.storage_slots, s.footprint_m2
-         FROM assignments a
-         JOIN sites s ON s.id = a.site_id
-         JOIN users u ON u.id = a.user_id
-        WHERE u.public_id = ?
-          AND s.status <> 'archived'`,
-      [userId],
-    )
+    let rows: SiteAssignmentRow[] = []
 
-    if (rows.length === 0) return [BURSA_DEFAULT_SITE]
+    if (role === 'admin') {
+      rows = await query<SiteAssignmentRow>(
+        `SELECT s.id, s.public_id, s.name, s.scene_id, s.storage_slots, s.footprint_m2
+           FROM sites s
+          WHERE s.status <> 'archived'
+          ORDER BY s.name ASC`,
+      )
+    } else {
+      rows = await query<SiteAssignmentRow>(
+        `SELECT s.id, s.public_id, s.name, s.scene_id, s.storage_slots, s.footprint_m2
+           FROM assignments a
+           JOIN sites s ON s.id = a.site_id
+           JOIN users u ON u.id = a.user_id
+          WHERE u.public_id = ?
+            AND s.status <> 'archived'
+          ORDER BY s.name ASC`,
+        [userId],
+      )
+    }
 
-    return rows.map((r) => ({
+    const sites: Array<typeof BURSA_DEFAULT_SITE> = rows.map((r) => ({
       id: r.public_id,
       name: r.name,
-      location: r.name.includes('Bursa') ? 'Bursa, Nilüfer' : 'Türkiye',
+      location: r.name.toLowerCase().includes('bursa')
+        ? 'Bursa, Nilüfer'
+        : r.name.toLowerCase().includes('sakarya')
+          ? 'Sakarya, Arifiye'
+          : 'Türkiye',
       areaM2: r.footprint_m2 ?? 24500,
       palletSlots: r.storage_slots ?? 56937,
       docks: 36,
-      featured: r.name.includes('Bursa'),
+      featured: r.name.toLowerCase().includes('bursa'),
       badge: 'Aktif Tesis',
-      sceneId: r.scene_id || 'bursa',
+      sceneId: r.scene_id || r.public_id,
     }))
+
+    // Also include scenes shared with this user in scene_shares
+    try {
+      const sharedScenes = await query<RowDataPacket & { id: string; name: string }>(
+        `SELECT s.id, s.name
+           FROM scene_shares ss
+           JOIN scenes s ON s.id = ss.scene_id
+          WHERE ss.user_id = ?`,
+        [userId],
+      )
+      for (const sc of sharedScenes) {
+        if (!sites.some((st) => st.sceneId === sc.id || st.id === sc.id)) {
+          sites.push({
+            id: sc.id,
+            name: sc.name || 'Paylaşılan 3D Sahne',
+            location: 'Dijital İkiz',
+            areaM2: 20000,
+            palletSlots: 30000,
+            docks: 20,
+            featured: false,
+            badge: 'Paylaşılan Sahne',
+            sceneId: sc.id,
+          })
+        }
+      }
+    } catch {
+      // scene_shares or scenes table may not exist in all deployments, safe to skip
+    }
+
+    return sites
   } catch {
-    return [BURSA_DEFAULT_SITE]
+    return []
   }
 }
 
@@ -127,8 +174,8 @@ export async function POST(request: NextRequest) {
     return withViewerCors(request, res)
   }
 
-  const allowedSites = await resolveUserAllowedSites(user.id)
-  const defaultSite = allowedSites[0]?.id || 'site_bursa'
+  const allowedSites = await resolveUserAllowedSites(user.id, user.role)
+  const defaultSite = allowedSites[0]?.id || null
 
   const res = NextResponse.json({
     ok: true,
