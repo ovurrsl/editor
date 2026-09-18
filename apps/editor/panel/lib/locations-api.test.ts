@@ -1,5 +1,5 @@
 import { describe, expect, test, beforeEach } from 'bun:test'
-import { GET, POST, getMemoryStore, setMemoryStore } from '../../app/api/locations/route'
+import { GET, POST, DELETE as DELETE_ALL, getMemoryStore, setMemoryStore } from '../../app/api/locations/route'
 import { PATCH, DELETE } from '../../app/api/locations/[id]/route'
 import { POST as POST_BULK } from '../../app/api/locations/bulk/route'
 
@@ -213,4 +213,29 @@ describe('Warehouse Locations API Endpoints (Milestone M3)', () => {
       expect(created?.status).toBe('Active')
     })
   })
+
+  describe('5. DELETE /api/locations (Clear All Addresses)', () => {
+    test('clears all locations for specific siteId', async () => {
+      // Ensure store has initial items
+      const initialStore = getMemoryStore()
+      expect(initialStore.length).toBeGreaterThan(0)
+      const targetSiteId = initialStore[0]?.siteId || '01JM1SITE00000000000000001'
+
+      const req = new Request(`http://localhost/api/locations?siteId=${encodeURIComponent(targetSiteId)}`, {
+        method: 'DELETE',
+      })
+
+      const res = await DELETE_ALL(req)
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.cleared).toBe(true)
+      expect(body.deletedCount).toBeGreaterThan(0)
+
+      // Verify no remaining locations with targetSiteId
+      const afterStore = getMemoryStore()
+      const remainingForSite = afterStore.filter((l) => l.siteId === targetSiteId)
+      expect(remainingForSite.length).toBe(0)
+    })
+  })
 })
+
