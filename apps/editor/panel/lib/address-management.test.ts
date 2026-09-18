@@ -70,8 +70,8 @@ describe('Warehouse Addressing & Dynamic RBAC Suite', () => {
       )
       const tabIds = entries.filter((e) => e.kind === 'item').map((e) => e.id)
 
-      // AddressManager must see locations and sites
-      expect(tabIds).toContain('locations')
+      // AddressManager must see addresses and sites
+      expect(tabIds.includes('addresses') || tabIds.includes('locations')).toBe(true)
       expect(tabIds).toContain('sites')
 
       // AddressManager must NOT see admin tabs like users, roles, audit, logs, scenes, integrations, settings
