@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@panel/lib/cn'
-import { formatIndustrialAddress, generateBarcode } from '@panel/lib/excel-ingest'
+import { formatIndustrialAddress, generateBarcode } from '@panel/lib/addressing-utils'
 import type { WarehouseLocation } from '@panel/lib/types'
 
 export interface PalletRackNodeShape {

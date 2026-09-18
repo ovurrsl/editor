@@ -3,6 +3,8 @@ import { requireSession } from '@panel/lib/auth/guard'
 import { exec, query, queryOne, type RowDataPacket } from '@panel/lib/db'
 import type { LocationStatus, WarehouseLocation } from '@panel/lib/types'
 import { ulid } from 'ulid'
+import { existsSync, readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -36,6 +38,29 @@ declare global {
 
 function initMemoryStore(): WarehouseLocation[] {
   const seed: WarehouseLocation[] = []
+
+  // Candidate paths for pre-seeded Bursa locations
+  const candidatePaths = [
+    join(process.cwd(), 'public/assets/data/locations_bursa.json'),
+    join(process.cwd(), 'apps/editor/public/assets/data/locations_bursa.json'),
+    join(process.cwd(), '../panel/public/assets/data/locations_bursa.json'),
+    resolve('E:/Digital Twin/editor/apps/editor/public/assets/data/locations_bursa.json'),
+    resolve('E:/Digital Twin/panel/public/assets/data/locations_bursa.json'),
+  ]
+
+  for (const p of candidatePaths) {
+    if (existsSync(p)) {
+      try {
+        const raw = readFileSync(p, 'utf8')
+        const data = JSON.parse(raw)
+        if (Array.isArray(data) && data.length > 0) {
+          seed.push(...data)
+          break
+        }
+      } catch (_e) {}
+    }
+  }
+
   const siteId = '01JM1SITE00000000000000001'
   const siteName = 'Sakarya LM1'
   const now = new Date().toISOString()

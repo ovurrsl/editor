@@ -39,6 +39,7 @@ const LIBRARY = [
   ['panel/env.ts', 'scripts/env.ts', true],
   ['panel/migrate.ts', 'scripts/migrate.ts', true],
   ['panel/seed.ts', 'scripts/seed.ts', true],
+  ['app/api/locations', 'src/app/api/locations', true],
 ]
 
 const ROUTES = [
@@ -118,12 +119,11 @@ const EDITOR_OWNED = new Set([
   'src/app/layout.tsx',
   'src/app/page.tsx',
   'src/app/api/health/route.ts',
+  'src/app/api/scenes/[id]/route.ts',
   'src/lib/console-tabs.ts',
   'src/components/console/tab-content.tsx',
   'src/components/console/scenes-tab.tsx',
   'src/components/console/guides-tab.tsx',
-  'src/components/console/interactive-2d-canvas.tsx',
-  'src/components/console/rack-property-editor-card.tsx',
   // Third group, and a different reason again: these two carry an editor-only
   // authorisation gate that upstream has never had. See the block below.
   'src/app/console/[tab]/page.tsx',
@@ -221,10 +221,13 @@ function plan(panelRoot, pull) {
       if (claimed.has(origin)) continue
       claimed.add(origin)
       const target = isFile ? to : join(to, rel)
+      // Normalize slashes so Windows backslashes match EDITOR_OWNED keys
+      const normalizedOrigin = origin.replace(/\\/g, '/')
+      const normalizedTarget = target.replace(/\\/g, '/')
       // `EDITOR_OWNED` holds console-side paths, so it is the origin on pull
       // and the target on push. Either way it means the same thing: the
       // editor's copy is the authority and must not be written over.
-      if (EDITOR_OWNED.has(pull ? origin : target)) continue
+      if (EDITOR_OWNED.has(pull ? normalizedOrigin : normalizedTarget)) continue
       const absolute = join(destRoot, target)
       if (!create && !existsSync(absolute)) continue
       const body = readFileSync(file, 'utf8')
@@ -273,7 +276,10 @@ if (checkOnly) {
 }
 
 for (const action of actions) {
-  mkdirSync(dirname(action.absolute), { recursive: true })
+  const targetDir = dirname(action.absolute)
+  if (!existsSync(targetDir)) {
+    mkdirSync(targetDir, { recursive: true })
+  }
   writeFileSync(action.absolute, action.next)
 }
 console.log('written')

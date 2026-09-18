@@ -1,72 +1,41 @@
-import * as fs from 'node:fs'
-import * as path from 'node:path'
-import * as XLSX from 'xlsx'
 import type { LocationStatus, WarehouseLocation } from './types'
+import {
+  LEVEL_LETTERS,
+  levelToLetter,
+  letterToLevel,
+  type FormatAddressOptions,
+  formatIndustrialAddress,
+  generateBarcode,
+} from './addressing-utils'
 
-export const LEVEL_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'] as const
-
-export function levelToLetter(levelIndex: number): string {
-  return LEVEL_LETTERS[levelIndex] ?? String.fromCharCode(65 + levelIndex)
+export {
+  LEVEL_LETTERS,
+  levelToLetter,
+  letterToLevel,
+  type FormatAddressOptions,
+  formatIndustrialAddress,
+  generateBarcode,
 }
 
-export interface FormatAddressOptions {
-  aisle: string
-  bay: number | string
-  level: number | string
-  position: number | string
-  depth?: number
-}
-
-/**
- * Formats an industrial slot address conforming to the enterprise standard:
- * `${aisle}-${padBay}-${levelChar}${position}` (with optional `-${depth}` suffix).
- * Supports both options object and positional arguments.
- */
-export function formatIndustrialAddress(
-  aisleOrOptions: string | FormatAddressOptions,
-  bayArg?: number | string,
-  levelArg?: number | string,
-  positionArg?: number | string,
-  depthArg?: number
-): string {
-  let aisle: string
-  let bay: number | string
-  let level: number | string
-  let position: number | string
-  let depth: number | undefined
-
-  if (typeof aisleOrOptions === 'object' && aisleOrOptions !== null) {
-    aisle = aisleOrOptions.aisle
-    bay = aisleOrOptions.bay
-    level = aisleOrOptions.level
-    position = aisleOrOptions.position
-    depth = aisleOrOptions.depth
-  } else {
-    aisle = String(aisleOrOptions)
-    bay = bayArg!
-    level = levelArg!
-    position = positionArg!
-    depth = depthArg
+// Lazy-load XLSX only when parsing Excel files to keep client components light
+let _xlsx: any = null
+function getXlsx() {
+  if (!_xlsx) {
+    try {
+      _xlsx = require('xlsx')
+    } catch (_e) {
+      throw new Error('Package "xlsx" is required to parse Excel spreadsheets.')
+    }
   }
-
-  const padBay = String(bay).padStart(2, '0')
-  const levelChar =
-    typeof level === 'number'
-      ? levelToLetter(level)
-      : String(level).length === 1 && String(level) >= 'A' && String(level) <= 'Z'
-        ? String(level)
-        : levelToLetter(parseInt(String(level), 10) || 0)
-
-  const depthSuffix = depth && depth > 1 ? `-${depth}` : ''
-  return `${aisle}-${padBay}-${levelChar}${position}${depthSuffix}`
+  return _xlsx
 }
 
-/**
- * Synthesizes a barcode identifier from an address ID.
- * Standard format: `LOC-${addressId.replace(/[^A-Za-z0-9]/g, '')}`
- */
-export function generateBarcode(addressId: string): string {
-  return `LOC-${addressId.replace(/[^A-Za-z0-9]/g, '')}`
+function tryRequire(id: string): any {
+  try {
+    return require(id)
+  } catch {
+    return null
+  }
 }
 
 export interface ParsedAisleRun {
@@ -169,7 +138,8 @@ export interface SeedResult {
 /**
  * Builds a column index (1-based) to zone mapping based on merged cells in Row 6.
  */
-function getMergedZoneMap(sheet: XLSX.WorkSheet): Map<number, string> {
+function getMergedZoneMap(sheet: any): Map<number, string> {
+  const XLSX = getXlsx()
   const map = new Map<number, string>()
   const merges = sheet['!merges'] || []
   for (const merge of merges) {
@@ -208,9 +178,10 @@ function resolveZone(col1Based: number, directZoneVal?: string, mergedMap?: Map<
  * Parses a SheetJS worksheet into a structured WarehouseLayoutResult.
  */
 export function parseWarehouseWorksheet(
-  worksheet: XLSX.WorkSheet,
+  worksheet: any,
   options: ParseOptions = {}
 ): WarehouseLayoutResult {
+  const XLSX = getXlsx()
   const siteId = options.siteId ?? '01JM1SITE00000000000000001'
   const siteName = options.siteName ?? 'Bursa Depo'
   const facilityName = options.facilityName ?? 'Bursa'
@@ -394,11 +365,13 @@ export function parseWarehouseWorksheet(
  * Parses warehouse layout from a local file path.
  */
 export function parseWarehouseExcel(filePath: string, options: ParseOptions = {}): WarehouseLayoutResult {
+  const XLSX = getXlsx()
+  const fs = require('node:fs')
   if (!fs.existsSync(filePath)) {
     throw new Error(`File not found: ${filePath} (ENOENT)`)
   }
 
-  let workbook: XLSX.WorkBook
+  let workbook: any
   try {
     workbook = XLSX.readFile(filePath)
   } catch (e: any) {
@@ -421,6 +394,7 @@ export function parseWarehouseExcelBuffer(
   buffer: Buffer | ArrayBuffer | Uint8Array,
   options: ParseOptions = {}
 ): WarehouseLayoutResult {
+  const XLSX = getXlsx()
   const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer as any)
   if (!buf || buf.length < 4) {
     throw new Error('Invalid buffer or unsupported file: corrupt or empty buffer')
@@ -433,7 +407,7 @@ export function parseWarehouseExcelBuffer(
     throw new Error('Invalid buffer or unsupported file: corrupt or unrecognized Excel format')
   }
 
-  let workbook: XLSX.WorkBook
+  let workbook: any
   try {
     workbook = XLSX.read(buf, { type: 'buffer' })
   } catch (e: any) {
@@ -670,23 +644,25 @@ export async function seedLocationsFromExcel(
       let handled = false
       if (typeof window === 'undefined') {
         try {
-          const { POST: bulkHandler } = await import('../../app/api/locations/bulk/route')
-          const req = new Request('http://localhost/api/locations/bulk', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ siteId, locations: chunk, mode: 'upsert' }),
-          })
-          const response = await bulkHandler(req)
-          if (response.ok) {
-            const data = await response.json()
-            created += data.created || 0
-            updated += data.updated || 0
-            if (data.errors) allErrors.push(...data.errors)
+          const mod =
+            tryRequire('../../../app/api/locations/route') ||
+            tryRequire('../../app/api/locations/route') ||
+            tryRequire('@panel/app/api/locations/route')
+          if (mod?.getMemoryStore) {
+            const store = mod.getMemoryStore()
+            for (const loc of chunk) {
+              const existingIdx = store.findIndex((l: any) => l.addressId === loc.addressId)
+              if (existingIdx !== -1) {
+                store[existingIdx] = { ...store[existingIdx], ...loc }
+                updated++
+              } else {
+                store.push(loc)
+                created++
+              }
+            }
             handled = true
           }
-        } catch (_err) {
-          // Fallback if bulk route handler import failed
-        }
+        } catch (_e) {}
       }
 
       if (!handled && typeof fetch === 'function') {
