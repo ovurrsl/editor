@@ -116,7 +116,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 
   // If Bursa or default requested, return Bursa manifest
-  if (id === 'bursa' || id === 'site_bursa' || id === 'default') {
+  const isBursa =
+    id === 'bursa' ||
+    id === 'site_bursa' ||
+    id === 'bursa_baskoy' ||
+    id === '01JM1SITE00000000000000002' ||
+    id === 'default'
+  if (isBursa) {
     const res = NextResponse.json(BURSA_MANIFEST)
     return withViewerCors(request, res)
   }

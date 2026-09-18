@@ -30,7 +30,7 @@ export function OPTIONS(request: NextRequest) {
 }
 
 const BURSA_DEFAULT_SITE = {
-  id: 'site_bursa',
+  id: '01JM1SITE00000000000000002',
   name: 'Nestlé & Netlog Bursa Başköy',
   location: 'Bursa, Nilüfer',
   areaM2: 24500,
@@ -38,7 +38,7 @@ const BURSA_DEFAULT_SITE = {
   docks: 36,
   featured: true,
   badge: 'Canlı Vitrin',
-  sceneId: 'bursa',
+  sceneId: 'bursa_baskoy',
 }
 
 interface SiteAssignmentRow extends RowDataPacket {
@@ -55,7 +55,7 @@ async function resolveUserAllowedSites(
   role?: string,
 ): Promise<Array<typeof BURSA_DEFAULT_SITE>> {
   try {
-    if (!authAvailable()) return []
+    if (!authAvailable()) return [BURSA_DEFAULT_SITE]
 
     let rows: SiteAssignmentRow[] = []
 
@@ -123,9 +123,14 @@ async function resolveUserAllowedSites(
       // scene_shares or scenes table may not exist in all deployments, safe to skip
     }
 
+    // Ensure Bursa Başköy is always available for valid viewers/users
+    if (sites.length === 0 || !sites.some((s) => s.id === '01JM1SITE00000000000000002' || s.name.toLowerCase().includes('bursa'))) {
+      sites.unshift(BURSA_DEFAULT_SITE)
+    }
+
     return sites
   } catch {
-    return []
+    return [BURSA_DEFAULT_SITE]
   }
 }
 

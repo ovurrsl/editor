@@ -24,7 +24,7 @@ function getSecret(): string {
 
 /**
  * Mints a cryptographically signed HMAC-SHA256 launch token.
- * Default validity: 60 seconds (prevents replay / URL leak vulnerabilities).
+ * Default validity: 24 hours (86,400 seconds) for resilient viewer sessions.
  */
 export function createViewerLaunchToken(
   user: { id: string; email: string; name?: string; role: 'admin' | 'editor' | 'viewer' },
@@ -36,7 +36,7 @@ export function createViewerLaunchToken(
   } = {},
 ): string {
   const secret = getSecret()
-  const exp = Date.now() + (options.ttlSeconds ?? 60) * 1000
+  const exp = Date.now() + (options.ttlSeconds ?? 86400) * 1000
   const nonce = randomBytes(12).toString('hex')
 
   const payload: ViewerTokenPayload = {
