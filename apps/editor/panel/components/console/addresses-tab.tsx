@@ -205,6 +205,27 @@ interface EditDraft {
   status: LocationStatus
 }
 
+export function compareLocationsNatural(a: WarehouseLocation, b: WarehouseLocation): number {
+  const aisleA = a.aisle ?? ''
+  const aisleB = b.aisle ?? ''
+  if (aisleA !== aisleB) {
+    const aisleCmp = aisleA.localeCompare(aisleB, undefined, { numeric: true, sensitivity: 'base' })
+    if (aisleCmp !== 0) return aisleCmp
+  }
+  const bayA = parseInt(String(a.bay ?? 0), 10) || 0
+  const bayB = parseInt(String(b.bay ?? 0), 10) || 0
+  if (bayA !== bayB) return bayA - bayB
+  const levelA = a.level ?? ''
+  const levelB = b.level ?? ''
+  if (levelA !== levelB) {
+    const lvlCmp = levelA.localeCompare(levelB)
+    if (lvlCmp !== 0) return lvlCmp
+  }
+  const posA = parseInt(String(a.position ?? 0), 10) || 0
+  const posB = parseInt(String(b.position ?? 0), 10) || 0
+  return posA - posB
+}
+
 /**
  * Synthesizes PalletRackNode entities from existing locations if site has no saved 3D scene.
  * Guarantees that the 2D canvas always renders interactive bays with 100% fidelity.
@@ -434,6 +455,7 @@ export function AddressesTab() {
 
       if (res.ok) {
         const incoming = res.data.locations || []
+        incoming.sort(compareLocationsNatural)
         setLocations(incoming)
         if (res.data.canEdit !== undefined) setCanEdit(res.data.canEdit)
         isFirstLoad.current = false
@@ -534,10 +556,10 @@ export function AddressesTab() {
     } catch (_e) {}
   }, [])
 
-  // Multi-column filtering & Natural Sorting
+  // Multi-column filtering (Preserves pre-sorted natural order without 56k localeCompare on every keystroke)
   const filteredLocations = useMemo(() => {
     const q = search.trim().toLowerCase()
-    const result = locations.filter((loc) => {
+    return locations.filter((loc) => {
       if (statusFilter !== 'All' && loc.status !== statusFilter) return false
       if (aisleFilter !== 'All' && loc.aisle.toLowerCase() !== aisleFilter.toLowerCase()) return false
       if (bayFilter && String(loc.bay).padStart(2, '0') !== String(bayFilter).padStart(2, '0')) return false
@@ -549,24 +571,6 @@ export function AddressesTab() {
         loc.aisle.toLowerCase().includes(q) ||
         String(loc.bay).includes(q)
       )
-    })
-
-    // Natural sort: Aisle (1L, 1R, 2L...), Bay (01, 02...), Level (A, B...), Position (1, 2, 3)
-    return result.sort((a, b) => {
-      if (a.aisle !== b.aisle) {
-        const aisleCmp = a.aisle.localeCompare(b.aisle, undefined, { numeric: true, sensitivity: 'base' })
-        if (aisleCmp !== 0) return aisleCmp
-      }
-      const bayA = parseInt(String(a.bay), 10) || 0
-      const bayB = parseInt(String(b.bay), 10) || 0
-      if (bayA !== bayB) return bayA - bayB
-      if (a.level !== b.level) {
-        const lvlCmp = a.level.localeCompare(b.level)
-        if (lvlCmp !== 0) return lvlCmp
-      }
-      const posA = parseInt(String(a.position), 10) || 0
-      const posB = parseInt(String(b.position), 10) || 0
-      return posA - posB
     })
   }, [locations, search, statusFilter, aisleFilter, bayFilter])
 
@@ -594,22 +598,30 @@ export function AddressesTab() {
       }
 
       const rackAisle = (rack.rowLabel || rack.frontAisleLabel || '').trim()
-      const rackBay = String(rack.bayIndex).padStart(2, '0')
+      const rawBay = rack.bayIndex
+      const rackBay = rawBay != null && rawBay > 0 ? String(rawBay).padStart(2, '0') : null
 
       if (rackAisle) setAisleFilter(rackAisle)
-      if (rackBay) setBayFilter(rackBay)
+      if (rackBay) {
+        setBayFilter(rackBay)
+      } else {
+        setBayFilter(null)
+      }
 
       // Highlight first matching location
       const matching = locations.find((l) => {
         if (l.nodeId && l.nodeId === rack.id) return true
+        if (!rackAisle) return false
         return (
           l.aisle.trim().toUpperCase() === rackAisle.toUpperCase() &&
-          String(l.bay).padStart(2, '0') === rackBay
+          (rackBay ? String(l.bay).padStart(2, '0') === rackBay : true)
         )
       })
 
       if (matching) {
         setSelectedLocation(matching)
+      } else {
+        setSelectedLocation(null)
       }
       setScrollTop(0)
     },

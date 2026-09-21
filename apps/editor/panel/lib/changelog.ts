@@ -70,7 +70,7 @@ const SNAPSHOT: ReleaseEntry[] = [
     id: 'snapshot-console-0.10.0',
     title: 'İzole Adres Veri Izgarası & 4 Kanal Güncelleme Takibi',
     summary:
-      '✨ Depo adresleri için sanallaştırılmış veri ızgarası, RFC-4180 CSV içe/dışa aktarım ve anlık satır içi düzenleme. 👥 Kullanıcı çekmecesinde doğrudan rol seçimi (UserDrawer role select). 🔔 4 bağımsız repo (Editör, Konsol, Eklenti, Vitrin) için güncellenen sürüm zaman çizelgesi. (Virtualized location grid, CSV bulk import/export, role assign drawer, 4-channel updates.)',
+      '✨ Depo adresleri için sanallaştırılmış veri ızgarası, RFC-4180 CSV içe/dışa aktarım ve anlık satır içi düzenleme. 👥 Kullanıcı çekmecesinde doğrudan rol seçimi (UserDrawer role select). 🔔 4 bağımsız repo (Editör, Konsol, Eklenti, Viewer) için güncellenen sürüm zaman çizelgesi. (Virtualized location grid, CSV bulk import/export, role assign drawer, 4-channel updates.)',
     version: 'v0.10.0',
     date: '2026-09-17T11:00:00.000Z',
     tags: ['console', 'adres-yonetimi', 'csv', 'roller'],
@@ -79,12 +79,12 @@ const SNAPSHOT: ReleaseEntry[] = [
   },
   {
     id: 'snapshot-viewer-0.2.0',
-    title: 'Bağımsız 3D Vitrin Mimarisi & Güvenli Oturum Geçişi',
+    title: 'Bağımsız 3D Viewer Mimarisi & Güvenli Oturum Geçişi',
     summary:
-      '✨ İzleyici rolü için bağımsız 3D vitrin (viewer.opex.help) entegrasyonu. 🔐 Tek seferlik launch_token ile güvenli oturum doğrulama ve sahne yetkilendirmesi. 🏢 Yayınlanmamış tesisler için bilgilendirme ekranı ve akıcı WebGL render. (Standalone 3D showcase architecture, secure token handoff, smooth WebGL rendering.)',
+      '✨ İzleyici rolü için bağımsız 3D viewer (viewer.opex.help) entegrasyonu. 🔐 Tek seferlik launch_token ile güvenli oturum doğrulama ve sahne yetkilendirmesi. 🏢 Yayınlanmamış tesisler için bilgilendirme ekranı ve akıcı WebGL render. (Standalone 3D viewer architecture, secure token handoff, smooth WebGL rendering.)',
     version: 'v0.2.0',
     date: '2026-09-17T10:30:00.000Z',
-    tags: ['viewer', '3d-vitrin', 'token', 'guvenlik'],
+    tags: ['viewer', '3d-viewer', 'token', 'guvenlik'],
     authors: ['ovurrsl'],
     channel: 'viewer',
   },
@@ -348,14 +348,14 @@ async function loadUpstream(): Promise<Cache> {
     ? releaseEntries(viewerReleases, {
         idPrefix: 'viewer',
         channel: 'viewer',
-        tags: ['viewer', '3d-vitrin'],
-        fallback: 'DigitalTwin 3D vitrin güncellemesi.',
+        tags: ['viewer', '3d-viewer'],
+        fallback: 'DigitalTwin 3D viewer güncellemesi.',
       })
     : commitEntries(viewerCommits, {
         idPrefix: 'viewer',
         channel: 'viewer',
         tags: ['viewer'],
-        fallback: 'DigitalTwin 3D vitrin güncellemesi.',
+        fallback: 'DigitalTwin 3D viewer güncellemesi.',
         channelVersion: viewerVersion,
       })
 

@@ -21,7 +21,7 @@ import { hasDrawableGeometry } from '../../lib/drawable-geometry'
 import { PERF_OVERLAY_ENABLED, pushGpuSample } from '../../lib/gpu-perf'
 import { applyIsolation, clearIsolation } from '../../lib/isolation'
 import { ensureKtx2Support } from '../../lib/ktx2-loader'
-import { createThrottledPointerEvents } from '../../hooks/use-throttled-pointer'
+import { choosePointerEvents } from '../../lib/pointer-events'
 import { clearMaterialCache, type ColorPreset, type RenderShading } from '../../lib/materials'
 import { initializeGpuRenderer, type RendererPowerPreference } from '../../lib/renderer-capability'
 import { getSceneTheme } from '../../lib/scene-themes'
@@ -449,6 +449,7 @@ const Viewer = forwardRef<ViewerHandle, ViewerProps>(function Viewer(
   }, [sceneReadyKey])
 
   const [rendererInitFailed, setRendererInitFailed] = useState(false)
+  const [pointerEvents] = useState(() => choosePointerEvents())
 
   const isDark = useViewer((state) => getSceneTheme(state.sceneTheme).appearance === 'dark')
   const transparentBackground = useViewer((state) => state.transparentBackground)
@@ -528,7 +529,7 @@ const Viewer = forwardRef<ViewerHandle, ViewerProps>(function Viewer(
         transparentBackground ? 'bg-transparent' : isDark ? 'bg-[#1f2433]' : 'bg-[#fafafa]'
       }`}
       dpr={[1, maxDpr]}
-      events={createThrottledPointerEvents}
+      events={pointerEvents}
       frameloop="never"
       gl={
         ((props: { canvas?: HTMLCanvasElement; powerPreference?: RendererPowerPreference }) => {

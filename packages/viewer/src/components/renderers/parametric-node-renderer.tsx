@@ -8,10 +8,11 @@ import {
   useRegistry,
   useScene,
 } from '@pascal-app/core'
-import { useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import type { Group } from 'three'
 import { useNodeEvents } from '../../hooks/use-node-events'
 import { useStaticTransform } from '../../hooks/use-static-transform'
+import { disposeObject3DResources } from '../../lib/dispose-object3d'
 import { NodeRenderer } from './node-renderer'
 
 /**
@@ -68,6 +69,14 @@ export const ParametricNodeRenderer = ({ node }: { node: AnyNode }) => {
   useLayoutEffect(() => {
     useScene.getState().markDirty(node.id as AnyNodeId)
   }, [node.id])
+
+  useEffect(() => {
+    return () => {
+      if (ref.current) {
+        disposeObject3DResources(ref.current)
+      }
+    }
+  }, [])
 
   const position = liveTransform?.position ?? overridePosition ?? n.position ?? [0, 0, 0]
   const rawRotation = overrideRotation ?? n.rotation

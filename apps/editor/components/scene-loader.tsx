@@ -253,6 +253,20 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
           serverNodeCountRef.current = next.nodeCount
           lastSavedGraphRef.current = graph
           setSaveError(null)
+          if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+            try {
+              const channel = new BroadcastChannel('dt_live_scene_stream')
+              channel.postMessage({
+                type: 'SCENE_PATCH_EVENT',
+                sceneId: meta.id,
+                version: next.version,
+                patch,
+                graph,
+                timestamp: Date.now(),
+              })
+              channel.close()
+            } catch {}
+          }
           return
         }
 
@@ -261,6 +275,20 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
         serverNodeCountRef.current = next.nodeCount
         lastSavedGraphRef.current = graph
         setSaveError(null)
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          try {
+            const channel = new BroadcastChannel('dt_live_scene_stream')
+            channel.postMessage({
+              type: 'SCENE_PATCH_EVENT',
+              sceneId: meta.id,
+              version: next.version,
+              patch,
+              graph,
+              timestamp: Date.now(),
+            })
+            channel.close()
+          } catch {}
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Save failed'
         if (message !== 'version_conflict' && message !== 'empty_graph_rejected' && message !== 'unauthorized') {

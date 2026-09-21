@@ -6298,13 +6298,25 @@ export function FloorplanPanel({
 
     measure()
     observer.observe(el, {
-      attributes: true,
-      characterData: true,
+      attributes: false,
+      characterData: false,
       childList: true,
-      subtree: true,
+      subtree: false,
     })
+
+    const unsubScene = useScene.subscribe((state, prevState) => {
+      if (state.nodes !== prevState?.nodes) {
+        mutationVersion += 1
+        if (scheduledFrame === null) {
+          observedVersion = mutationVersion - 1
+          scheduledFrame = requestAnimationFrame(flushWhenSettled)
+        }
+      }
+    })
+
     return () => {
       observer.disconnect()
+      unsubScene()
       if (scheduledFrame !== null) cancelAnimationFrame(scheduledFrame)
     }
   }, [isFloorplanOpen])

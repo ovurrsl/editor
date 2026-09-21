@@ -3,6 +3,7 @@ import { authAvailable } from '@/lib/auth/db'
 import { getSessionUser } from '@/lib/auth/session'
 import { verifyViewerLaunchToken } from '@/lib/auth/viewer-token'
 import { query, type RowDataPacket } from '@panel/lib/db'
+import { getSceneOperations } from '@/lib/scene-store-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,7 +38,7 @@ const BURSA_DEFAULT_SITE = {
   palletSlots: 56937,
   docks: 36,
   featured: true,
-  badge: 'Canlı Vitrin',
+  badge: 'Canlı Viewer',
   sceneId: 'bursa_baskoy',
 }
 
@@ -55,80 +56,87 @@ async function resolveUserAllowedSites(
   role?: string,
 ): Promise<Array<typeof BURSA_DEFAULT_SITE>> {
   try {
-    if (!authAvailable()) return [BURSA_DEFAULT_SITE]
+    const sites: Array<typeof BURSA_DEFAULT_SITE> = []
 
-    let rows: SiteAssignmentRow[] = []
-
-    if (role === 'admin') {
-      rows = await query<SiteAssignmentRow>(
-        `SELECT s.id, s.public_id, s.name, s.scene_id, s.storage_slots, s.footprint_m2
-           FROM sites s
-          WHERE s.status <> 'archived'
-          ORDER BY s.name ASC`,
-      )
-    } else {
-      rows = await query<SiteAssignmentRow>(
-        `SELECT s.id, s.public_id, s.name, s.scene_id, s.storage_slots, s.footprint_m2
-           FROM assignments a
-           JOIN sites s ON s.id = a.site_id
-           JOIN users u ON u.id = a.user_id
-          WHERE u.public_id = ?
-            AND s.status <> 'archived'
-          ORDER BY s.name ASC`,
-        [userId],
-      )
-    }
-
-    const sites: Array<typeof BURSA_DEFAULT_SITE> = rows.map((r) => ({
-      id: r.public_id,
-      name: r.name,
-      location: r.name.toLowerCase().includes('bursa')
-        ? 'Bursa, Nilüfer'
-        : r.name.toLowerCase().includes('sakarya')
-          ? 'Sakarya, Arifiye'
-          : 'Türkiye',
-      areaM2: r.footprint_m2 ?? 24500,
-      palletSlots: r.storage_slots ?? 56937,
-      docks: 36,
-      featured: r.name.toLowerCase().includes('bursa'),
-      badge: 'Aktif Tesis',
-      sceneId: r.scene_id || r.public_id,
-    }))
-
-    // Also include scenes shared with this user in scene_shares
+    // 1. Fetch all warehouse scenes from local/SQLite store
     try {
-      const sharedScenes = await query<RowDataPacket & { id: string; name: string }>(
-        `SELECT s.id, s.name
-           FROM scene_shares ss
-           JOIN scenes s ON s.id = ss.scene_id
-          WHERE ss.user_id = ?`,
-        [userId],
-      )
-      for (const sc of sharedScenes) {
-        if (!sites.some((st) => st.sceneId === sc.id || st.id === sc.id)) {
-          sites.push({
-            id: sc.id,
-            name: sc.name || 'Paylaşılan 3D Sahne',
-            location: 'Dijital İkiz',
-            areaM2: 20000,
-            palletSlots: 30000,
-            docks: 20,
-            featured: false,
-            badge: 'Paylaşılan Sahne',
-            sceneId: sc.id,
-          })
-        }
+      const operations = await getSceneOperations()
+      const allScenes = await operations.listScenes()
+      for (const sc of allScenes) {
+        if (!sc.nodeCount || sc.nodeCount === 0) continue
+        const isBursa = sc.name.toLowerCase().includes('bursa') || sc.id.toLowerCase().includes('bursa')
+        const isSakarya = sc.name.toLowerCase().includes('sakarya') || sc.id.toLowerCase().includes('sakarya')
+        sites.push({
+          id: sc.id,
+          name: sc.name,
+          location: isBursa
+            ? 'Bursa, Nilüfer'
+            : isSakarya
+              ? 'Sakarya, Arifiye'
+              : 'Türkiye',
+          areaM2: Math.max(5000, sc.nodeCount * 35),
+          palletSlots: Math.max(1200, sc.nodeCount * 25),
+          docks: Math.max(8, Math.min(40, Math.floor(sc.nodeCount / 20))),
+          featured: isBursa || isSakarya,
+          badge: 'Aktif Tesis',
+          sceneId: sc.id,
+        })
       }
-    } catch {
-      // scene_shares or scenes table may not exist in all deployments, safe to skip
+    } catch {}
+
+    // 2. If MySQL auth is available, also merge assigned sites from database
+    if (authAvailable()) {
+      try {
+        let rows: SiteAssignmentRow[] = []
+        if (role === 'admin') {
+          rows = await query<SiteAssignmentRow>(
+            `SELECT s.id, s.public_id, s.name, s.scene_id, s.storage_slots, s.footprint_m2
+               FROM sites s
+              WHERE s.status <> 'archived'
+              ORDER BY s.name ASC`,
+          )
+        } else {
+          rows = await query<SiteAssignmentRow>(
+            `SELECT s.id, s.public_id, s.name, s.scene_id, s.storage_slots, s.footprint_m2
+               FROM assignments a
+               JOIN sites s ON s.id = a.site_id
+               JOIN users u ON u.id = a.user_id
+              WHERE u.public_id = ?
+                AND s.status <> 'archived'
+              ORDER BY s.name ASC`,
+            [userId],
+          )
+        }
+
+        for (const r of rows) {
+          const targetScene = r.scene_id || r.public_id
+          if (!sites.some((s) => s.id === r.public_id || s.sceneId === targetScene)) {
+            sites.push({
+              id: r.public_id,
+              name: r.name,
+              location: r.name.toLowerCase().includes('bursa')
+                ? 'Bursa, Nilüfer'
+                : r.name.toLowerCase().includes('sakarya')
+                  ? 'Sakarya, Arifiye'
+                  : 'Türkiye',
+              areaM2: r.footprint_m2 ?? 24500,
+              palletSlots: r.storage_slots ?? 56937,
+              docks: 36,
+              featured: r.name.toLowerCase().includes('bursa'),
+              badge: 'Aktif Tesis',
+              sceneId: targetScene,
+            })
+          }
+        }
+      } catch {}
     }
 
-    // Ensure Bursa Başköy is always available for valid viewers/users
-    if (sites.length === 0 || !sites.some((s) => s.id === '01JM1SITE00000000000000002' || s.name.toLowerCase().includes('bursa'))) {
+    // Ensure Bursa Başköy default site is always available
+    if (!sites.some((s) => s.id === '01JM1SITE00000000000000002' || s.name.toLowerCase().includes('bursa'))) {
       sites.unshift(BURSA_DEFAULT_SITE)
     }
 
-    return sites
+    return sites.length > 0 ? sites : [BURSA_DEFAULT_SITE]
   } catch {
     return [BURSA_DEFAULT_SITE]
   }

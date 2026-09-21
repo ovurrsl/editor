@@ -1,0 +1,1572 @@
+{
+  "id": "54c70c9e4e65",
+  "name": "Güzeller üst",
+  "projectId": null,
+  "ownerId": null,
+  "thumbnailUrl": null,
+  "version": 129,
+  "createdAt": "2026-07-17T06:03:32.952Z",
+  "updatedAt": "2026-07-28T13:38:05.552Z",
+  "sizeBytes": 23742,
+  "nodeCount": 30,
+  "editorUrl": "/editor/54c70c9e4e65",
+  "url": "/editor/54c70c9e4e65",
+  "published": true,
+  "graphHash": "0ad0251a6a3fb643c9e1debf70ebb3ad484b1d4c77a62e5725ad4ccb57f8cb25",
+  "graph": {
+    "nodes": {
+      "site_tdsjivs7gp0wezmp": {
+        "object": "node",
+        "id": "site_tdsjivs7gp0wezmp",
+        "type": "site",
+        "parentId": null,
+        "visible": true,
+        "metadata": {},
+        "polygon": {
+          "type": "polygon",
+          "points": [
+            [
+              -150,
+              -150
+            ],
+            [
+              150,
+              -150
+            ],
+            [
+              150,
+              150
+            ],
+            [
+              -150,
+              150
+            ]
+          ]
+        },
+        "children": [
+          "building_zdumuojte3sydr0i"
+        ]
+      },
+      "building_zdumuojte3sydr0i": {
+        "object": "node",
+        "id": "building_zdumuojte3sydr0i",
+        "type": "building",
+        "parentId": null,
+        "visible": true,
+        "metadata": {},
+        "children": [
+          "level_sr23yo22skvzess2"
+        ],
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "level_sr23yo22skvzess2": {
+        "object": "node",
+        "id": "level_sr23yo22skvzess2",
+        "type": "level",
+        "parentId": null,
+        "visible": true,
+        "metadata": {},
+        "children": [
+          "wall_021bvb2aia745hya",
+          "wall_hapzyfpa51xp6e3y",
+          "wall_29oawnbb2p7tj9pm",
+          "wall_cthn9df3ppep71vh",
+          "wall_v543zx9uhg9l328b",
+          "wall_0g31i6zmxkwmgtcc",
+          "wall_iibqeawv20zp3x6h",
+          "wall_ec6knqbl8h1laloa",
+          "slab_m68fyvrhh4v71n0y",
+          "guide_0mtpddovzpw2o3c0"
+        ],
+        "level": 0,
+        "height": 2.5
+      },
+      "wall_021bvb2aia745hya": {
+        "object": "node",
+        "id": "wall_021bvb2aia745hya",
+        "type": "wall",
+        "name": "Wall 2",
+        "parentId": "level_sr23yo22skvzess2",
+        "visible": true,
+        "metadata": {},
+        "children": [
+          "door_kahr199irig2ntqz",
+          "door_788ncghedmc418up",
+          "door_g73tyr0btxjbgc3q",
+          "door_6rk6p7g5hrehevep",
+          "door_q5jpc7q92pypr8ft",
+          "door_ng24qedoqft1wf6r",
+          "door_7a7cuvpf46qmt7xp",
+          "door_34xxvva94bb6lz25",
+          "door_evzqelmkjujmg671",
+          "door_3v71v0fydyacqf3i",
+          "door_xo9fr0dv7n5xkciy",
+          "door_8mxr9qlu2bls7lit",
+          "door_oshytbqikr0rm5ow",
+          "door_zqicsf4y09h54mo5",
+          "door_hiydcd3ixloue0lk",
+          "door_gw759rl5lcj7a7py",
+          "door_ymxplyify4c6uyb0"
+        ],
+        "start": [
+          51.150000000000006,
+          -72.5
+        ],
+        "end": [
+          -44.7,
+          -72.55
+        ],
+        "frontSide": "unknown",
+        "backSide": "unknown"
+      },
+      "wall_hapzyfpa51xp6e3y": {
+        "object": "node",
+        "id": "wall_hapzyfpa51xp6e3y",
+        "type": "wall",
+        "name": "Wall 3",
+        "parentId": "level_sr23yo22skvzess2",
+        "visible": true,
+        "metadata": {},
+        "children": [],
+        "start": [
+          -44.7,
+          -72.55
+        ],
+        "end": [
+          -44.7,
+          -75.95
+        ],
+        "frontSide": "unknown",
+        "backSide": "unknown"
+      },
+      "wall_29oawnbb2p7tj9pm": {
+        "object": "node",
+        "id": "wall_29oawnbb2p7tj9pm",
+        "type": "wall",
+        "name": "Wall 4",
+        "parentId": "level_sr23yo22skvzess2",
+        "visible": true,
+        "metadata": {},
+        "children": [],
+        "start": [
+          -44.7,
+          -75.95
+        ],
+        "end": [
+          -50.400000000000006,
+          -75.95
+        ],
+        "frontSide": "unknown",
+        "backSide": "unknown"
+      },
+      "wall_cthn9df3ppep71vh": {
+        "object": "node",
+        "id": "wall_cthn9df3ppep71vh",
+        "type": "wall",
+        "name": "Wall 5",
+        "parentId": "level_sr23yo22skvzess2",
+        "visible": true,
+        "metadata": {},
+        "children": [],
+        "start": [
+          -50.400000000000006,
+          -75.95
+        ],
+        "end": [
+          -50.3998999555358,
+          -72.50223432636727
+        ],
+        "frontSide": "unknown",
+        "backSide": "unknown"
+      },
+      "wall_v543zx9uhg9l328b": {
+        "object": "node",
+        "id": "wall_v543zx9uhg9l328b",
+        "type": "wall",
+        "name": "Wall 6",
+        "parentId": "level_sr23yo22skvzess2",
+        "visible": true,
+        "metadata": {},
+        "children": [],
+        "start": [
+          -50.3998999555358,
+          -72.50223432636727
+        ],
+        "end": [
+          -51.050000000000004,
+          -72.5
+        ],
+        "frontSide": "unknown",
+        "backSide": "unknown"
+      },
+      "wall_0g31i6zmxkwmgtcc": {
+        "object": "node",
+        "id": "wall_0g31i6zmxkwmgtcc",
+        "type": "wall",
+        "name": "Wall 7",
+        "parentId": "level_sr23yo22skvzess2",
+        "visible": true,
+        "metadata": {},
+        "children": [],
+        "start": [
+          -51.050000000000004,
+          -72.5
+        ],
+        "end": [
+          -51.05,
+          74.55000000000001
+        ],
+        "frontSide": "unknown",
+        "backSide": "unknown"
+      },
+      "wall_iibqeawv20zp3x6h": {
+        "object": "node",
+        "id": "wall_iibqeawv20zp3x6h",
+        "type": "wall",
+        "name": "Wall 8",
+        "parentId": "level_sr23yo22skvzess2",
+        "visible": true,
+        "metadata": {},
+        "children": [],
+        "start": [
+          -51.05,
+          74.55000000000001
+        ],
+        "end": [
+          51.20000366675013,
+          74.54957183640828
+        ],
+        "frontSide": "unknown",
+        "backSide": "unknown"
+      },
+      "wall_ec6knqbl8h1laloa": {
+        "object": "node",
+        "id": "wall_ec6knqbl8h1laloa",
+        "type": "wall",
+        "name": "Wall 8",
+        "parentId": "level_sr23yo22skvzess2",
+        "visible": true,
+        "metadata": {},
+        "children": [],
+        "start": [
+          51.20000366675013,
+          74.54957183640828
+        ],
+        "end": [
+          51.150000000000006,
+          -72.5
+        ],
+        "frontSide": "unknown",
+        "backSide": "unknown"
+      },
+      "door_kahr199irig2ntqz": {
+        "object": "node",
+        "id": "door_kahr199irig2ntqz",
+        "type": "door",
+        "name": "Door 1",
+        "parentId": "wall_021bvb2aia745hya",
+        "visible": true,
+        "metadata": {},
+        "position": [
+          93.65,
+          1.625,
+          0
+        ],
+        "rotation": [
+          0,
+          6.283185307179586,
+          0
+        ],
+        "side": "front",
+        "wallId": "wall_021bvb2aia745hya",
+        "width": 3.15,
+        "height": 3.25,
+        "doorCategory": "garage",
+        "doorType": "garage-sectional",
+        "leafCount": 1,
+        "operationState": 0,
+        "slideDirection": "left",
+        "trackStyle": "overhead",
+        "garagePanelCount": 4,
+        "openingKind": "door",
+        "openingShape": "rectangle",
+        "openingRadiusMode": "all",
+        "openingTopRadii": [
+          0.15,
+          0.15
+        ],
+        "cornerRadius": 0.15,
+        "archHeight": 0.45,
+        "openingRevealRadius": 0.025,
+        "frameThickness": 0.05,
+        "frameDepth": 0.07,
+        "threshold": false,
+        "thresholdHeight": 0.02,
+        "hingesSide": "left",
+        "swingDirection": "inward",
+        "swingAngle": 0,
+        "segments": [
+          {
+            "type": "panel",
+            "heightRatio": 1,
+            "columnRatios": [
+              1
+            ],
+            "dividerThickness": 0.02,
+            "panelDepth": 0.008,
+            "panelInset": 0.025
+          }
+        ],
+        "handle": false,
+        "handleHeight": 1.4218750000000002,
+        "handleSide": "right",
+        "contentPadding": [
+          0.04,
+          0.04
+        ],
+        "doorCloser": false,
+        "panicBar": false,
+        "panicBarHeight": 1,
+        "constructionType": "framed",
+        "dimensionReference": "nominal"
+      },
+      "door_788ncghedmc418up": {
+        "object": "node",
+        "id": "door_788ncghedmc418up",
+        "type": "door",
+        "name": "Door 1",
+        "parentId": "wall_021bvb2aia745hya",
+        "visible": true,
+        "metadata": {},
+        "position": [
+          88,
+          1.625,
+          0
+        ],
+        "rotation": [
+          0,
+          6.283185307179586,
+          0
+        ],
+        "side": "front",
+        "wallId": "wall_021bvb2aia745hya",
+        "width": 3.15,
+        "height": 3.25,
+        "doorCategory": "garage",
+        "doorType": "garage-sectional",
+        "leafCount": 1,
+        "operationState": 0,
+        "slideDirection": "left",
+        "trackStyle": "overhead",
+        "garagePanelCount": 4,
+        "openingKind": "door",
+        "openingShape": "rectangle",
+        "openingRadiusMode": "all",
+        "openingTopRadii": [
+          0.15,
+          0.15
+        ],
+        "cornerRadius": 0.15,
+        "archHeight": 0.45,
+        "openingRevealRadius": 0.025,
+        "frameThickness": 0.05,
+        "frameDepth": 0.07,
+        "threshold": false,
+        "thresholdHeight": 0.02,
+        "hingesSide": "left",
+        "swingDirection": "inward",
+        "swingAngle": 0,
+        "segments": [
+          {
+            "type": "panel",
+            "heightRatio": 1,
+            "columnRatios": [
+              1
+            ],
+            "dividerThickness": 0.02,
+            "panelDepth": 0.008,
+            "panelInset": 0.025
+          }
+        ],
+        "handle": false,
+        "handleHeight": 1.4218750000000002,
+        "handleSide": "right",
+        "contentPadding": [
+          0.04,
+          0.04
+        ],
+        "doorCloser": false,
+        "panicBar": false,
+        "panicBarHeight": 1,
+        "constructionType": "framed",
+        "dimensionReference": "nominal"
+      },
+      "door_g73tyr0btxjbgc3q": {
+        "object": "node",
+        "id": "door_g73tyr0btxjbgc3q",
+        "type": "door",
+        "name": "Door 1",
+        "parentId": "wall_021bvb2aia745hya",
+        "visible": true,
+        "metadata": {},
+        "position": [
+          82.4,
+          1.625,
+          0
+        ],
+        "rotation": [
+          0,
+          6.283185307179586,
+          0
+        ],
+        "side": "front",
+        "wallId": "wall_021bvb2aia745hya",
+        "width": 3.15,
+        "height": 3.25,
+        "doorCategory": "garage",
+        "doorType": "garage-sectional",
+        "leafCount": 1,
+        "operationState": 0,
+        "slideDirection": "left",
+        "trackStyle": "overhead",
+        "garagePanelCount": 4,
+        "openingKind": "door",
+        "openingShape": "rectangle",
+        "openingRadiusMode": "all",
+        "openingTopRadii": [
+          0.15,
+          0.15
+        ],
+        "cornerRadius": 0.15,
+        "archHeight": 0.45,
+        "openingRevealRadius": 0.025,
+        "frameThickness": 0.05,
+        "frameDepth": 0.07,
+        "threshold": false,
+        "thresholdHeight": 0.02,
+        "hingesSide": "left",
+        "swingDirection": "inward",
+        "swingAngle": 0,
+        "segments": [
+          {
+            "type": "panel",
+            "heightRatio": 1,
+            "columnRatios": [
+              1
+            ],
+            "dividerThickness": 0.02,
+            "panelDepth": 0.008,
+            "panelInset": 0.025
+          }
+        ],
+        "handle": false,
+        "handleHeight": 1.4218750000000002,
+        "handleSide": "right",
+        "contentPadding": [
+          0.04,
+          0.04
+        ],
+        "doorCloser": false,
+        "panicBar": false,
+        "panicBarHeight": 1,
+        "constructionType": "framed",
+        "dimensionReference": "nominal"
+      },
+      "door_6rk6p7g5hrehevep": {
+        "object": "node",
+        "id": "door_6rk6p7g5hrehevep",
+        "type": "door",
+        "name": "Door 1",
+        "parentId": "wall_021bvb2aia745hya",
+        "visible": true,
+        "metadata": {},
+        "position": [
+          76.80000000000001,
+          1.625,
+          0
+        ],
+        "rotation": [
+          0,
+          6.283185307179586,
+          0
+        ],
+        "side": "front",
+        "wallId": "wall_021bvb2aia745hya",
+        "width": 3.15,
+        "height": 3.25,
+        "doorCategory": "garage",
+        "doorType": "garage-sectional",
+        "leafCount": 1,
+        "operationState": 0,
+        "slideDirection": "left",
+        "trackStyle": "overhead",
+        "garagePanelCount": 4,
+        "openingKind": "door",
+        "openingShape": "rectangle",
+        "openingRadiusMode": "all",
+        "openingTopRadii": [
+          0.15,
+          0.15
+        ],
+        "cornerRadius": 0.15,
+        "archHeight": 0.45,
+        "openingRevealRadius": 0.025,
+        "frameThickness": 0.05,
+        "frameDepth": 0.07,
+        "threshold": false,
+        "thresholdHeight": 0.02,
+        "hingesSide": "left",
+        "swingDirection": "inward",
+        "swingAngle": 0,
+        "segments": [
+          {
+            "type": "panel",
+            "heightRatio": 1,
+            "columnRatios": [
+              1
+            ],
+            "dividerThickness": 0.02,
+            "panelDepth": 0.008,
+            "panelInset": 0.025
+          }
+        ],
+        "handle": false,
+        "handleHeight": 1.4218750000000002,
+        "handleSide": "right",
+        "contentPadding": [
+          0.04,
+          0.04
+        ],
+        "doorCloser": false,
+        "panicBar": false,
+        "panicBarHeight": 1,
+        "constructionType": "framed",
+        "dimensionReference": "nominal"
+      },
+      "door_q5jpc7q92pypr8ft": {
+        "object": "node",
+        "id": "door_q5jpc7q92pypr8ft",
+        "type": "door",
+        "name": "Door 1",
+        "parentId": "wall_021bvb2aia745hya",
+        "visible": true,
+        "metadata": {},
+        "position": [
+          71.2,
+          1.625,
+          0
+        ],
+        "rotation": [
+          0,
+          6.283185307179586,
+          0
+        ],
+        "side": "front",
+        "wallId": "wall_021bvb2aia745hya",
+        "width": 3.15,
+        "height": 3.25,
+        "doorCategory": "garage",
+        "doorType": "garage-sectional",
+        "leafCount": 1,
+        "operationState": 0,
+        "slideDirection": "left",
+        "trackStyle": "overhead",
+        "garagePanelCount": 4,
+        "openingKind": "door",
+        "openingShape": "rectangle",
+        "openingRadiusMode": "all",
+        "openingTopRadii": [
+          0.15,
+          0.15
+        ],
+        "cornerRadius": 0.15,
+        "archHeight": 0.45,
+        "openingRevealRadius": 0.025,
+        "frameThickness": 0.05,
+        "frameDepth": 0.07,
+        "threshold": false,
+        "thresholdHeight": 0.02,
+        "hingesSide": "left",
+        "swingDirection": "inward",
+        "swingAngle": 0,
+        "segments": [
+          {
+            "type": "panel",
+            "heightRatio": 1,
+            "columnRatios": [
+              1
+            ],
+            "dividerThickness": 0.02,
+            "panelDepth": 0.008,
+            "panelInset": 0.025
+          }
+        ],
+        "handle": false,
+        "handleHeight": 1.4218750000000002,
+        "handleSide": "right",
+        "contentPadding": [
+          0.04,
+          0.04
+        ],
+        "doorCloser": false,
+        "panicBar": false,
+        "panicBarHeight": 1,
+        "constructionType": "framed",
+        "dimensionReference": "nominal"
+      },
+      "door_ng24qedoqft1wf6r": {
+        "object": "node",
+        "id": "door_ng24qedoqft1wf6r",
+        "type": "door",
+        "name": "Door 1",
+        "parentId": "wall_021bvb2aia745hya",
+        "visible": true,
+        "metadata": {},
+        "position": [
+          65.60000000000001,
+          1.625,
+          0
+        ],
+        "rotation": [
+          0,
+          6.283185307179586,
+          0
+        ],
+        "side": "front",
+        "wallId": "wall_021bvb2aia745hya",
+        "width": 3.15,
+        "height": 3.25,
+        "doorCategory": "garage",
+        "doorType": "garage-sectional",
+        "leafCount": 1,
+        "operationState": 0,
+        "slideDirection": "left",
+        "trackStyle": "overhead",
+        "garagePanelCount": 4,
+        "openingKind": "door",
+        "openingShape": "rectangle",
+        "openingRadiusMode": "all",
+        "openingTopRadii": [
+          0.15,
+          0.15
+        ],
+        "cornerRadius": 0.15,
+        "archHeight": 0.45,
+        "openingRevealRadius": 0.025,
+        "frameThickness": 0.05,
+        "frameDepth": 0.07,
+        "threshold": false,
+        "thresholdHeight": 0.02,
+        "hingesSide": "left",
+        "swingDirection": "inward",
+        "swingAngle": 0,
+        "segments": [
+          {
+            "type": "panel",
+            "heightRatio": 1,
+            "columnRatios": [
+              1
+            ],
+            "dividerThickness": 0.02,
+            "panelDepth": 0.008,
+            "panelInset": 0.025
+          }
+        ],
+        "handle": false,
+        "handleHeight": 1.4218750000000002,
+        "handleSide": "right",
+        "contentPadding": [
+          0.04,
+          0.04
+        ],
+        "doorCloser": false,
+        "panicBar": false,
+        "panicBarHeight": 1,
+        "constructionType": "framed",
+        "dimensionReference": "nominal"
+      },
+      "door_7a7cuvpf46qmt7xp": {
+        "object": "node",
+        "id": "door_7a7cuvpf46qmt7xp",
+        "type": "door",
+        "name": "Door 1",
+        "parentId": "wall_021bvb2aia745hya",
+        "visible": true,
+        "metadata": {},
+        "position": [
+          60,
+          1.625,
+          0
+        ],
+        "rotation": [
+          0,
+          6.283185307179586,
+          0
+        ],
+        "side": "front",
+        "wallId": "wall_021bvb2aia745hya",
+        "width": 3.15,
+        "height": 3.25,
+        "doorCategory": "garage",
+        "doorType": "garage-sectional",
+        "leafCount": 1,
+        "operationState": 0,
+        "slideDirection": "left",
+        "trackStyle": "overhead",
+        "garagePanelCount": 4,
+        "openingKind": "door",
+        "openingShape": "rectangle",
+        "openingRadiusMode": "all",
+        "openingTopRadii": [
+          0.15,
+          0.15
+        ],
+        "cornerRadius": 0.15,
+        "archHeight": 0.45,
+        "openingRevealRadius": 0.025,
+        "frameThickness": 0.05,
+        "frameDepth": 0.07,
+        "threshold": false,
+        "thresholdHeight": 0.02,
+        "hingesSide": "left",
+        "swingDirection": "inward",
+        "swingAngle": 0,
+        "segments": [
+          {
+            "type": "panel",
+            "heightRatio": 1,
+            "columnRatios": [
+              1
+            ],
+            "dividerThickness": 0.02,
+            "panelDepth": 0.008,
+            "panelInset": 0.025
+          }
+        ],
+        "handle": false,
+        "handleHeight": 1.4218750000000002,
+        "handleSide": "right",
+        "contentPadding": [
+          0.04,
+          0.04
+        ],
+        "doorCloser": false,
+        "panicBar": false,
+        "panicBarHeight": 1,
+        "constructionType": "framed",
+        "dimensionReference": "nominal"
+      },
+      "door_34xxvva94bb6lz25": {
+        "object": "node",
+        "id": "door_34xxvva94bb6lz25",
+        "type": "door",
+        "name": "Door 1",
+        "parentId": "wall_021bvb2aia745hya",
+        "visible": true,
+        "metadata": {},
+        "position": [
+          55,
+          1.625,
+          0
+        ],
+        "rotation": [
+          0,
+          6.283185307179586,
+          0
+        ],
+        "side": "front",
+        "wallId": "wall_021bvb2aia745hya",
+        "width": 3.15,
+        "height": 3.25,
+        "doorCategory": "garage",
+        "doorType": "garage-sectional",
+        "leafCount": 1,
+        "operationState": 0,
+        "slideDirection": "left",
+        "trackStyle": "overhead",
+        "garagePanelCount": 4,
+        "openingKind": "door",
+        "openingShape": "rectangle",
+        "openingRadiusMode": "all",
+        "openingTopRadii": [
+          0.15,
+          0.15
+        ],
+        "cornerRadius": 0.15,
+        "archHeight": 0.45,
+        "openingRevealRadius": 0.025,
+        "frameThickness": 0.05,
+        "frameDepth": 0.07,
+        "threshold": false,
+        "thresholdHeight": 0.02,
+        "hingesSide": "left",
+        "swingDirection": "inward",
+        "swingAngle": 0,
+        "segments": [
+          {
+            "type": "panel",
+            "heightRatio": 1,
+            "columnRatios": [
+              1
+            ],
+            "dividerThickness": 0.02,
+            "panelDepth": 0.008,
+            "panelInset": 0.025
+          }
+        ],
+        "handle": false,
+        "handleHeight": 1.4218750000000002,
+        "handleSide": "right",
+        "contentPadding": [
+          0.04,
+          0.04
+        ],
+        "doorCloser": false,
+        "panicBar": false,
+        "panicBarHeight": 1,
+        "constructionType": "framed",
+        "dimensionReference": "nominal"
+      },
+      "door_evzqelmkjujmg671": {
+        "object": "node",
+        "id": "door_evzqelmkjujmg671",
+        "type": "door",
+        "name": "Door 1",
+        "parentId": "wall_021bvb2aia745hya",
+        "visible": true,
+        "metadata": {},
+        "position": [
+          48.75,
+          1.625,
+          0
+        ],
+        "rotation": [
+          0,
+          6.283185307179586,
+          0
+        ],
+        "side": "front",
+        "wallId": "wall_021bvb2aia745hya",
+        "width": 3.15,
+        "height": 3.25,
+        "doorCategory": "garage",
+        "doorType": "garage-sectional",
+        "leafCount": 1,
+        "operationState": 0,
+        "slideDirection": "left",
+        "trackStyle": "overhead",
+        "garagePanelCount": 4,
+        "openingKind": "door",
+        "openingShape": "rectangle",
+        "openingRadiusMode": "all",
+        "openingTopRadii": [
+          0.15,
+          0.15
+        ],
+        "cornerRadius": 0.15,
+        "archHeight": 0.45,
+        "openingRevealRadius": 0.025,
+        "frameThickness": 0.05,
+        "frameDepth": 0.07,
+        "threshold": false,
+        "thresholdHeight": 0.02,
+        "hingesSide": "left",
+        "swingDirection": "inward",
+        "swingAngle": 0,
+        "segments": [
+          {
+            "type": "panel",
+            "heightRatio": 1,
+            "columnRatios": [
+              1
+            ],
+            "dividerThickness": 0.02,
+            "panelDepth": 0.008,
+            "panelInset": 0.025
+          }
+        ],
+        "handle": false,
+        "handleHeight": 1.4218750000000002,
+        "handleSide": "right",
+        "contentPadding": [
+          0.04,
+          0.04
+        ],
+        "doorCloser": false,
+        "panicBar": false,
+        "panicBarHeight": 1,
+        "constructionType": "framed",
+        "dimensionReference": "nominal"
+      },
+      "door_3v71v0fydyacqf3i": {
+        "object": "node",
+        "id": "door_3v71v0fydyacqf3i",
+        "type": "door",
+        "name": "Door 1",
+        "parentId": "wall_021bvb2aia745hya",
+        "visible": true,
+        "metadata": {},
+        "position": [
+          43.150000000000006,
+          1.625,
+          0
+        ],
+        "rotation": [
+          0,
+          6.283185307179586,
+          0
+        ],
+        "side": "front",
+        "wallId": "wall_021bvb2aia745hya",
+        "width": 3.15,
+        "height": 3.25,
+        "doorCategory": "garage",
+        "doorType": "garage-sectional",
+        "leafCount": 1,
+        "operationState": 0,
+        "slideDirection": "left",
+        "trackStyle": "overhead",
+        "garagePanelCount": 4,
+        "openingKind": "door",
+        "openingShape": "rectangle",
+        "openingRadiusMode": "all",
+        "openingTopRadii": [
+          0.15,
+          0.15
+        ],
+        "cornerRadius": 0.15,
+        "archHeight": 0.45,
+        "openingRevealRadius": 0.025,
+        "frameThickness": 0.05,
+        "frameDepth": 0.07,
+        "threshold": false,
+        "thresholdHeight": 0.02,
+        "hingesSide": "left",
+        "swingDirection": "inward",
+        "swingAngle": 0,
+        "segments": [
+          {
+            "type": "panel",
+            "heightRatio": 1,
+            "columnRatios": [
+              1
+            ],
+            "dividerThickness": 0.02,
+            "panelDepth": 0.008,
+            "panelInset": 0.025
+          }
+        ],
+        "handle": false,
+        "handleHeight": 1.4218750000000002,
+        "handleSide": "right",
+        "contentPadding": [
+          0.04,
+          0.04
+        ],
+        "doorCloser": false,
+        "panicBar": false,
+        "panicBarHeight": 1,
+        "constructionType": "framed",
+        "dimensionReference": "nominal"
+      },
+      "door_xo9fr0dv7n5xkciy": {
+        "object": "node",
+        "id": "door_xo9fr0dv7n5xkciy",
+        "type": "door",
+        "name": "Door 1",
+        "parentId": "wall_021bvb2aia745hya",
+        "visible": true,
+        "metadata": {},
+        "position": [
+          37.550000000000004,
+          1.625,
+          0
+        ],
+        "rotation": [
+          0,
+          6.283185307179586,
+          0
+        ],
+        "side": "front",
+        "wallId": "wall_021bvb2aia745hya",
+        "width": 3.15,
+        "height": 3.25,
+        "doorCategory": "garage",
+        "doorType": "garage-sectional",
+        "leafCount": 1,
+        "operationState": 0,
+        "slideDirection": "left",
+        "trackStyle": "overhead",
+        "garagePanelCount": 4,
+        "openingKind": "door",
+        "openingShape": "rectangle",
+        "openingRadiusMode": "all",
+        "openingTopRadii": [
+          0.15,
+          0.15
+        ],
+        "cornerRadius": 0.15,
+        "archHeight": 0.45,
+        "openingRevealRadius": 0.025,
+        "frameThickness": 0.05,
+        "frameDepth": 0.07,
+        "threshold": false,
+        "thresholdHeight": 0.02,
+        "hingesSide": "left",
+        "swingDirection": "inward",
+        "swingAngle": 0,
+        "segments": [
+          {
+            "type": "panel",
+            "heightRatio": 1,
+            "columnRatios": [
+              1
+            ],
+            "dividerThickness": 0.02,
+            "panelDepth": 0.008,
+            "panelInset": 0.025
+          }
+        ],
+        "handle": false,
+        "handleHeight": 1.4218750000000002,
+        "handleSide": "right",
+        "contentPadding": [
+          0.04,
+          0.04
+        ],
+        "doorCloser": false,
+        "panicBar": false,
+        "panicBarHeight": 1,
+        "constructionType": "framed",
+        "dimensionReference": "nominal"
+      },
+      "door_8mxr9qlu2bls7lit": {
+        "object": "node",
+        "id": "door_8mxr9qlu2bls7lit",
+        "type": "door",
+        "name": "Door 1",
+        "parentId": "wall_021bvb2aia745hya",
+        "visible": true,
+        "metadata": {},
+        "position": [
+          31.950000000000003,
+          1.625,
+          0
+        ],
+        "rotation": [
+          0,
+          6.283185307179586,
+          0
+        ],
+        "side": "front",
+        "wallId": "wall_021bvb2aia745hya",
+        "width": 3.15,
+        "height": 3.25,
+        "doorCategory": "garage",
+        "doorType": "garage-sectional",
+        "leafCount": 1,
+        "operationState": 0,
+        "slideDirection": "left",
+        "trackStyle": "overhead",
+        "garagePanelCount": 4,
+        "openingKind": "door",
+        "openingShape": "rectangle",
+        "openingRadiusMode": "all",
+        "openingTopRadii": [
+          0.15,
+          0.15
+        ],
+        "cornerRadius": 0.15,
+        "archHeight": 0.45,
+        "openingRevealRadius": 0.025,
+        "frameThickness": 0.05,
+        "frameDepth": 0.07,
+        "threshold": false,
+        "thresholdHeight": 0.02,
+        "hingesSide": "left",
+        "swingDirection": "inward",
+        "swingAngle": 0,
+        "segments": [
+          {
+            "type": "panel",
+            "heightRatio": 1,
+            "columnRatios": [
+              1
+            ],
+            "dividerThickness": 0.02,
+            "panelDepth": 0.008,
+            "panelInset": 0.025
+          }
+        ],
+        "handle": false,
+        "handleHeight": 1.4218750000000002,
+        "handleSide": "right",
+        "contentPadding": [
+          0.04,
+          0.04
+        ],
+        "doorCloser": false,
+        "panicBar": false,
+        "panicBarHeight": 1,
+        "constructionType": "framed",
+        "dimensionReference": "nominal"
+      },
+      "door_oshytbqikr0rm5ow": {
+        "object": "node",
+        "id": "door_oshytbqikr0rm5ow",
+        "type": "door",
+        "name": "Door 1",
+        "parentId": "wall_021bvb2aia745hya",
+        "visible": true,
+        "metadata": {},
+        "position": [
+          26.35,
+          1.625,
+          0
+        ],
+        "rotation": [
+          0,
+          6.283185307179586,
+          0
+        ],
+        "side": "front",
+        "wallId": "wall_021bvb2aia745hya",
+        "width": 3.15,
+        "height": 3.25,
+        "doorCategory": "garage",
+        "doorType": "garage-sectional",
+        "leafCount": 1,
+        "operationState": 0,
+        "slideDirection": "left",
+        "trackStyle": "overhead",
+        "garagePanelCount": 4,
+        "openingKind": "door",
+        "openingShape": "rectangle",
+        "openingRadiusMode": "all",
+        "openingTopRadii": [
+          0.15,
+          0.15
+        ],
+        "cornerRadius": 0.15,
+        "archHeight": 0.45,
+        "openingRevealRadius": 0.025,
+        "frameThickness": 0.05,
+        "frameDepth": 0.07,
+        "threshold": false,
+        "thresholdHeight": 0.02,
+        "hingesSide": "left",
+        "swingDirection": "inward",
+        "swingAngle": 0,
+        "segments": [
+          {
+            "type": "panel",
+            "heightRatio": 1,
+            "columnRatios": [
+              1
+            ],
+            "dividerThickness": 0.02,
+            "panelDepth": 0.008,
+            "panelInset": 0.025
+          }
+        ],
+        "handle": false,
+        "handleHeight": 1.4218750000000002,
+        "handleSide": "right",
+        "contentPadding": [
+          0.04,
+          0.04
+        ],
+        "doorCloser": false,
+        "panicBar": false,
+        "panicBarHeight": 1,
+        "constructionType": "framed",
+        "dimensionReference": "nominal"
+      },
+      "door_zqicsf4y09h54mo5": {
+        "object": "node",
+        "id": "door_zqicsf4y09h54mo5",
+        "type": "door",
+        "name": "Door 1",
+        "parentId": "wall_021bvb2aia745hya",
+        "visible": true,
+        "metadata": {},
+        "position": [
+          20.75,
+          1.625,
+          0
+        ],
+        "rotation": [
+          0,
+          6.283185307179586,
+          0
+        ],
+        "side": "front",
+        "wallId": "wall_021bvb2aia745hya",
+        "width": 3.15,
+        "height": 3.25,
+        "doorCategory": "garage",
+        "doorType": "garage-sectional",
+        "leafCount": 1,
+        "operationState": 0,
+        "slideDirection": "left",
+        "trackStyle": "overhead",
+        "garagePanelCount": 4,
+        "openingKind": "door",
+        "openingShape": "rectangle",
+        "openingRadiusMode": "all",
+        "openingTopRadii": [
+          0.15,
+          0.15
+        ],
+        "cornerRadius": 0.15,
+        "archHeight": 0.45,
+        "openingRevealRadius": 0.025,
+        "frameThickness": 0.05,
+        "frameDepth": 0.07,
+        "threshold": false,
+        "thresholdHeight": 0.02,
+        "hingesSide": "left",
+        "swingDirection": "inward",
+        "swingAngle": 0,
+        "segments": [
+          {
+            "type": "panel",
+            "heightRatio": 1,
+            "columnRatios": [
+              1
+            ],
+            "dividerThickness": 0.02,
+            "panelDepth": 0.008,
+            "panelInset": 0.025
+          }
+        ],
+        "handle": false,
+        "handleHeight": 1.4218750000000002,
+        "handleSide": "right",
+        "contentPadding": [
+          0.04,
+          0.04
+        ],
+        "doorCloser": false,
+        "panicBar": false,
+        "panicBarHeight": 1,
+        "constructionType": "framed",
+        "dimensionReference": "nominal"
+      },
+      "door_hiydcd3ixloue0lk": {
+        "object": "node",
+        "id": "door_hiydcd3ixloue0lk",
+        "type": "door",
+        "name": "Door 1",
+        "parentId": "wall_021bvb2aia745hya",
+        "visible": true,
+        "metadata": {},
+        "position": [
+          15.15,
+          1.625,
+          0
+        ],
+        "rotation": [
+          0,
+          6.283185307179586,
+          0
+        ],
+        "side": "front",
+        "wallId": "wall_021bvb2aia745hya",
+        "width": 3.15,
+        "height": 3.25,
+        "doorCategory": "garage",
+        "doorType": "garage-sectional",
+        "leafCount": 1,
+        "operationState": 0,
+        "slideDirection": "left",
+        "trackStyle": "overhead",
+        "garagePanelCount": 4,
+        "openingKind": "door",
+        "openingShape": "rectangle",
+        "openingRadiusMode": "all",
+        "openingTopRadii": [
+          0.15,
+          0.15
+        ],
+        "cornerRadius": 0.15,
+        "archHeight": 0.45,
+        "openingRevealRadius": 0.025,
+        "frameThickness": 0.05,
+        "frameDepth": 0.07,
+        "threshold": false,
+        "thresholdHeight": 0.02,
+        "hingesSide": "left",
+        "swingDirection": "inward",
+        "swingAngle": 0,
+        "segments": [
+          {
+            "type": "panel",
+            "heightRatio": 1,
+            "columnRatios": [
+              1
+            ],
+            "dividerThickness": 0.02,
+            "panelDepth": 0.008,
+            "panelInset": 0.025
+          }
+        ],
+        "handle": false,
+        "handleHeight": 1.4218750000000002,
+        "handleSide": "right",
+        "contentPadding": [
+          0.04,
+          0.04
+        ],
+        "doorCloser": false,
+        "panicBar": false,
+        "panicBarHeight": 1,
+        "constructionType": "framed",
+        "dimensionReference": "nominal"
+      },
+      "door_gw759rl5lcj7a7py": {
+        "object": "node",
+        "id": "door_gw759rl5lcj7a7py",
+        "type": "door",
+        "name": "Door 1",
+        "parentId": "wall_021bvb2aia745hya",
+        "visible": true,
+        "metadata": {},
+        "position": [
+          9.55,
+          1.625,
+          0
+        ],
+        "rotation": [
+          0,
+          6.283185307179586,
+          0
+        ],
+        "side": "front",
+        "wallId": "wall_021bvb2aia745hya",
+        "width": 3.15,
+        "height": 3.25,
+        "doorCategory": "garage",
+        "doorType": "garage-sectional",
+        "leafCount": 1,
+        "operationState": 0,
+        "slideDirection": "left",
+        "trackStyle": "overhead",
+        "garagePanelCount": 4,
+        "openingKind": "door",
+        "openingShape": "rectangle",
+        "openingRadiusMode": "all",
+        "openingTopRadii": [
+          0.15,
+          0.15
+        ],
+        "cornerRadius": 0.15,
+        "archHeight": 0.45,
+        "openingRevealRadius": 0.025,
+        "frameThickness": 0.05,
+        "frameDepth": 0.07,
+        "threshold": false,
+        "thresholdHeight": 0.02,
+        "hingesSide": "left",
+        "swingDirection": "inward",
+        "swingAngle": 0,
+        "segments": [
+          {
+            "type": "panel",
+            "heightRatio": 1,
+            "columnRatios": [
+              1
+            ],
+            "dividerThickness": 0.02,
+            "panelDepth": 0.008,
+            "panelInset": 0.025
+          }
+        ],
+        "handle": false,
+        "handleHeight": 1.4218750000000002,
+        "handleSide": "right",
+        "contentPadding": [
+          0.04,
+          0.04
+        ],
+        "doorCloser": false,
+        "panicBar": false,
+        "panicBarHeight": 1,
+        "constructionType": "framed",
+        "dimensionReference": "nominal"
+      },
+      "door_ymxplyify4c6uyb0": {
+        "object": "node",
+        "id": "door_ymxplyify4c6uyb0",
+        "type": "door",
+        "name": "Door 1",
+        "parentId": "wall_021bvb2aia745hya",
+        "visible": true,
+        "metadata": {},
+        "position": [
+          3.5,
+          1.625,
+          0
+        ],
+        "rotation": [
+          0,
+          6.283185307179586,
+          0
+        ],
+        "side": "front",
+        "wallId": "wall_021bvb2aia745hya",
+        "width": 3.15,
+        "height": 3.25,
+        "doorCategory": "garage",
+        "doorType": "garage-sectional",
+        "leafCount": 1,
+        "operationState": 0,
+        "slideDirection": "left",
+        "trackStyle": "overhead",
+        "garagePanelCount": 4,
+        "openingKind": "door",
+        "openingShape": "rectangle",
+        "openingRadiusMode": "all",
+        "openingTopRadii": [
+          0.15,
+          0.15
+        ],
+        "cornerRadius": 0.15,
+        "archHeight": 0.45,
+        "openingRevealRadius": 0.025,
+        "frameThickness": 0.05,
+        "frameDepth": 0.07,
+        "threshold": false,
+        "thresholdHeight": 0.02,
+        "hingesSide": "left",
+        "swingDirection": "inward",
+        "swingAngle": 0,
+        "segments": [
+          {
+            "type": "panel",
+            "heightRatio": 1,
+            "columnRatios": [
+              1
+            ],
+            "dividerThickness": 0.02,
+            "panelDepth": 0.008,
+            "panelInset": 0.025
+          }
+        ],
+        "handle": false,
+        "handleHeight": 1.4218750000000002,
+        "handleSide": "right",
+        "contentPadding": [
+          0.04,
+          0.04
+        ],
+        "doorCloser": false,
+        "panicBar": false,
+        "panicBarHeight": 1,
+        "constructionType": "framed",
+        "dimensionReference": "nominal"
+      },
+      "slab_m68fyvrhh4v71n0y": {
+        "object": "node",
+        "id": "slab_m68fyvrhh4v71n0y",
+        "type": "slab",
+        "name": "Slab 1",
+        "parentId": "level_sr23yo22skvzess2",
+        "visible": true,
+        "metadata": {},
+        "polygon": [
+          [
+            51.150000000000006,
+            -72.5
+          ],
+          [
+            51.10000000000001,
+            74.5
+          ],
+          [
+            -51.1,
+            74.55
+          ],
+          [
+            -51.050000000000004,
+            -72.5
+          ],
+          [
+            -50.3998999555358,
+            -72.50223432636727
+          ],
+          [
+            -50.400000000000006,
+            -75.95
+          ],
+          [
+            -44.7,
+            -75.95
+          ],
+          [
+            -44.7,
+            -72.60000000000001
+          ]
+        ],
+        "holes": [],
+        "holeMetadata": [],
+        "elevation": 0.05,
+        "autoFromWalls": false,
+        "thickness": 0.05
+      },
+      "guide_0mtpddovzpw2o3c0": {
+        "object": "node",
+        "id": "guide_0mtpddovzpw2o3c0",
+        "type": "guide",
+        "name": "GÜZELLER 2 DEPO ÜST KAT AMAZON YERLEŞİM PLANI 08.06.2026-Model_page-0001",
+        "parentId": "level_sr23yo22skvzess2",
+        "visible": false,
+        "metadata": {},
+        "url": "asset://74a4f5d3-05aa-45eb-9a22-ff921bf8dba3",
+        "position": [
+          0.45,
+          0,
+          -0.1
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": 13.049677824698083,
+        "opacity": 100,
+        "scaleReference": {
+          "start": [
+            1.727339744567871,
+            -1.384318232536316
+          ],
+          "end": [
+            1.6910465975224727,
+            4.720273883033531
+          ],
+          "realLengthMeters": 6.1047,
+          "measuredLengthUnits": 6.104700000000001,
+          "metersPerUnit": 0.9999999999999999,
+          "label": "610.47 cm"
+        }
+      }
+    },
+    "rootNodeIds": [
+      "site_tdsjivs7gp0wezmp"
+    ],
+    "collections": {},
+    "installedPlugins": [
+      "pascal:trees",
+      "ovurrsl:warehouse"
+    ]
+  }
+}

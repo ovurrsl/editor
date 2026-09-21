@@ -79,7 +79,7 @@ export function SceneGrid({
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {scenes.map((scene) => {
           const manage = canManage(scene)
-          const vitrinUrl = `${viewerUrl}/?launch_token=${encodeURIComponent(launchToken || '')}&sceneId=${encodeURIComponent(scene.id)}`
+          const viewerLaunchUrl = `${viewerUrl}/?launch_token=${encodeURIComponent(launchToken || '')}&sceneId=${encodeURIComponent(scene.id)}`
 
           return (
             <li
@@ -90,7 +90,7 @@ export function SceneGrid({
                 className="group block rounded-t-xl p-4 text-left transition-colors hover:bg-accent/30"
                 onClick={() => handleCardClick(scene)}
                 type="button"
-                title={manage ? 'Editörde Aç' : '3D Vitrinde Aç'}
+                title={manage ? 'Editörde Aç' : "Viewer'da Aç"}
               >
                 <div className="flex aspect-video items-center justify-center overflow-hidden rounded-lg bg-accent/30">
                   {scene.thumbnailUrl ? (
@@ -117,14 +117,14 @@ export function SceneGrid({
 
               <div className="flex items-center gap-1 border-border/60 border-t px-3 py-2">
                 <a
-                  href={vitrinUrl}
+                  href={viewerLaunchUrl}
                   className="flex items-center gap-1 rounded-md px-2 py-1 text-primary text-xs font-medium transition-colors hover:bg-primary/10"
                   target="_blank"
                   rel="noopener noreferrer"
-                  title="Yeni 3D Vitrinde Görüntüle"
+                  title="Yeni Viewer Penceresinde Görüntüle"
                 >
                   <Eye className="size-3.5" />
-                  3D Vitrin
+                  Viewer
                 </a>
 
                 {manage ? (

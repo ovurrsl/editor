@@ -61,6 +61,12 @@ export {
   useThrottledPointer,
   type UseThrottledPointerOptions,
 } from './hooks/use-throttled-pointer'
+export * from './lib/perf-tracks'
+export {
+  choosePointerEvents,
+  createPascalPointerEvents,
+  markPureRaycast,
+} from './lib/pointer-events'
 export { ASSETS_CDN_URL, resolveAssetUrl, resolveCdnUrl } from './lib/asset-url'
 export { backdropGradient, deepSkyColor, horizonHazeColor } from './lib/backdrop'
 export { applyWorldScaleBoxUVs } from './lib/box-uv'

@@ -47,6 +47,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       layoutUrl: 'assets/data/layout_2026-09-11.json',
       planCadUrl: 'assets/data/plan_cad.json',
     },
+    events: {
+      url: '/api/scenes/bursa_baskoy/events',
+      sceneId: 'bursa_baskoy',
+    },
     building: {
       id: 'building_jrk57b7iof7fyzxt',
       bounds: {
@@ -156,20 +160,148 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return withViewerCors(request, res)
     }
 
+    const resolvedSceneId = stored?.id || id
+    const nodes = (stored?.graph?.nodes || {}) as Record<string, any>
+    const allNodes = Object.values(nodes)
+
+    // 1. Dynamic building detection & bounds calculation
+    const buildingNode = allNodes.find((n) => n.type === 'building')
+    let minX = Infinity, minY = 0, minZ = Infinity
+    let maxX = -Infinity, maxY = 14, maxZ = -Infinity
+
+    for (const n of allNodes) {
+      if (Array.isArray(n.position)) {
+        const [x, y, z] = n.position
+        if (typeof x === 'number' && typeof z === 'number') {
+          if (x < minX) minX = x
+          if (x > maxX) maxX = x
+          if (z < minZ) minZ = z
+          if (z > maxZ) maxZ = z
+          if (typeof y === 'number' && y > maxY) maxY = y
+        }
+      }
+      if (Array.isArray(n.start) && Array.isArray(n.end)) {
+        const [x1, z1] = n.start
+        const [x2, z2] = n.end
+        if (x1 < minX) minX = x1
+        if (x1 > maxX) maxX = x1
+        if (x2 < minX) minX = x2
+        if (x2 > maxX) maxX = x2
+        if (z1 < minZ) minZ = z1
+        if (z1 > maxZ) maxZ = z1
+        if (z2 < minZ) minZ = z2
+        if (z2 > maxZ) maxZ = z2
+        if (typeof n.height === 'number' && n.height > maxY) maxY = n.height
+      }
+      if (Array.isArray(n.polygon)) {
+        for (const pt of n.polygon) {
+          if (Array.isArray(pt)) {
+            const [px, pz] = pt
+            if (px < minX) minX = px
+            if (px > maxX) maxX = px
+            if (pz < minZ) minZ = pz
+            if (pz > maxZ) maxZ = pz
+          }
+        }
+      }
+    }
+
+    if (!Number.isFinite(minX) || !Number.isFinite(maxX) || minX === maxX) {
+      minX = -60; maxX = 60; minZ = -40; maxZ = 40; maxY = 14;
+    }
+
+    const buildingBounds = {
+      min: [Number((minX - 5).toFixed(2)), 0, Number((minZ - 5).toFixed(2))],
+      max: [Number((maxX + 5).toFixed(2)), Number((maxY + 2).toFixed(2)), Number((maxZ + 5).toFixed(2))],
+    }
+
+    // 2. Dynamic metrics calculation
+    let totalRacks = 0
+    let totalPalletSlots = 0
+    let docksCount = 0
+
+    for (const n of allNodes) {
+      const isRack = n.type === 'warehouse:pallet-rack' || (n.type === 'item' && String(n.name || '').toLowerCase().includes('rack'))
+      if (isRack) {
+        totalRacks++
+        const levels = Number(n.levels || 5)
+        const depthPositions = Number(n.depthPositions || 1)
+        const bayClearWidth = Number(n.bayClearWidth || 2.73)
+        const alongRun = 0.8
+        const toUpright = Number(n.clearanceToUpright || 0.075)
+        const between = Number(n.clearanceBetweenPallets || 0.075)
+        const usable = bayClearWidth - 2 * toUpright + between
+        const step = alongRun + between
+        const autoPalletsPerLevel = Math.max(0, Math.floor(usable / step + 1e-9))
+        const palletsPerLevel = Number(n.palletsPerLevel || autoPalletsPerLevel || 3)
+        const totalLevels = (n.groundLevelStorage ? 1 : 0) + levels
+        totalPalletSlots += totalLevels * palletsPerLevel * depthPositions
+      } else if (n.type === 'door' || (n.type === 'item' && String(n.name || '').toLowerCase().includes('dock'))) {
+        docksCount++
+      }
+    }
+
+    const approxAreaM2 = Math.round(Math.max(2500, (maxX - minX) * (maxZ - minZ)))
+    const clearHeightM = Math.max(8.5, Math.min(18.0, maxY))
+
+    // 3. Dynamic zones extraction
+    const zoneNodes = allNodes.filter((n) => n.type === 'zone')
+    const dynamicZones = zoneNodes.map((z, idx) => {
+      let areaM2 = 1500
+      if (Array.isArray(z.polygon) && z.polygon.length >= 3) {
+        let sum = 0
+        for (let i = 0; i < z.polygon.length; i++) {
+          const j = (i + 1) % z.polygon.length
+          sum += z.polygon[i][0] * z.polygon[j][1] - z.polygon[j][0] * z.polygon[i][1]
+        }
+        areaM2 = Math.round(Math.abs(sum) / 2)
+      }
+      return {
+        id: z.id,
+        key: `zone_${idx + 1}`,
+        name: z.name || `Bölge ${idx + 1}`,
+        labelTr: z.name || `Depo Bölgesi ${idx + 1}`,
+        labelEn: z.name || `Warehouse Zone ${idx + 1}`,
+        areaM2,
+        palletCapacity: Math.round(totalPalletSlots / Math.max(1, zoneNodes.length)),
+        color: z.color || '#3b82f6',
+      }
+    })
+
+    const finalName = siteName || stored?.name || 'Lojistik Depo'
+    const isSakarya = finalName.toLowerCase().includes('sakarya') || id.toLowerCase().includes('sakarya')
+
     const manifest = {
       version: '1.0',
       site: {
-        id,
-        name: siteName || stored?.name || 'Lojistik Depo',
-        city: 'Türkiye',
+        id: resolvedSceneId,
+        name: finalName,
+        description: `${approxAreaM2.toLocaleString('tr-TR')} m² kapalı alan, ${clearHeightM.toFixed(1)} m serbest yükseklik, ${docksCount || 16} rampa ve ${(totalPalletSlots || 15000).toLocaleString('tr-TR')} palet kapasiteli Dijital İkiz.`,
+        city: isSakarya ? 'Sakarya' : 'Türkiye',
+        country: 'TR',
       },
       assets: {
-        modelUrl: `assets/model/model_2026-09-11.glb`,
-        layoutUrl: `assets/data/layout_2026-09-11.json`,
+        modelUrl: `assets/model/model_${resolvedSceneId}.glb`,
+        layoutUrl: `assets/data/layout_${resolvedSceneId}.json`,
+        planCadUrl: 'assets/data/plan_cad.json',
       },
-      building: BURSA_MANIFEST.building,
-      zones: BURSA_MANIFEST.zones,
-      metrics: BURSA_MANIFEST.metrics,
+      events: {
+        url: `/api/scenes/${resolvedSceneId}/events`,
+        sceneId: resolvedSceneId,
+      },
+      layoutData: stored?.graph ?? null,
+      building: {
+        id: buildingNode?.id || `building_${resolvedSceneId}`,
+        bounds: buildingBounds,
+      },
+      zones: dynamicZones.length > 0 ? dynamicZones : BURSA_MANIFEST.zones,
+      metrics: {
+        totalRacks: totalRacks || 450,
+        totalPalletSlots: totalPalletSlots || 12000,
+        totalAreaM2: approxAreaM2,
+        clearHeightM: Number(clearHeightM.toFixed(2)),
+        docksCount: docksCount || 16,
+      },
     }
 
     const res = NextResponse.json(manifest)

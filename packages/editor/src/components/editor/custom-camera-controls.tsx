@@ -12,7 +12,7 @@ import {
 import { GRID_LAYER, useViewer, ZONE_LAYER } from '@pascal-app/viewer'
 import { CameraControls, CameraControlsImpl } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import {
   Box3,
   type Camera,
@@ -347,7 +347,7 @@ function useFirstPersonCameraPoseRestore(
   return useCallback(() => isRestoring.current, [])
 }
 
-export const CustomCameraControls = () => {
+export const CustomCameraControls = ({ paused = false }: { paused?: boolean }) => {
   const controls = useRef<CameraControlsImpl | null>(null)
   const pendingAppliedPose = useRef<CameraPoseApplicationPlan | null>(null)
   const activePoseInterpolation = useRef<{
@@ -366,6 +366,7 @@ export const CustomCameraControls = () => {
   const isFirstPersonMode = useEditor((s) => s.isFirstPersonMode)
   const allowUndergroundCamera = useEditor((s) => s.allowUndergroundCamera)
   const selection = useViewer((s) => s.selection)
+  const renderPaused = useViewer((state) => state.renderPaused)
   const cameraMode = useViewer((state) => state.cameraMode)
   const isRestoringFirstPersonPose = useFirstPersonCameraPoseRestore(
     controls,
@@ -1273,6 +1274,10 @@ export const CustomCameraControls = () => {
   const onRest = useCallback(() => {
     cameraDraggingLifecycle.end()
   }, [cameraDraggingLifecycle])
+
+  useLayoutEffect(() => {
+    cameraDraggingLifecycle.setPaused(paused || renderPaused)
+  }, [cameraDraggingLifecycle, paused, renderPaused])
 
   const onControlEnd = useCallback(() => {
     // A mapped-button tap with zero camera movement never wakes the

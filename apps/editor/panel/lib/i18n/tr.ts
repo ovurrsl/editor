@@ -497,7 +497,7 @@ export const tr: Dictionary = {
   clEditor: 'DigitalTwin editör sürümü',
   clPlugin: 'DigitalTwin depo eklentisi',
   clConsole: 'DigitalTwin konsol paneli',
-  clViewer: 'DigitalTwin 3D vitrin sürümü',
+  clViewer: 'DigitalTwin Viewer sürümü',
 
   /* ——— Projeler sekmesi ——— */
   scTitle: 'Projeler',

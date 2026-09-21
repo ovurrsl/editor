@@ -24,8 +24,8 @@ export const metadata: Metadata = { title: 'Changelog' }
  * release from a plugin one, and they version independently.
  */
 const CHANNEL_LABEL: Record<Lang, Record<ReleaseEntry['channel'], string>> = {
-  en: { editor: 'Editor', plugin: 'Warehouse plugin', console: 'Console', viewer: '3D Viewer' },
-  tr: { editor: 'Editör', plugin: 'Depo eklentisi', console: 'Konsol', viewer: '3D Vitrin' },
+  en: { editor: 'Editor', plugin: 'Warehouse plugin', console: 'Console', viewer: 'Viewer' },
+  tr: { editor: 'Editör', plugin: 'Depo eklentisi', console: 'Konsol', viewer: 'Viewer' },
 }
 
 function formatDay(lang: Lang, iso: string): string {
