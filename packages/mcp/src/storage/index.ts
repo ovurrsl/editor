@@ -36,16 +36,13 @@ export async function createSceneStore(env?: NodeJS.ProcessEnv): Promise<SceneSt
   }
 
   if (resolved.NODE_ENV === 'production') {
-    const isLocalSafe = process.platform === 'win32' || resolved.DIGITALTWIN_ALLOW_SQLITE === '1'
-    if (resolved.CI || resolved.GITHUB_ACTIONS || !isLocalSafe) {
-      throw new SceneInvalidError(
-        'No MySQL configuration found. Scenes must live in MySQL in production: a scene ' +
-          'written to the local filesystem is lost on the next redeploy. ' +
-          'Set DIGITALTWIN_MYSQL_URL (mysql://user:password@host:3306/database) or all of ' +
-          'DIGITALTWIN_MYSQL_HOST, DIGITALTWIN_MYSQL_USER and DIGITALTWIN_MYSQL_DATABASE ' +
-          '(plus DIGITALTWIN_MYSQL_PASSWORD/_PORT as needed).',
-      )
-    }
+    throw new SceneInvalidError(
+      'No MySQL configuration found. Scenes must live in MySQL in production: a scene ' +
+        'written to the local filesystem is lost on the next redeploy. ' +
+        'Set DIGITALTWIN_MYSQL_URL (mysql://user:password@host:3306/database) or all of ' +
+        'DIGITALTWIN_MYSQL_HOST, DIGITALTWIN_MYSQL_USER and DIGITALTWIN_MYSQL_DATABASE ' +
+        '(plus DIGITALTWIN_MYSQL_PASSWORD/_PORT as needed).',
+    )
   }
 
   const mod = await import('./sqlite-scene-store')

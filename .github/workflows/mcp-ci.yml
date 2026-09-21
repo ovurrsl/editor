@@ -35,7 +35,7 @@ jobs:
 
 
       - name: Install
-        run: bun install --frozen-lockfile
+        run: bun install --linker=hoisted
 
       - name: Build core
         run: bun run --cwd packages/core build
