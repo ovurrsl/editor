@@ -23,6 +23,15 @@ import { guidesFor } from '@/lib/guides-content'
 // TIER 1: FEATURE COVERAGE — "SCENES" -> "PROJECTS" RENAMING (R2)
 // ════════════════════════════════════════════════════════════════════════════
 
+function resolveEditorPath(rel: string): string {
+  const candidates = [
+    path.resolve(process.cwd(), rel),
+    path.resolve(process.cwd(), 'apps/editor', rel),
+    path.resolve(import.meta.dir, '..', '..', rel),
+  ]
+  return candidates.find((c) => fs.existsSync(c)) ?? path.resolve(process.cwd(), rel)
+}
+
 describe('Tier 1: Feature Coverage — "Scenes" -> "Projects" Renaming Completeness', () => {
   it('T1.F2.1: EDITOR_SIDEBAR_TABS registers tab id "scenes" with user-facing label "Projects"', () => {
     const scenesTab = EDITOR_SIDEBAR_TABS.find((t) => t.id === 'scenes')
@@ -33,7 +42,7 @@ describe('Tier 1: Feature Coverage — "Scenes" -> "Projects" Renaming Completen
   })
 
   it('T1.F2.2: scenes-tab.tsx uses "Projects" and "project" across all pluralized headers', () => {
-    const filePath = path.resolve(process.cwd(), 'components/scenes-tab.tsx')
+    const filePath = resolveEditorPath('components/scenes-tab.tsx')
     const content = fs.readFileSync(filePath, 'utf8')
 
     expect(content).toContain('Projects')
@@ -48,7 +57,7 @@ describe('Tier 1: Feature Coverage — "Scenes" -> "Projects" Renaming Completen
   })
 
   it('T1.F2.3: app/scenes/page.tsx displays "Projects" breadcrumb and "Your projects" heading', () => {
-    const filePath = path.resolve(process.cwd(), 'app/scenes/page.tsx')
+    const filePath = resolveEditorPath('app/scenes/page.tsx')
     const content = fs.readFileSync(filePath, 'utf8')
 
     expect(content).toContain('<span className="font-medium text-foreground">Projects</span>')
@@ -60,7 +69,7 @@ describe('Tier 1: Feature Coverage — "Scenes" -> "Projects" Renaming Completen
   })
 
   it('T1.F2.4: save-button.tsx uses "project" in action labels, prompts, and status messages', () => {
-    const filePath = path.resolve(process.cwd(), 'components/save-button.tsx')
+    const filePath = resolveEditorPath('components/save-button.tsx')
     const content = fs.readFileSync(filePath, 'utf8')
 
     expect(content).toContain("label = 'Create new project'")
