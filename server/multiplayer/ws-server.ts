@@ -183,19 +183,55 @@ export class CollabWebSocketServer {
 
   public close(): Promise<void> {
     return new Promise((resolve) => {
+      let resolved = false
+      const done = () => {
+        if (!resolved) {
+          resolved = true
+          resolve()
+        }
+      }
+      const safetyTimer = setTimeout(done, 500)
+
       for (const room of this.rooms.values()) {
         for (const conn of room.conns) {
-          conn.close()
+          try {
+            conn.terminate()
+          } catch {}
         }
-        room.doc.destroy()
-        room.awareness.destroy()
+        try {
+          room.doc.destroy()
+        } catch {}
+        try {
+          room.awareness.destroy()
+        } catch {}
       }
       this.rooms.clear()
+
+      try {
+        if (this.wss?.clients) {
+          for (const client of this.wss.clients) {
+            try {
+              client.terminate()
+            } catch {}
+          }
+        }
+      } catch {}
+
+      if (typeof (this.server as any).closeAllConnections === 'function') {
+        try {
+          (this.server as any).closeAllConnections()
+        } catch {}
+      }
+
       this.wss.close(() => {
         if (this.server.listening) {
-          this.server.close(() => resolve())
+          this.server.close(() => {
+            clearTimeout(safetyTimer)
+            done()
+          })
         } else {
-          resolve()
+          clearTimeout(safetyTimer)
+          done()
         }
       })
     })

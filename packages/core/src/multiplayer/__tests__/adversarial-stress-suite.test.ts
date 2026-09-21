@@ -312,8 +312,8 @@ describe('Adversarial Stress & Security Test Suite (Challenger 2)', () => {
       expect(room.doc.getMap('nodes').has('valid-editor-node')).toBe(true)
 
       // Cleanup
-      viewerWs.close()
-      editorWs.close()
+      try { viewerWs.terminate() } catch {}
+      try { editorWs.terminate() } catch {}
       rogueDoc.destroy()
       editorDoc.destroy()
       await collabServer.close()
