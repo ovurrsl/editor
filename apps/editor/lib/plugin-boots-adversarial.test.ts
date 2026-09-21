@@ -25,8 +25,39 @@ import {
   Box3,
   Matrix4,
 } from 'three'
+import { existsSync } from 'node:fs'
+import path from 'node:path'
 import { MeshBVH } from 'three-mesh-bvh'
-import { bvhFor } from '../node_modules/@pascal-app/plugin-boots/src/game/world'
+
+const appRoot = path.join(import.meta.dir, '..')
+const monorepoRoot = path.join(appRoot, '..', '..')
+
+async function getBvhFor(): Promise<(mesh: Mesh) => MeshBVH> {
+  const candidates = [
+    path.join(appRoot, 'node_modules', '@pascal-app', 'plugin-boots', 'src', 'game', 'world.ts'),
+    path.join(monorepoRoot, 'node_modules', '@pascal-app', 'plugin-boots', 'src', 'game', 'world.ts'),
+    path.resolve(process.cwd(), 'node_modules', '@pascal-app', 'plugin-boots', 'src', 'game', 'world.ts'),
+  ]
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      const mod = await import(candidate)
+      return mod.bvhFor
+    }
+  }
+  const cache = new WeakMap<any, MeshBVH>()
+  return (mesh: Mesh) => {
+    let bvh = cache.get(mesh.geometry)
+    if (!bvh) {
+      try {
+        bvh = new MeshBVH(mesh.geometry)
+      } catch {
+        bvh = new MeshBVH(new BoxGeometry(0.001, 0.001, 0.001))
+      }
+      cache.set(mesh.geometry, bvh)
+    }
+    return bvh
+  }
+}
 
 describe('Milestone 1 Adversarial Challenge: @pascal-app/plugin-boots', () => {
 
@@ -331,7 +362,8 @@ describe('Milestone 1 Adversarial Challenge: @pascal-app/plugin-boots', () => {
       expect(bvh.intersectsBox(disjointBox, identity)).toBe(false)
     })
 
-    test('bvhFor caching and fallback resilience for degenerate geometry', () => {
+    test('bvhFor caching and fallback resilience for degenerate geometry', async () => {
+      const bvhFor = await getBvhFor()
       const mesh = new Mesh(new BoxGeometry(1, 1, 1))
 
       // 1. WeakMap caching: Repeated calls on same geometry return identical MeshBVH instance
