@@ -216,21 +216,51 @@ export class CollabServer {
   }
 
   public async close(): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
+      let resolved = false
+      const done = () => {
+        if (!resolved) {
+          resolved = true
+          resolve()
+        }
+      }
+      const safetyTimer = setTimeout(done, 500)
+
       for (const room of this.rooms.values()) {
         for (const ws of room.connections) {
-          ws.terminate()
+          try {
+            ws.terminate()
+          } catch {}
         }
-        room.doc.destroy()
-        room.awareness.destroy()
+        try {
+          room.doc.destroy()
+        } catch {}
+        try {
+          room.awareness.destroy()
+        } catch {}
       }
       this.rooms.clear()
 
-      this.wss.close((err) => {
-        if (err) return reject(err)
-        this.server.close((serverErr) => {
-          if (serverErr) return reject(serverErr)
-          resolve()
+      try {
+        if (this.wss?.clients) {
+          for (const client of this.wss.clients) {
+            try {
+              client.terminate()
+            } catch {}
+          }
+        }
+      } catch {}
+
+      if (typeof (this.server as any).closeAllConnections === 'function') {
+        try {
+          (this.server as any).closeAllConnections()
+        } catch {}
+      }
+
+      this.wss.close(() => {
+        this.server.close(() => {
+          clearTimeout(safetyTimer)
+          done()
         })
       })
     })
@@ -361,7 +391,9 @@ export class SimulatedMultiplayerClient {
 
   public disconnect(): void {
     if (this.ws) {
-      this.ws.close()
+      try {
+        this.ws.terminate()
+      } catch {}
       this.ws = null
       this.isConnected = false
     }
