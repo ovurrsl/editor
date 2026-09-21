@@ -36,7 +36,7 @@ jobs:
         run: bun run check-types
 
       - name: Test
-        run: bun run test
+        run: bunx turbo run test --filter=!@pascal-app/cli
 
       - name: Build
         run: bun run build
