@@ -44,7 +44,12 @@ describe('Strict Zero-Mutation & Slot Isolation Invariant Tests', () => {
   })
 
   describe('Forensic Invariant Protection: scene-loader.tsx', () => {
-    const sceneLoaderPath = join(projectRoot, 'editor', 'apps', 'editor', 'components', 'scene-loader.tsx')
+    const sceneLoaderPath = [
+      join(projectRoot, 'editor', 'apps', 'editor', 'components', 'scene-loader.tsx'),
+      join(projectRoot, 'apps', 'editor', 'components', 'scene-loader.tsx'),
+      resolve(process.cwd(), 'apps/editor/components/scene-loader.tsx'),
+      resolve(import.meta.dir, '../../../../apps/editor/components/scene-loader.tsx'),
+    ].find((p) => existsSync(p)) ?? join(projectRoot, 'editor', 'apps', 'editor', 'components', 'scene-loader.tsx')
 
     test('verifies scene-loader.tsx exists and is pristine', () => {
       expect(existsSync(sceneLoaderPath)).toBe(true)
