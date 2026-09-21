@@ -176,12 +176,17 @@ export async function createSession(opts: {
   // Concurrent-session limit is enforced here, not in the console: oldest first.
   await enforceConcurrencyLimit(opts.userId, id, settings.concurrentSessionLimit)
 
+  const reqHeaders = await headers()
+  const host = reqHeaders.get('host') || ''
+  const isOpex = host.includes('opex.help')
+
   const jar = await cookies()
   jar.set(SESSION_COOKIE, id.toString('hex'), {
     httpOnly: true,
     sameSite: 'lax',
     secure: cookieSecure(),
     path: '/',
+    ...(isOpex ? { domain: '.opex.help' } : {}),
     // A session cookie for the idle case; a dated cookie when "keep me signed in"
     // is on, so the browser keeps it across restarts for the full window.
     ...(keepSignedIn ? { expires: expiresAt } : {}),
