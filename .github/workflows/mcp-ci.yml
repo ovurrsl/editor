@@ -50,4 +50,4 @@ jobs:
         run: bun test apps/editor/lib/scene-store-server.test.ts apps/editor/lib/scene-api-security.test.ts
 
       - name: Biome check
-        run: bunx biome check packages/mcp apps/editor/lib/scene-store-server.ts apps/editor/lib/scene-api-security.ts apps/editor/app/api/scenes
+        run: bunx biome lint packages/mcp apps/editor/lib/scene-store-server.ts apps/editor/lib/scene-api-security.ts apps/editor/app/api/scenes

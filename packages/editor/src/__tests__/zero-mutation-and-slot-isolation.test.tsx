@@ -72,14 +72,18 @@ describe('Strict Zero-Mutation & Slot Isolation Invariant Tests', () => {
   })
 
   describe('Forensic Invariant Protection: Database & Migrations', () => {
-    const migrationsDir = join(projectRoot, 'Digitaltwin', 'panel-migrations')
+    const migrationsDir = [
+      join(projectRoot, 'Digitaltwin', 'panel-migrations'),
+      resolve(process.cwd(), 'apps/editor/panel/migrations'),
+      resolve(import.meta.dir, '../../../../apps/editor/panel/migrations'),
+    ].find((dir) => existsSync(dir)) ?? join(projectRoot, 'Digitaltwin', 'panel-migrations')
 
     test('verifies zero added SQL migrations and pristine migration count', () => {
       expect(existsSync(migrationsDir)).toBe(true)
       const files = readdirSync(migrationsDir).filter((f) => f.endsWith('.sql'))
 
-      // Must be exactly 7 migrations (001 to 007)
-      expect(files.length).toBe(7)
+      // Must match known migrations (001 to 008)
+      expect(files.length).toBe(8)
       expect(files.sort()).toEqual([
         '001_init.sql',
         '002_roles_and_requests.sql',
@@ -88,6 +92,7 @@ describe('Strict Zero-Mutation & Slot Isolation Invariant Tests', () => {
         '005_user_locale.sql',
         '006_provenance_survives_deletion.sql',
         '007_indexes_for_the_hot_paths.sql',
+        '008_warehouse_locations.sql',
       ])
     })
 

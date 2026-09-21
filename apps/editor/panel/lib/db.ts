@@ -30,11 +30,31 @@ export function resolveDatabasePath(): string {
   return path.join(xdg, 'pascal', 'data', 'pascal.db')
 }
 
+function fromUrl(): Partial<Record<'host' | 'port' | 'user' | 'password' | 'database', string>> {
+  const raw = env('DIGITALTWIN_MYSQL_URL', 'PASCAL_MYSQL_URL', 'DATABASE_URL')
+  if (!raw) return {}
+  try {
+    const url = new URL(raw)
+    return {
+      host: url.hostname || undefined,
+      port: url.port || undefined,
+      user: decodeURIComponent(url.username) || undefined,
+      password: decodeURIComponent(url.password) || undefined,
+      database: url.pathname.replace(/^\//, '') || undefined,
+    }
+  } catch {
+    return {}
+  }
+}
+
 export function isMysqlConfigured(): boolean {
   if (env('DIGITALTWIN_USE_SQLITE', 'PASCAL_USE_SQLITE') === '1') {
     return false
   }
-  return Boolean(env('DIGITALTWIN_MYSQL_URL', 'PASCAL_MYSQL_URL', 'DATABASE_URL'))
+  return Boolean(
+    env('DIGITALTWIN_MYSQL_URL', 'PASCAL_MYSQL_URL', 'DATABASE_URL') ||
+    env('DIGITALTWIN_MYSQL_HOST', 'PASCAL_MYSQL_HOST', 'DATABASE_HOST')
+  )
 }
 
 function normalizeSql(sql: string): string {
@@ -122,13 +142,24 @@ function runSqlite<T>(sql: string, params: unknown[] = []): [T, unknown] {
 }
 
 export function dbConfig() {
+  const url = fromUrl()
   return {
-    host: env('DIGITALTWIN_MYSQL_HOST', 'PASCAL_MYSQL_HOST', 'DATABASE_HOST') ?? '127.0.0.1',
-    port: Number(env('DIGITALTWIN_MYSQL_PORT', 'PASCAL_MYSQL_PORT', 'DATABASE_PORT') ?? 3306),
-    user: env('DIGITALTWIN_MYSQL_USER', 'PASCAL_MYSQL_USER', 'DATABASE_USER') ?? 'root',
-    password: env('DIGITALTWIN_MYSQL_PASSWORD', 'PASCAL_MYSQL_PASSWORD', 'DATABASE_PASSWORD') ?? '',
+    host:
+      env('DIGITALTWIN_MYSQL_HOST', 'PASCAL_MYSQL_HOST', 'DATABASE_HOST') ??
+      url.host ??
+      '127.0.0.1',
+    port: Number(
+      env('DIGITALTWIN_MYSQL_PORT', 'PASCAL_MYSQL_PORT', 'DATABASE_PORT') ?? url.port ?? 3306,
+    ),
+    user: env('DIGITALTWIN_MYSQL_USER', 'PASCAL_MYSQL_USER', 'DATABASE_USER') ?? url.user ?? 'root',
+    password:
+      env('DIGITALTWIN_MYSQL_PASSWORD', 'PASCAL_MYSQL_PASSWORD', 'DATABASE_PASSWORD') ??
+      url.password ??
+      '',
     database:
-      env('DIGITALTWIN_MYSQL_DATABASE', 'PASCAL_MYSQL_DATABASE', 'DATABASE_NAME') ?? 'digitaltwin',
+      env('DIGITALTWIN_MYSQL_DATABASE', 'PASCAL_MYSQL_DATABASE', 'DATABASE_NAME') ??
+      url.database ??
+      'digitaltwin',
     charset: 'utf8mb4_unicode_ci',
     timezone: 'Z',
     dateStrings: false,

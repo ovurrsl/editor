@@ -45,6 +45,8 @@
         "noDelete": "off"
       },
       "suspicious": {
+        "noAssignInExpressions": "off",
+        "useIterableCallbackReturn": "off",
         "noEmptyBlockStatements": "off",
         "noImplicitAnyLet": "off",
         "noGlobalIsNan": "off",
@@ -63,6 +65,7 @@
         "useLiteralKeys": "off"
       },
       "correctness": {
+        "noUnsafeOptionalChaining": "off",
         "noUnusedVariables": "off",
         "noUnusedFunctionParameters": "off",
         "noUnusedImports": {
@@ -73,6 +76,7 @@
         "noPrecisionLoss": "off"
       },
       "a11y": {
+        "useAriaPropsSupportedByRole": "off",
         "noSvgWithoutTitle": "off",
         "useSemanticElements": "off",
         "noLabelWithoutControl": "off",

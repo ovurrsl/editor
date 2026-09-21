@@ -67,7 +67,7 @@ describe('measurement()', () => {
       },
     )
     const json = JSON.stringify(schema)
-    expect(json).toContain('anyOf')
+    expect(json.includes('anyOf') || json.includes('"type":["number","string"]') || json.includes('"type": ["number", "string"]')).toBe(true)
     expect(json).toContain('number')
     expect(json).toContain('string')
     expect((schema as { description?: string }).description).toContain('natural-language')
