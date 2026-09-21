@@ -139,9 +139,26 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     if (!stored) {
       try {
+        const decoded = decodeURIComponent(id).trim().toLowerCase()
+        const all = await operations.listScenes({ limit: 100 })
+        const match = all.find(
+          (s) =>
+            s.id.toLowerCase() === decoded ||
+            s.name.toLowerCase() === decoded ||
+            s.name.toLowerCase().includes(decoded) ||
+            decoded.includes(s.name.toLowerCase()),
+        )
+        if (match) {
+          stored = await operations.loadStoredScene(match.id)
+        }
+      } catch {}
+    }
+
+    if (!stored) {
+      try {
         const siteRows = await query<RowDataPacket & { scene_id: string | null; name: string }>(
-          'SELECT scene_id, name FROM sites WHERE public_id = ? OR name = ? LIMIT 1',
-          [id, id],
+          'SELECT scene_id, name FROM sites WHERE public_id = ? OR name = ? OR LOWER(name) = ? LIMIT 1',
+          [id, id, id.toLowerCase()],
         )
         const firstSite = siteRows[0]
         if (firstSite) {

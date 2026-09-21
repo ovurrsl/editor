@@ -32,13 +32,11 @@ export default async function Root() {
   if (session.user.mustChangePassword) redirect('/welcome')
 
   // View-only accounts have no business in the editing surface: they land on
-  // their designated 3D showcase viewer (https://viewer.opex.help).
+  // their designated projects dashboard (/scenes) where they can select and launch 3D projects.
   const user = await getSessionUser()
   if (!user) redirect('/signin')
   if (!canEdit(user)) {
-    const token = createViewerLaunchToken(user)
-    const viewerUrl = process.env.NEXT_PUBLIC_VIEWER_URL || 'https://viewer.opex.help'
-    redirect(`${viewerUrl}/?launch_token=${token}`)
+    redirect('/scenes')
   }
 
   const workspace = await loadOrCreateWorkspaceScene(user.id)

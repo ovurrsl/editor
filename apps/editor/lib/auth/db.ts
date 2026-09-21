@@ -1,11 +1,9 @@
 import { resolveMysqlUrl } from '@pascal-app/mcp/storage'
+import { db } from '@panel/lib/db'
 
 /**
- * Auth stores users and sessions in the same MySQL database as scenes, but
- * through its own small pool rather than reaching into the scene store's
- * private one. mysql2 is a dynamic import (never a static one) so it stays a
- * traceable runtime dependency in the standalone bundle, exactly as the scene
- * store does it. node:crypto covers hashing, so auth adds no new dependency.
+ * Auth stores users and sessions in the unified database (pascal.db or MySQL).
+ * Always available locally and in production via the unified database driver.
  */
 
 interface MysqlQueryable {
@@ -17,40 +15,15 @@ export interface MysqlPool extends MysqlQueryable {
   end(): Promise<void>
 }
 
-let pool: MysqlPool | null = null
-let poolPromise: Promise<MysqlPool> | null = null
-
-/** True when a MySQL target is configured. Auth is unavailable without one. */
-export function authAvailable(env: NodeJS.ProcessEnv = process.env): boolean {
-  return Boolean(resolveMysqlUrl(env))
+/** True whenever a database is available. pascal.db is always available. */
+export function authAvailable(_env: NodeJS.ProcessEnv = process.env): boolean {
+  return true
 }
 
 export async function getAuthPool(): Promise<MysqlPool> {
-  if (pool) return pool
-  if (!poolPromise) {
-    poolPromise = (async () => {
-      const url = resolveMysqlUrl(process.env)
-      if (!url) {
-        throw new Error('Auth requires a MySQL connection (DIGITALTWIN_MYSQL_URL or the trio).')
-      }
-      const mod = (await import('mysql2/promise')) as unknown as {
-        createPool: (config: { uri: string; connectionLimit: number }) => MysqlPool
-      }
-      const created = mod.createPool({ uri: url, connectionLimit: 3 })
-      try {
-        await migrate(created)
-      } catch (err) {
-        // Don't cache a failed pool: a database briefly unreachable at boot
-        // would otherwise poison auth until the process restarts.
-        poolPromise = null
-        await created.end().catch(() => {})
-        throw err
-      }
-      pool = created
-      return created
-    })()
-  }
-  return poolPromise
+  const pool = db() as unknown as MysqlPool
+  await migrate(pool)
+  return pool
 }
 
 /** Creates the auth tables. Safe to call repeatedly. */
@@ -59,11 +32,6 @@ export async function migrateAuth(): Promise<void> {
 }
 
 async function migrate(p: MysqlPool): Promise<void> {
-  // The console owns the identity schema now (users, sessions, roles, ... —
-  // see panel/migrations). Creating the editor's old users/user_sessions here
-  // would race the console's migrations for the `users` name, so this only
-  // verifies the console schema is reachable and reports plainly when the
-  // migrations have not been run yet.
   try {
     await p.query('SELECT 1 FROM users LIMIT 1')
   } catch {
@@ -73,3 +41,4 @@ async function migrate(p: MysqlPool): Promise<void> {
     )
   }
 }
+

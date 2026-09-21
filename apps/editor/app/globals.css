@@ -102,6 +102,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.205 0 0); /* ~171717 */
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -407,3 +408,14 @@
       100% 100%;
   }
 }
+
+select {
+  color-scheme: dark;
+}
+
+select option,
+select optgroup {
+  background-color: #18181b;
+  color: #f4f4f5;
+}
+

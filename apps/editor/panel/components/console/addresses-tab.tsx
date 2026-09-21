@@ -1387,10 +1387,11 @@ export function AddressesTab() {
               setBayFilter(null)
               setSelectedLocation(null)
             }}
-            className="h-8 rounded-lg border border-input bg-field px-2.5 text-xs font-semibold text-fg outline-none cursor-pointer focus:border-ring"
+            style={{ colorScheme: 'dark' }}
+            className="h-8 rounded-lg border border-input bg-zinc-900 px-2.5 text-xs font-semibold text-zinc-100 outline-none cursor-pointer focus:border-ring [&>option]:bg-zinc-900 [&>option]:text-zinc-100"
           >
             {sites.map((s) => (
-              <option key={s.id} value={s.id} className="bg-surface text-fg">
+              <option key={s.id} value={s.id} className="bg-zinc-900 text-zinc-100">
                 {s.name}
               </option>
             ))}
@@ -1492,11 +1493,12 @@ export function AddressesTab() {
           <select
             value={aisleFilter}
             onChange={(e) => setAisleFilter(e.target.value)}
-            className="h-7 rounded-lg border border-input bg-field px-2 text-xs font-medium text-fg outline-none cursor-pointer focus:border-ring"
+            style={{ colorScheme: 'dark' }}
+            className="h-7 rounded-lg border border-input bg-zinc-900 px-2 text-xs font-medium text-zinc-100 outline-none cursor-pointer focus:border-ring [&>option]:bg-zinc-900 [&>option]:text-zinc-100"
           >
-            <option value="All">{t.addrAllAisles ?? 'All aisles'}</option>
+            <option value="All" className="bg-zinc-900 text-zinc-100">{t.addrAllAisles ?? 'All aisles'}</option>
             {distinctAisles.map((a) => (
-              <option key={a} value={a}>
+              <option key={a} value={a} className="bg-zinc-900 text-zinc-100">
                 Sıra {a}
               </option>
             ))}
@@ -1728,11 +1730,12 @@ export function AddressesTab() {
                                   d ? { ...d, status: e.target.value as LocationStatus } : null,
                                 )
                               }
-                              className="h-6 rounded border border-primary bg-field px-1 text-[10px] text-fg outline-none"
+                              style={{ colorScheme: 'dark' }}
+                              className="h-6 rounded border border-primary bg-zinc-900 px-1 text-[10px] text-zinc-100 outline-none [&>option]:bg-zinc-900 [&>option]:text-zinc-100"
                             >
-                              <option value="Active">Active</option>
-                              <option value="Blocked">Blocked</option>
-                              <option value="Quarantine">Quarantine</option>
+                              <option value="Active" className="bg-zinc-900 text-zinc-100">Active</option>
+                              <option value="Blocked" className="bg-zinc-900 text-zinc-100">Blocked</option>
+                              <option value="Quarantine" className="bg-zinc-900 text-zinc-100">Quarantine</option>
                             </select>
                           ) : (
                             <span
@@ -2014,11 +2017,12 @@ export function AddressesTab() {
                   <select
                     value={rowNamingModal.palletsPerLevel}
                     onChange={(e) => setRowNamingModal((prev) => ({ ...prev, palletsPerLevel: parseInt(e.target.value) || 3 }))}
-                    className="w-full h-8 rounded-lg border border-input bg-field px-2 text-xs font-medium text-fg outline-none focus:border-ring cursor-pointer"
+                    style={{ colorScheme: 'dark' }}
+                    className="w-full h-8 rounded-lg border border-input bg-zinc-900 px-2 text-xs font-medium text-zinc-100 outline-none focus:border-ring cursor-pointer [&>option]:bg-zinc-900 [&>option]:text-zinc-100"
                   >
-                    <option value={1}>1 Palet</option>
-                    <option value={2}>2 Palet</option>
-                    <option value={3}>3 Palet</option>
+                    <option value={1} className="bg-zinc-900 text-zinc-100">1 Palet</option>
+                    <option value={2} className="bg-zinc-900 text-zinc-100">2 Palet</option>
+                    <option value={3} className="bg-zinc-900 text-zinc-100">3 Palet</option>
                   </select>
                 </div>
               </div>
