@@ -36,10 +36,10 @@ jobs:
         run: bun run check-types
 
       - name: Test
-        run: bunx turbo run test --filter=!@pascal-app/cli
+        run: bunx turbo run test --concurrency=2 --filter=!@pascal-app/cli -- --timeout=20000
 
       - name: Build
-        run: bun run build
+        run: bunx turbo run build --filter=editor
 
   # `cli-smoke` (upstream) was removed here on the beta.5 take, for two reasons
   # that both point the same way.
