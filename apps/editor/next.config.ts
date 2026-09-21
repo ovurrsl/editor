@@ -30,6 +30,12 @@ const nextConfig: NextConfig = {
   logging: {
     browserToTerminal: true,
   },
+  outputFileTracingExcludes: {
+    '*': [
+      './public/assets/data/**',
+      './public/assets/model/**',
+    ],
+  },
   typescript: {
     ignoreBuildErrors: true,
   },

@@ -43,15 +43,12 @@ function initMemoryStore(): WarehouseLocation[] {
   const candidatePaths = [
     join(process.cwd(), 'public/assets/data/locations_bursa.json'),
     join(process.cwd(), 'apps/editor/public/assets/data/locations_bursa.json'),
-    join(process.cwd(), '../panel/public/assets/data/locations_bursa.json'),
-    resolve('E:/Digital Twin/editor/apps/editor/public/assets/data/locations_bursa.json'),
-    resolve('E:/Digital Twin/panel/public/assets/data/locations_bursa.json'),
   ]
 
   for (const p of candidatePaths) {
-    if (existsSync(p)) {
+    if (existsSync(/*turbopackIgnore: true*/ p)) {
       try {
-        const raw = readFileSync(p, 'utf8')
+        const raw = readFileSync(/*turbopackIgnore: true*/ p, 'utf8')
         const data = JSON.parse(raw)
         if (Array.isArray(data) && data.length > 0) {
           seed.push(...data)

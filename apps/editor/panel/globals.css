@@ -1,4 +1,8 @@
 @import 'tailwindcss';
+@source not "../public/assets/**";
+@source not "./public/assets/**";
+@source not "**/*.json";
+@source not "**/*.glb";
 
 /*
  * Token scale lifted verbatim from the prototype's <helmet> block, which itself
