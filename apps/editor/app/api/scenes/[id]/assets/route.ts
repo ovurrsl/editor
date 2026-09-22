@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { existsSync, mkdirSync, writeFileSync, statSync, readdirSync, unlinkSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync, statSync, readdirSync, unlinkSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 export const dynamic = 'force-dynamic'
@@ -158,38 +158,117 @@ function cleanOldSceneAssets(sceneId: string, dirs: ReturnType<typeof resolveAss
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const { id } = await params
-  const { editorModelDirs, editorDataDirs } = resolveAssetDirectories()
+  const { editorModelDirs, editorDataDirs, viewerModelDir, viewerDataDir } = resolveAssetDirectories()
+  const allModelDirs = [...editorModelDirs, viewerModelDir].filter(Boolean) as string[]
+  const allDataDirs = [...editorDataDirs, viewerDataDir].filter(Boolean) as string[]
+
+  const isBursa =
+    id === 'bursa' ||
+    id === 'site_bursa' ||
+    id === 'bursa_baskoy' ||
+    id === '01JM1SITE00000000000000002'
 
   let glbFound = false
+  let glbPath: string | null = null
   let glbSize = 0
   let glbModified: Date | null = null
 
-  for (const dir of editorModelDirs) {
-    const glbPath = join(dir, `model_${id}.glb`)
-    if (existsSync(glbPath)) {
-      glbFound = true
-      try {
-        const s = statSync(glbPath)
-        glbSize = s.size
-        glbModified = s.mtime
-      } catch {}
-      break
+  // Check scene-specific GLB first, with Bursa alias fallback
+  const glbCandidates = [`model_${id}.glb`]
+  if (isBursa) glbCandidates.push('model_2026-09-11.glb')
+  if (id === 'sakarya' || id === '01JM1SITE00000000000000001') glbCandidates.push('model_sakarya-lm1.glb')
+
+  for (const candidate of glbCandidates) {
+    for (const dir of allModelDirs) {
+      const p = join(dir, candidate)
+      if (existsSync(p)) {
+        glbFound = true
+        glbPath = p
+        try {
+          const s = statSync(p)
+          glbSize = s.size
+          glbModified = s.mtime
+        } catch {}
+        break
+      }
     }
+    if (glbFound) break
   }
 
   let layoutFound = false
+  let layoutPath: string | null = null
   let layoutSize = 0
-  for (const dir of editorDataDirs) {
-    const layoutPath = join(dir, `layout_${id}.json`)
-    if (existsSync(layoutPath)) {
-      layoutFound = true
-      try {
-        layoutSize = statSync(layoutPath).size
-      } catch {}
-      break
+
+  const layoutCandidates = [`layout_${id}.json`]
+  if (isBursa) layoutCandidates.push('layout_2026-09-11.json')
+
+  for (const candidate of layoutCandidates) {
+    for (const dir of allDataDirs) {
+      const p = join(dir, candidate)
+      if (existsSync(p)) {
+        layoutFound = true
+        layoutPath = p
+        try {
+          layoutSize = statSync(p).size
+        } catch {}
+        break
+      }
     }
+    if (layoutFound) break
   }
 
+  const url = request.nextUrl || new URL(request.url)
+  const downloadParam = url.searchParams.get('download') || url.searchParams.get('format')
+
+  // 1. Direct GLB Binary Stream Request (Requested by Viewer on Project Open / Sync)
+  if (downloadParam === 'glb' || downloadParam === 'model') {
+    if (glbFound && glbPath) {
+      try {
+        const fileBuffer = readFileSync(glbPath)
+        const glbResponse = new NextResponse(fileBuffer, {
+          status: 200,
+          headers: {
+            'Content-Type': 'model/gltf-binary',
+            'Content-Disposition': `inline; filename="model_${id}.glb"`,
+            'Cache-Control': 'public, max-age=300, stale-while-revalidate=86400',
+          },
+        })
+        return withViewerCors(request, glbResponse)
+      } catch (err) {
+        console.error(`[assets-api] Failed to read GLB file at ${glbPath}:`, err)
+        const errRes = NextResponse.json({ error: 'glb_read_failed', details: String(err) }, { status: 500 })
+        return withViewerCors(request, errRes)
+      }
+    }
+    const notFoundRes = NextResponse.json({ error: 'glb_not_found', sceneId: id }, { status: 404 })
+    return withViewerCors(request, notFoundRes)
+  }
+
+  // 2. Direct Layout JSON Stream Request
+  if (downloadParam === 'layout' || downloadParam === 'json') {
+    if (layoutFound && layoutPath) {
+      try {
+        const fileContent = readFileSync(layoutPath, 'utf8')
+        const layoutResponse = new NextResponse(fileContent, {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Disposition': `inline; filename="layout_${id}.json"`,
+            'Cache-Control': 'public, max-age=300, stale-while-revalidate=86400',
+          },
+        })
+        return withViewerCors(request, layoutResponse)
+      } catch (err) {
+        console.error(`[assets-api] Failed to read layout file at ${layoutPath}:`, err)
+        const errRes = NextResponse.json({ error: 'layout_read_failed', details: String(err) }, { status: 500 })
+        return withViewerCors(request, errRes)
+      }
+    }
+    const notFoundRes = NextResponse.json({ error: 'layout_not_found', sceneId: id }, { status: 404 })
+    return withViewerCors(request, notFoundRes)
+  }
+
+  // 3. Metadata Response
   const v = glbModified ? glbModified.getTime() : Date.now()
   const res = NextResponse.json({
     ok: true,
@@ -198,8 +277,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     hasLayout: layoutFound,
     glbSize,
     layoutSize,
-    modelUrl: glbFound ? `/assets/model/model_${id}.glb?v=${v}` : null,
-    layoutUrl: layoutFound ? `/assets/data/layout_${id}.json?v=${v}` : null,
+    modelUrl: glbFound ? `/api/scenes/${id}/assets?download=glb&v=${v}` : null,
+    layoutUrl: layoutFound ? `/api/scenes/${id}/assets?download=layout&v=${v}` : null,
     lastModified: glbModified?.toISOString() ?? null,
   })
 

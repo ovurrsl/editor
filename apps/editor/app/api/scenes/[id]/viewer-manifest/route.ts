@@ -45,8 +45,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       country: 'TR',
     },
     assets: {
-      modelUrl: 'assets/model/model_2026-09-11.glb',
-      layoutUrl: 'assets/data/layout_2026-09-11.json',
+      modelUrl: '/api/scenes/bursa_baskoy/assets?download=glb',
+      layoutUrl: '/api/scenes/bursa_baskoy/assets?download=layout',
       planCadUrl: 'assets/data/plan_cad.json',
     },
     events: {
@@ -475,20 +475,20 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    const versionParam = stored?.version ? `?v=${stored.version}` : ''
+    const versionParam = stored?.version ? `&v=${stored.version}` : `&v=${Date.now()}`
     let resolvedModelUrl: string | null = null
     let resolvedLayoutUrl: string | null = null
 
     if (isExplicitBursa) {
-      resolvedModelUrl = 'assets/model/model_2026-09-11.glb'
-      resolvedLayoutUrl = 'assets/data/layout_2026-09-11.json'
+      resolvedModelUrl = `/api/scenes/bursa_baskoy/assets?download=glb${versionParam}`
+      resolvedLayoutUrl = `/api/scenes/bursa_baskoy/assets?download=layout${versionParam}`
     } else if (hasSceneGlb) {
-      resolvedModelUrl = `assets/model/model_${resolvedSceneId}.glb${versionParam}`
-      resolvedLayoutUrl = `assets/data/layout_${resolvedSceneId}.json${versionParam}`
+      resolvedModelUrl = `/api/scenes/${resolvedSceneId}/assets?download=glb${versionParam}`
+      resolvedLayoutUrl = `/api/scenes/${resolvedSceneId}/assets?download=layout${versionParam}`
     } else if (hasAnyNodes) {
       // Scene has nodes, assign standard asset URLs for auto-sync
-      resolvedModelUrl = `assets/model/model_${resolvedSceneId}.glb${versionParam}`
-      resolvedLayoutUrl = `assets/data/layout_${resolvedSceneId}.json${versionParam}`
+      resolvedModelUrl = `/api/scenes/${resolvedSceneId}/assets?download=glb${versionParam}`
+      resolvedLayoutUrl = `/api/scenes/${resolvedSceneId}/assets?download=layout${versionParam}`
     }
 
     const manifest = {
