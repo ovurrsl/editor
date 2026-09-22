@@ -221,8 +221,34 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
     }
 
+    if (!stored) {
+      const candidatePaths = [
+        join(process.cwd(), `apps/editor/public/assets/data/layout_${decodedId}.json`),
+        join(process.cwd(), `public/assets/data/layout_${decodedId}.json`),
+        `E:/Digital Twin/editor/apps/editor/public/assets/data/layout_${decodedId}.json`,
+        `E:/Digital Twin/Viewer/public/assets/data/layout_${decodedId}.json`,
+      ]
+      for (const p of candidatePaths) {
+        if (existsSync(p)) {
+          try {
+            const raw = JSON.parse(readFileSync(p, 'utf8'))
+            const nodes = raw.nodes || raw.graph?.nodes || raw
+            const inferredName = decodedId === '6507e9525168' ? 'BEYAZ KAĞIT A.Ş.' : (raw.name || decodedId)
+            stored = {
+              id: decodedId,
+              name: inferredName,
+              version: 1,
+              nodeCount: Object.keys(nodes).length,
+              graph: { nodes },
+            } as any
+            siteName = inferredName
+            break
+          } catch {}
+        }
+      }
+    }
+
     if (!stored && !siteName) {
-      const decodedId = decodeURIComponent(id).trim()
       const isExplicitBursa =
         decodedId === 'bursa' ||
         decodedId === 'site_bursa' ||
@@ -231,18 +257,28 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         decodedId === 'default'
 
       if (!isExplicitBursa) {
+        const candidateModelPaths = [
+          join(process.cwd(), `apps/editor/public/assets/model/model_${decodedId}.glb`),
+          join(process.cwd(), `public/assets/model/model_${decodedId}.glb`),
+          `E:/Digital Twin/editor/apps/editor/public/assets/model/model_${decodedId}.glb`,
+          `E:/Digital Twin/Viewer/public/assets/model/model_${decodedId}.glb`,
+        ]
+        const hasModel = candidateModelPaths.some((p) => existsSync(p))
+
         const emptyManifest = {
           version: '1.0',
           site: {
             id: decodedId,
-            name: decodedId.length > 25 ? 'Lojistik Depo' : decodedId,
-            description: 'Bu projede henüz yerleşim çizilmemiştir. Editör üzerinden raf ve duvar ekleyebilirsiniz.',
+            name: decodedId === '6507e9525168' ? 'BEYAZ KAĞIT A.Ş.' : (decodedId.length > 25 ? 'Lojistik Depo' : decodedId),
+            description: hasModel
+              ? 'Lojistik Depo 3D Dijital İkiz Modeli.'
+              : 'Bu projede henüz yerleşim çizilmemiştir. Editör üzerinden raf ve duvar ekleyebilirsiniz.',
             city: 'Türkiye',
             country: 'TR',
           },
           assets: {
-            modelUrl: null,
-            layoutUrl: null,
+            modelUrl: hasModel ? `assets/model/model_${decodedId}.glb` : null,
+            layoutUrl: `assets/data/layout_${decodedId}.json`,
             planCadUrl: null,
           },
           events: {
@@ -388,6 +424,37 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       ? `${approxAreaM2.toLocaleString('tr-TR')} m² kapalı alan, ${clearHeightM.toFixed(1)} m serbest yükseklik, ${docksCount} rampa ve ${totalPalletSlots.toLocaleString('tr-TR')} palet kapasiteli Dijital İkiz.`
       : 'Bu projede henüz yerleşim çizilmemiştir. Editör üzerinden raf ve duvar ekleyebilirsiniz.'
 
+    const cwd = process.cwd()
+    const candidateModelPaths = [
+      join(cwd, 'public/assets/model', `model_${resolvedSceneId}.glb`),
+      join(cwd, 'apps/editor/public/assets/model', `model_${resolvedSceneId}.glb`),
+      `E:/Digital Twin/editor/apps/editor/public/assets/model/model_${resolvedSceneId}.glb`,
+      `E:/Digital Twin/Viewer/public/assets/model/model_${resolvedSceneId}.glb`,
+    ]
+    let hasSceneGlb = false
+    for (const p of candidateModelPaths) {
+      if (existsSync(p)) {
+        hasSceneGlb = true
+        break
+      }
+    }
+
+    const versionParam = stored?.version ? `?v=${stored.version}` : ''
+    let resolvedModelUrl: string | null = null
+    let resolvedLayoutUrl: string | null = null
+
+    if (isExplicitBursa) {
+      resolvedModelUrl = 'assets/model/model_2026-09-11.glb'
+      resolvedLayoutUrl = 'assets/data/layout_2026-09-11.json'
+    } else if (hasSceneGlb) {
+      resolvedModelUrl = `assets/model/model_${resolvedSceneId}.glb${versionParam}`
+      resolvedLayoutUrl = `assets/data/layout_${resolvedSceneId}.json${versionParam}`
+    } else if (hasAnyNodes) {
+      // Scene has nodes, assign standard asset URLs for auto-sync
+      resolvedModelUrl = `assets/model/model_${resolvedSceneId}.glb${versionParam}`
+      resolvedLayoutUrl = `assets/data/layout_${resolvedSceneId}.json${versionParam}`
+    }
+
     const manifest = {
       version: '1.0',
       site: {
@@ -398,8 +465,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         country: 'TR',
       },
       assets: {
-        modelUrl: null, // Zero-bake: Three.js dynamically renders from layoutData.nodes in real-time
-        layoutUrl: null,
+        modelUrl: resolvedModelUrl,
+        layoutUrl: resolvedLayoutUrl,
         planCadUrl: 'assets/data/plan_cad.json',
       },
       events: {

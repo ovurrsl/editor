@@ -16,6 +16,7 @@ import {
   applySceneGraphPatch,
   applySceneGraphPatchToStore,
   computeSceneGraphDiff,
+  emitter,
   type SceneGraphPatch,
 } from '@pascal-app/core'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -267,6 +268,7 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
               channel.close()
             } catch {}
           }
+          emitter.emit('scene:auto-sync-assets' as any, { sceneId: meta.id, graph })
           return
         }
 
@@ -289,6 +291,7 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
             channel.close()
           } catch {}
         }
+        emitter.emit('scene:auto-sync-assets' as any, { sceneId: meta.id, graph })
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Save failed'
         if (message !== 'version_conflict' && message !== 'empty_graph_rejected' && message !== 'unauthorized') {

@@ -85,6 +85,7 @@ import { SiteEdgeLabels } from './site-edge-labels'
 import { SlabHoleHighlights } from './slab-hole-highlights'
 import { SnapshotCaptureOverlay } from './snapshot-capture-overlay'
 import { type SnapshotCameraData, ThumbnailGenerator } from './thumbnail-generator'
+import { GlbAutoSync } from './glb-auto-sync'
 import { WallMeasurementLabel } from './wall-measurement-label'
 import { WallMoveSideHandles } from './wall-move-side-handles'
 import { WallOpeningHighlights } from './wall-opening-highlights'
@@ -801,6 +802,7 @@ const ViewerSceneContent = memo(function ViewerSceneContent({
       {isFirstPersonMode && <FirstPersonControls />}
       <CustomCameraControls paused={renderPaused} />
       <ThumbnailGenerator onThumbnailCapture={onThumbnailCapture} />
+      <GlbAutoSync />
       {!(isFirstPersonMode || isPreviewMode) && <SiteEdgeLabels />}
       <InteractiveSystem />
       {!noEditing && viewerSceneSlot}
