@@ -27,7 +27,6 @@ export { default as Editor } from './components/editor'
 // preset-system spec.
 export { BakeExporter } from './components/editor/bake-exporter'
 export { BakeThumbnail } from './components/editor/bake-thumbnail'
-export { GlbAutoSync } from './components/editor/glb-auto-sync'
 export { FirstPersonControls } from './components/editor/first-person-controls'
 export { FloatingActionMenu as FloatingMenu } from './components/editor/floating-action-menu'
 // Embed surface — the editor's real in-canvas affordances, so a host can mount

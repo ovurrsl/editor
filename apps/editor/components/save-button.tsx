@@ -1,7 +1,6 @@
 'use client'
 
 import type { SceneGraph } from '@pascal-app/editor'
-import { emitter } from '@pascal-app/core'
 import { useRouter } from 'next/navigation'
 import { useCallback, useState } from 'react'
 import { useSession } from '@/components/auth/session-provider'
@@ -117,7 +116,6 @@ export function SaveButton({ sceneId, name, version, getGraph }: SaveButtonProps
         return
       }
       setStatus('Saved')
-      emitter.emit('scene:auto-sync-assets' as any, { sceneId, graph })
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Save failed')
     } finally {
