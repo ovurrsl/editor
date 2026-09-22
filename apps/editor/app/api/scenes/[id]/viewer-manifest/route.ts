@@ -70,6 +70,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         areaM2: 2874.1,
         palletCapacity: 7086,
         color: '#06b6d4',
+        polygon: [
+          [-107.9997, -39.0],
+          [-135.8447, -39.0],
+          [-135.8, 64.3],
+          [-107.9997, 64.3],
+        ],
       },
       {
         id: 'zone_zm80l2t21bzxx8t0',
@@ -80,6 +86,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         areaM2: 1398.0,
         palletCapacity: 4608,
         color: '#a855f7',
+        polygon: [
+          [-107.9997, -39.0],
+          [-107.9997, 64.3],
+          [-94.4664, 64.3],
+          [-94.4664, -39.0],
+        ],
       },
       {
         id: 'zone_849h6lrnoe2biitp',
@@ -90,6 +102,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         areaM2: 9157.4,
         palletCapacity: 25488,
         color: '#3b82f6',
+        polygon: [
+          [-94.4664, -39.0],
+          [-94.4664, 64.3],
+          [-47.8, 64.3],
+          [-47.8, 41.55],
+          [6.0, 41.59],
+          [6.05, -39.0],
+        ],
       },
       {
         id: 'zone_07ewdx8rjcf77xr8',
@@ -100,6 +120,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         areaM2: 6842.6,
         palletCapacity: 19752,
         color: '#84cc16',
+        polygon: [
+          [6.0, -39.0],
+          [6.0, 41.59],
+          [17.25, 41.6],
+          [17.2, 18.9],
+          [119.8, 18.9],
+          [119.76, -39.0],
+        ],
       },
       {
         id: 'zone_i6jzu76namlmrd31',
@@ -110,6 +138,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         areaM2: 450.0,
         palletCapacity: 0,
         color: '#f59e0b',
+        polygon: [
+          [-146.1, -83.8],
+          [-146.1, -78.7],
+          [-141.12, -78.59],
+          [-128.5, -91.71],
+          [-138.3, -91.6],
+        ],
       },
     ],
     metrics: {
@@ -411,6 +446,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         labelTr: z.name || `Depo Bölgesi ${idx + 1}`,
         labelEn: z.name || `Warehouse Zone ${idx + 1}`,
         areaM2,
+        polygon: Array.isArray(z.polygon) ? z.polygon : undefined,
         palletCapacity: Math.round(totalPalletSlots / Math.max(1, zoneNodes.length)),
         color: z.color || '#3b82f6',
       }
