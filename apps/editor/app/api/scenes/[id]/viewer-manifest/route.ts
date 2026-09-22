@@ -1,4 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { query, type RowDataPacket } from '@panel/lib/db'
 import { getSceneOperations } from '@/lib/scene-store-server'
 
@@ -119,34 +121,56 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     },
   }
 
-  // If Bursa or default requested, return Bursa manifest
-  const isBursa =
-    id === 'bursa' ||
-    id === 'site_bursa' ||
-    id === 'bursa_baskoy' ||
-    id === '01JM1SITE00000000000000002' ||
-    id === 'default'
-  if (isBursa) {
-    const res = NextResponse.json(BURSA_MANIFEST)
-    return withViewerCors(request, res)
-  }
-
-  // Otherwise, load from scene store or resolve through sites table
+  // Load from scene store, Bursa candidate files, or resolve through sites table
   try {
     const operations = await getSceneOperations()
     let stored = await operations.loadStoredScene(id)
     let siteName = ''
 
+    const decodedId = decodeURIComponent(id).trim().toLowerCase()
+    const isExplicitBursa =
+      decodedId === 'bursa' ||
+      decodedId === 'site_bursa' ||
+      decodedId === 'bursa_baskoy' ||
+      decodedId === '01jm1site00000000000000002' ||
+      decodedId === 'default'
+
+    if (!stored && isExplicitBursa) {
+      const candidatePaths = [
+        join(process.cwd(), 'apps/editor/public/assets/data/layout_bursa.json'),
+        join(process.cwd(), 'public/assets/data/layout_bursa.json'),
+        join(process.cwd(), 'public/assets/data/layout_2026-09-11.json'),
+        'E:/Digital Twin/editor/apps/editor/public/assets/data/layout_bursa.json',
+        'E:/Digital Twin/Viewer/public/assets/data/layout_2026-09-11.json',
+      ]
+      for (const p of candidatePaths) {
+        if (existsSync(p)) {
+          try {
+            const raw = JSON.parse(readFileSync(p, 'utf8'))
+            const nodes = raw.nodes || raw.graph?.nodes || raw
+            stored = {
+              id: '01JM1SITE00000000000000002',
+              name: 'BURSA BAŞKÖY EXT',
+              version: 1,
+              nodeCount: Object.keys(nodes).length,
+              graph: { nodes },
+            } as any
+            siteName = 'BURSA BAŞKÖY EXT'
+            break
+          } catch {}
+        }
+      }
+    }
+
     if (!stored) {
       try {
-        const decoded = decodeURIComponent(id).trim().toLowerCase()
         const all = await operations.listScenes({ limit: 100 })
         const match = all.find(
           (s) =>
-            s.id.toLowerCase() === decoded ||
-            s.name.toLowerCase() === decoded ||
-            s.name.toLowerCase().includes(decoded) ||
-            decoded.includes(s.name.toLowerCase()),
+            s.id.toLowerCase() === decodedId ||
+            s.name.toLowerCase() === decodedId ||
+            s.name.toLowerCase().includes(decodedId) ||
+            decodedId.includes(s.name.toLowerCase()),
         )
         if (match) {
           stored = await operations.loadStoredScene(match.id)
@@ -165,6 +189,31 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           siteName = firstSite.name
           if (firstSite.scene_id) {
             stored = await operations.loadStoredScene(firstSite.scene_id)
+            if (!stored && (firstSite.scene_id === 'bursa_baskoy' || firstSite.name.toLowerCase().includes('bursa'))) {
+              const candidatePaths = [
+                join(process.cwd(), 'apps/editor/public/assets/data/layout_bursa.json'),
+                join(process.cwd(), 'public/assets/data/layout_bursa.json'),
+                join(process.cwd(), 'public/assets/data/layout_2026-09-11.json'),
+                'E:/Digital Twin/editor/apps/editor/public/assets/data/layout_bursa.json',
+                'E:/Digital Twin/Viewer/public/assets/data/layout_2026-09-11.json',
+              ]
+              for (const p of candidatePaths) {
+                if (existsSync(p)) {
+                  try {
+                    const raw = JSON.parse(readFileSync(p, 'utf8'))
+                    const nodes = raw.nodes || raw.graph?.nodes || raw
+                    stored = {
+                      id: firstSite.scene_id,
+                      name: firstSite.name,
+                      version: 1,
+                      nodeCount: Object.keys(nodes).length,
+                      graph: { nodes },
+                    } as any
+                    break
+                  } catch {}
+                }
+              }
+            }
           }
         }
       } catch {
@@ -362,7 +411,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         id: buildingNode?.id || `building_${resolvedSceneId}`,
         bounds: buildingBounds,
       },
-      zones: dynamicZones.length > 0 ? dynamicZones : (hasAnyNodes ? BURSA_MANIFEST.zones : []),
+      zones: dynamicZones.length > 0 ? dynamicZones : (isExplicitBursa ? BURSA_MANIFEST.zones : []),
       metrics: {
         totalRacks: totalRacks,
         totalPalletSlots: totalPalletSlots,
