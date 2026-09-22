@@ -43,8 +43,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       country: 'TR',
     },
     assets: {
-      modelUrl: 'assets/model/model_2026-09-11.glb',
-      layoutUrl: 'assets/data/layout_2026-09-11.json',
+      modelUrl: 'assets/model/model_2026-09-22.glb',
+      layoutUrl: 'assets/data/layout_2026-09-22.json',
       planCadUrl: 'assets/data/plan_cad.json',
     },
     building: {
@@ -121,6 +121,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     id === 'site_bursa' ||
     id === 'bursa_baskoy' ||
     id === '01JM1SITE00000000000000002' ||
+    id === '0312b44c083a' ||
     id === 'default'
   if (isBursa) {
     const res = NextResponse.json(BURSA_MANIFEST)
@@ -164,8 +165,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         city: 'Türkiye',
       },
       assets: {
-        modelUrl: `assets/model/model_2026-09-11.glb`,
-        layoutUrl: `assets/data/layout_2026-09-11.json`,
+        modelUrl: `assets/model/model_2026-09-22.glb`,
+        layoutUrl: `assets/data/layout_2026-09-22.json`,
       },
       building: BURSA_MANIFEST.building,
       zones: BURSA_MANIFEST.zones,
