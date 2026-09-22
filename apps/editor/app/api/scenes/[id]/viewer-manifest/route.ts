@@ -173,7 +173,53 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     if (!stored && !siteName) {
-      const res = NextResponse.json(BURSA_MANIFEST) // Graceful fallback
+      const decodedId = decodeURIComponent(id).trim()
+      const isExplicitBursa =
+        decodedId === 'bursa' ||
+        decodedId === 'site_bursa' ||
+        decodedId === 'bursa_baskoy' ||
+        decodedId === '01JM1SITE00000000000000002' ||
+        decodedId === 'default'
+
+      if (!isExplicitBursa) {
+        const emptyManifest = {
+          version: '1.0',
+          site: {
+            id: decodedId,
+            name: decodedId.length > 25 ? 'Lojistik Depo' : decodedId,
+            description: 'Bu projede henüz yerleşim çizilmemiştir. Editör üzerinden raf ve duvar ekleyebilirsiniz.',
+            city: 'Türkiye',
+            country: 'TR',
+          },
+          assets: {
+            modelUrl: null,
+            layoutUrl: null,
+            planCadUrl: null,
+          },
+          events: {
+            url: `/api/scenes/${encodeURIComponent(decodedId)}/events`,
+            sceneId: decodedId,
+          },
+          layoutData: { nodes: {} },
+          building: {
+            id: `building_${decodedId}`,
+            bounds: { min: [-50, 0, -30], max: [50, 12, 30] },
+          },
+          zones: [],
+          metrics: {
+            totalRacks: 0,
+            totalPalletSlots: 0,
+            totalAreaM2: 0,
+            clearHeightM: 12.0,
+            docksCount: 0,
+          },
+          isEmpty: true,
+        }
+        const res = NextResponse.json(emptyManifest)
+        return withViewerCors(request, res)
+      }
+
+      const res = NextResponse.json(BURSA_MANIFEST)
       return withViewerCors(request, res)
     }
 
@@ -258,7 +304,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    const approxAreaM2 = Math.round(Math.max(2500, (maxX - minX) * (maxZ - minZ)))
+    const approxAreaM2 = Math.round(Math.max(50, (maxX - minX) * (maxZ - minZ)))
     const clearHeightM = Math.max(8.5, Math.min(18.0, maxY))
 
     // 3. Dynamic zones extraction
@@ -287,44 +333,73 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const finalName = siteName || stored?.name || 'Lojistik Depo'
     const isSakarya = finalName.toLowerCase().includes('sakarya') || id.toLowerCase().includes('sakarya')
+    const hasAnyNodes = allNodes.length > 0
+
+    const description = hasAnyNodes
+      ? `${approxAreaM2.toLocaleString('tr-TR')} m² kapalı alan, ${clearHeightM.toFixed(1)} m serbest yükseklik, ${docksCount} rampa ve ${totalPalletSlots.toLocaleString('tr-TR')} palet kapasiteli Dijital İkiz.`
+      : 'Bu projede henüz yerleşim çizilmemiştir. Editör üzerinden raf ve duvar ekleyebilirsiniz.'
 
     const manifest = {
       version: '1.0',
       site: {
         id: resolvedSceneId,
         name: finalName,
-        description: `${approxAreaM2.toLocaleString('tr-TR')} m² kapalı alan, ${clearHeightM.toFixed(1)} m serbest yükseklik, ${docksCount || 16} rampa ve ${(totalPalletSlots || 15000).toLocaleString('tr-TR')} palet kapasiteli Dijital İkiz.`,
+        description,
         city: isSakarya ? 'Sakarya' : 'Türkiye',
         country: 'TR',
       },
       assets: {
-        modelUrl: `assets/model/model_${resolvedSceneId}.glb`,
-        layoutUrl: `assets/data/layout_${resolvedSceneId}.json`,
+        modelUrl: null, // Zero-bake: Three.js dynamically renders from layoutData.nodes in real-time
+        layoutUrl: null,
         planCadUrl: 'assets/data/plan_cad.json',
       },
       events: {
         url: `/api/scenes/${resolvedSceneId}/events`,
         sceneId: resolvedSceneId,
       },
-      layoutData: stored?.graph ?? null,
+      layoutData: stored?.graph ?? { nodes: {} },
       building: {
         id: buildingNode?.id || `building_${resolvedSceneId}`,
         bounds: buildingBounds,
       },
-      zones: dynamicZones.length > 0 ? dynamicZones : BURSA_MANIFEST.zones,
+      zones: dynamicZones.length > 0 ? dynamicZones : (hasAnyNodes ? BURSA_MANIFEST.zones : []),
       metrics: {
-        totalRacks: totalRacks || 450,
-        totalPalletSlots: totalPalletSlots || 12000,
-        totalAreaM2: approxAreaM2,
-        clearHeightM: Number(clearHeightM.toFixed(2)),
-        docksCount: docksCount || 16,
+        totalRacks: totalRacks,
+        totalPalletSlots: totalPalletSlots,
+        totalAreaM2: hasAnyNodes ? approxAreaM2 : 0,
+        clearHeightM: hasAnyNodes ? Number(clearHeightM.toFixed(2)) : 0,
+        docksCount: docksCount,
       },
+      isEmpty: !hasAnyNodes,
     }
 
     const res = NextResponse.json(manifest)
     return withViewerCors(request, res)
-  } catch {
-    const res = NextResponse.json(BURSA_MANIFEST)
+  } catch (err) {
+    console.error('[viewer-manifest] Error generating dynamic manifest:', err)
+    const isBursa = id === 'bursa' || id === 'site_bursa' || id === 'bursa_baskoy'
+    if (isBursa) {
+      const res = NextResponse.json(BURSA_MANIFEST)
+      return withViewerCors(request, res)
+    }
+    const emptyFallback = {
+      version: '1.0',
+      site: {
+        id,
+        name: 'Lojistik Depo',
+        description: 'Bu sahne verisi yüklenirken bir sorun oluştu veya henüz yerleşim çizilmemiştir.',
+        city: 'Türkiye',
+        country: 'TR',
+      },
+      assets: { modelUrl: null, layoutUrl: null, planCadUrl: null },
+      events: { url: `/api/scenes/${encodeURIComponent(id)}/events`, sceneId: id },
+      layoutData: { nodes: {} },
+      building: { id: `building_${id}`, bounds: { min: [-50, 0, -30], max: [50, 12, 30] } },
+      zones: [],
+      metrics: { totalRacks: 0, totalPalletSlots: 0, totalAreaM2: 0, clearHeightM: 12.0, docksCount: 0 },
+      isEmpty: true,
+    }
+    const res = NextResponse.json(emptyFallback)
     return withViewerCors(request, res)
   }
 }
