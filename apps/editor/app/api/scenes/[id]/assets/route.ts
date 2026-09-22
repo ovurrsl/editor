@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { existsSync, mkdirSync, writeFileSync, statSync } from 'node:fs'
+import { existsSync, mkdirSync, writeFileSync, statSync, readdirSync, unlinkSync } from 'node:fs'
 import { join } from 'node:path'
 
 export const dynamic = 'force-dynamic'
@@ -17,7 +17,7 @@ function withViewerCors(request: NextRequest, response: NextResponse): NextRespo
     ) {
       response.headers.set('Access-Control-Allow-Origin', origin)
       response.headers.set('Access-Control-Allow-Credentials', 'true')
-      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
       response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
     }
   }
@@ -49,6 +49,111 @@ function resolveAssetDirectories() {
     viewerModelDir: existsSync(viewerPublic) ? join(viewerPublic, 'model') : null,
     viewerDataDir: existsSync(viewerPublic) ? join(viewerPublic, 'data') : null,
   }
+}
+
+/**
+ * Cleans up stale, outdated, duplicate, or temporary GLB and layout files
+ * when a new update arrives, ensuring disk space is maintained and obsolete versions are pruned.
+ */
+function cleanOldSceneAssets(sceneId: string, dirs: ReturnType<typeof resolveAssetDirectories>) {
+  const allModelDirs = [...dirs.editorModelDirs, dirs.viewerModelDir].filter(Boolean) as string[]
+  const allDataDirs = [...dirs.editorDataDirs, dirs.viewerDataDir].filter(Boolean) as string[]
+
+  const cleanedFiles: string[] = []
+
+  // 1. Purge stale GLBs
+  for (const dir of allModelDirs) {
+    if (!existsSync(dir)) continue
+    try {
+      const files = readdirSync(dir)
+      for (const file of files) {
+        // Match old numbered variants (e.g. model_xxx (1).glb), temporary files (model_xxx.tmp), or dated variants
+        const isMatchingScene = file.startsWith(`model_${sceneId}`)
+        const isCanonical = file === `model_${sceneId}.glb`
+
+        if (isMatchingScene && !isCanonical) {
+          const filePath = join(dir, file)
+          try {
+            unlinkSync(filePath)
+            cleanedFiles.push(filePath)
+            console.log(`[assets-api] 🧹 Cleaned up obsolete model file: ${filePath}`)
+          } catch (e) {
+            console.warn(`[assets-api] Failed to delete old model file ${file}:`, e)
+          }
+        }
+
+        // Deprecated historical versions for Bursa (preserve only active model_2026-09-11.glb)
+        const isBursa = sceneId === 'bursa_baskoy' || sceneId === '01JM1SITE00000000000000002' || sceneId === 'bursa'
+        if (isBursa) {
+          const deprecatedBursaModels = [
+            'model_2026-09-08.glb',
+            'model_2026-09-09.glb',
+            'model_2026-09-10 (1).glb',
+            'model_2026-09-10.glb',
+          ]
+          if (deprecatedBursaModels.includes(file)) {
+            const filePath = join(dir, file)
+            try {
+              unlinkSync(filePath)
+              cleanedFiles.push(filePath)
+              console.log(`[assets-api] 🧹 Cleaned up deprecated Bursa model: ${filePath}`)
+            } catch (e) {
+              console.warn(`[assets-api] Failed to delete deprecated Bursa model ${file}:`, e)
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`[assets-api] Error reading model directory ${dir} for cleanup:`, err)
+    }
+  }
+
+  // 2. Purge stale Layout JSONs
+  for (const dir of allDataDirs) {
+    if (!existsSync(dir)) continue
+    try {
+      const files = readdirSync(dir)
+      for (const file of files) {
+        const isMatchingScene = file.startsWith(`layout_${sceneId}`)
+        const isCanonical = file === `layout_${sceneId}.json`
+
+        if (isMatchingScene && !isCanonical) {
+          const filePath = join(dir, file)
+          try {
+            unlinkSync(filePath)
+            cleanedFiles.push(filePath)
+            console.log(`[assets-api] 🧹 Cleaned up obsolete layout file: ${filePath}`)
+          } catch (e) {
+            console.warn(`[assets-api] Failed to delete old layout file ${file}:`, e)
+          }
+        }
+
+        const isBursa = sceneId === 'bursa_baskoy' || sceneId === '01JM1SITE00000000000000002' || sceneId === 'bursa'
+        if (isBursa) {
+          const deprecatedBursaLayouts = [
+            'layout_2026-09-08.json',
+            'layout_2026-09-09.json',
+            'layout_2026-09-10 (1).json',
+            'layout_2026-09-10.json',
+          ]
+          if (deprecatedBursaLayouts.includes(file)) {
+            const filePath = join(dir, file)
+            try {
+              unlinkSync(filePath)
+              cleanedFiles.push(filePath)
+              console.log(`[assets-api] 🧹 Cleaned up deprecated Bursa layout: ${filePath}`)
+            } catch (e) {
+              console.warn(`[assets-api] Failed to delete deprecated Bursa layout ${file}:`, e)
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`[assets-api] Error reading data directory ${dir} for cleanup:`, err)
+    }
+  }
+
+  return cleanedFiles
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -189,16 +294,55 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
   }
 
+  // Automatically clean up old stale versions and temporary files
+  const cleanedFiles = cleanOldSceneAssets(id, dirs)
+
   const v = Date.now()
   const response = NextResponse.json({
     ok: true,
     sceneId: id,
     glbBytesWritten,
     layoutBytesWritten,
+    cleanedFilesCount: cleanedFiles.length,
     modelUrl: glbBytesWritten > 0 ? `/assets/model/model_${id}.glb?v=${v}` : null,
     layoutUrl: layoutBytesWritten > 0 ? `/assets/data/layout_${id}.json?v=${v}` : null,
     syncedAt: new Date().toISOString(),
   })
 
   return withViewerCors(request, response)
+}
+
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  const { id } = await params
+  const dirs = resolveAssetDirectories()
+  const allModelDirs = [...dirs.editorModelDirs, dirs.viewerModelDir].filter(Boolean) as string[]
+  const allDataDirs = [...dirs.editorDataDirs, dirs.viewerDataDir].filter(Boolean) as string[]
+
+  let deletedCount = 0
+
+  for (const dir of allModelDirs) {
+    const glbPath = join(dir, `model_${id}.glb`)
+    if (existsSync(glbPath)) {
+      try {
+        unlinkSync(glbPath)
+        deletedCount++
+      } catch {}
+    }
+  }
+
+  for (const dir of allDataDirs) {
+    const layoutPath = join(dir, `layout_${id}.json`)
+    if (existsSync(layoutPath)) {
+      try {
+        unlinkSync(layoutPath)
+        deletedCount++
+      } catch {}
+    }
+  }
+
+  const cleaned = cleanOldSceneAssets(id, dirs)
+  deletedCount += cleaned.length
+
+  const res = NextResponse.json({ ok: true, sceneId: id, deletedCount })
+  return withViewerCors(request, res)
 }
