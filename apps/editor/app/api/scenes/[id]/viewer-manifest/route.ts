@@ -32,6 +32,12 @@ export function OPTIONS(request: NextRequest) {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const { id } = await params
 
+  const hostHeader = request.headers.get('x-forwarded-host') || request.headers.get('host')
+  const protoHeader = request.headers.get('x-forwarded-proto') || 'http'
+  const origin = hostHeader
+    ? `${protoHeader}://${hostHeader}`
+    : (request.nextUrl?.origin || new URL(request.url).origin)
+
   // Bursa Default Manifest
   const BURSA_MANIFEST = {
     version: '1.0',
@@ -43,9 +49,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       country: 'TR',
     },
     assets: {
-      modelUrl: 'assets/model/model_2026-09-22.glb',
-      layoutUrl: 'assets/data/layout_2026-09-22.json',
-      planCadUrl: 'assets/data/plan_cad.json',
+      modelUrl: `${origin}/api/scenes/${id}/model`,
+      layoutUrl: `${origin}/api/scenes/${id}/layout`,
+      planCadUrl: `${origin}/assets/data/plan_cad.json`,
     },
     building: {
       id: 'building_jrk57b7iof7fyzxt',
@@ -157,6 +163,70 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return withViewerCors(request, res)
     }
 
+    // Extract dynamic zones, metrics, and bounds from stored scene graph if available
+    let dynamicZones = BURSA_MANIFEST.zones
+    let dynamicMetrics = BURSA_MANIFEST.metrics
+    let dynamicBounds = BURSA_MANIFEST.building.bounds
+
+    if (stored?.graph?.nodes) {
+      const allNodes = Object.values(stored.graph.nodes) as any[]
+      const zoneNodes = allNodes.filter((n) => (n.type === 'zone' || n.kind === 'zone') && Array.isArray(n.polygon) && n.polygon.length >= 3)
+      if (zoneNodes.length > 0) {
+        dynamicZones = zoneNodes.map((z, idx) => ({
+          id: z.id || `zone_${idx}`,
+          key: z.name?.toLowerCase() || `zone_${idx}`,
+          name: z.name || `Bölge ${idx + 1}`,
+          labelTr: z.name || `Bölge ${idx + 1}`,
+          labelEn: z.name || `Zone ${idx + 1}`,
+          areaM2: z.metadata?.area || 0,
+          palletCapacity: z.metadata?.palletSlots || 0,
+          color: z.color || '#3b82f6',
+          polygon: z.polygon,
+        }))
+      }
+
+      // Compute rough bounds and node metrics
+      let minX = Infinity, minY = Infinity, minZ = Infinity
+      let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity
+      let rackCount = 0
+      let palletSlots = 0
+
+      for (const n of allNodes) {
+        if (n.position && Array.isArray(n.position)) {
+          const [x, y, z] = n.position
+          if (x < minX) minX = x
+          if (y < minY) minY = y
+          if (z < minZ) minZ = z
+          if (x > maxX) maxX = x
+          if (y > maxY) maxY = y
+          if (z > maxZ) maxZ = z
+        }
+        const nameLower = (n.name || '').toLowerCase()
+        const kindLower = (n.kind || n.type || '').toLowerCase()
+        if (kindLower.includes('rack') || nameLower.includes('rack')) {
+          rackCount++
+          palletSlots += 24 // average slots per bay
+        }
+      }
+
+      if (Number.isFinite(minX) && Number.isFinite(maxX)) {
+        dynamicBounds = {
+          min: [Math.floor(minX - 5), 0, Math.floor(minZ - 5)],
+          max: [Math.ceil(maxX + 5), Math.max(12, Math.ceil(maxY + 2)), Math.ceil(maxZ + 5)],
+        }
+      }
+
+      if (rackCount > 0) {
+        dynamicMetrics = {
+          totalRacks: rackCount,
+          totalPalletSlots: palletSlots,
+          totalAreaM2: Math.max(2500, Math.round((maxX - minX) * (maxZ - minZ))),
+          clearHeightM: 12.50,
+          docksCount: Math.max(4, Math.min(40, Math.floor(allNodes.length / 40))),
+        }
+      }
+    }
+
     const manifest = {
       version: '1.0',
       site: {
@@ -165,12 +235,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         city: 'Türkiye',
       },
       assets: {
-        modelUrl: `assets/model/model_2026-09-22.glb`,
-        layoutUrl: `assets/data/layout_2026-09-22.json`,
+        modelUrl: `${origin}/api/scenes/${id}/model`,
+        layoutUrl: `${origin}/api/scenes/${id}/layout`,
       },
-      building: BURSA_MANIFEST.building,
-      zones: BURSA_MANIFEST.zones,
-      metrics: BURSA_MANIFEST.metrics,
+      building: {
+        id: `building_${id}`,
+        bounds: dynamicBounds,
+      },
+      zones: dynamicZones,
+      metrics: dynamicMetrics,
     }
 
     const res = NextResponse.json(manifest)
