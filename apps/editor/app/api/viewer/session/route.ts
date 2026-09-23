@@ -55,14 +55,16 @@ async function resolveUserAllowedSites(
   userId: string,
   role?: string,
 ): Promise<Array<typeof BURSA_DEFAULT_SITE>> {
-  try {
-    const sites: Array<typeof BURSA_DEFAULT_SITE> = []
+  const sites: Array<typeof BURSA_DEFAULT_SITE> = []
+  const isAdmin = role === 'admin'
 
-    // 1. Fetch all warehouse scenes from local/SQLite store
+  try {
+    // 1. Fetch user scenes from store
     try {
       const operations = await getSceneOperations()
-      const allScenes = await operations.listScenes()
-      for (const sc of allScenes) {
+      // Admin sees all scenes; non-admin sees only scenes owned or shared
+      const scenes = await operations.listScenes(isAdmin ? {} : { viewerId: userId })
+      for (const sc of scenes) {
         if (!sc.nodeCount || sc.nodeCount === 0) continue
         const isBursa = sc.name.toLowerCase().includes('bursa') || sc.id.toLowerCase().includes('bursa')
         const isSakarya = sc.name.toLowerCase().includes('sakarya') || sc.id.toLowerCase().includes('sakarya')
@@ -84,11 +86,11 @@ async function resolveUserAllowedSites(
       }
     } catch {}
 
-    // 2. If MySQL auth is available, also merge assigned sites from database
+    // 2. If MySQL auth is available, merge assigned sites from database
     if (authAvailable()) {
       try {
         let rows: SiteAssignmentRow[] = []
-        if (role === 'admin') {
+        if (isAdmin) {
           rows = await query<SiteAssignmentRow>(
             `SELECT s.id, s.public_id, s.name, s.scene_id, s.storage_slots, s.footprint_m2
                FROM sites s
@@ -131,14 +133,14 @@ async function resolveUserAllowedSites(
       } catch {}
     }
 
-    // Ensure Bursa Başköy default site is always available
-    if (!sites.some((s) => s.id === '01JM1SITE00000000000000002' || s.name.toLowerCase().includes('bursa'))) {
+    // Only ensure Bursa default site for admins if not already present
+    if (isAdmin && !sites.some((s) => s.id === BURSA_DEFAULT_SITE.id || s.name.toLowerCase().includes('bursa'))) {
       sites.unshift(BURSA_DEFAULT_SITE)
     }
 
-    return sites.length > 0 ? sites : [BURSA_DEFAULT_SITE]
+    return sites
   } catch {
-    return [BURSA_DEFAULT_SITE]
+    return isAdmin ? [BURSA_DEFAULT_SITE] : []
   }
 }
 

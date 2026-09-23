@@ -9,6 +9,7 @@ import { authAvailable } from '@/lib/auth/db'
 import { getSessionUser, type SessionUser } from '@/lib/auth/session'
 import { createViewerLaunchToken } from '@/lib/auth/viewer-token'
 import { getSceneOperations } from '@/lib/scene-store-server'
+import { query, type RowDataPacket } from '@panel/lib/db'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,19 +29,28 @@ async function fetchScenes(viewerId: string | undefined): Promise<SceneMeta[]> {
   const operations = await getSceneOperations()
   // `viewerId` (owned OR shared with them), not `ownerId`, so scenes shared to
   // this account also appear on their scenes page — matching the editor rail.
+  // When viewerId is undefined (admin), all scenes are listed.
   return (await operations.listScenes({ viewerId, limit: 50 })) as SceneMeta[]
+}
+
+interface UserAssignmentSiteRow extends RowDataPacket {
+  public_id: string
+  name: string
+  scene_id: string | null
+  role: string
 }
 
 export default async function ScenesPage() {
   const user = await requireUser()
   const editingAllowed = user?.role !== 'viewer'
-  const scenes = await fetchScenes(user?.id)
+  const isAdmin = user?.role === 'admin'
+  const scenes = await fetchScenes(isAdmin ? undefined : user?.id)
   const launchToken = user ? createViewerLaunchToken(user) : undefined
   const viewerUrl = process.env.NEXT_PUBLIC_VIEWER_URL || 'https://viewer.opex.help'
 
   const editableSceneIds: string[] = []
   if (user && user.role !== 'viewer') {
-    if (user.role === 'admin') {
+    if (isAdmin) {
       editableSceneIds.push(...scenes.map((s) => s.id))
     } else {
       const operations = await getSceneOperations()
@@ -58,6 +68,81 @@ export default async function ScenesPage() {
           }
         }
       }
+    }
+  }
+
+  // If user is non-admin, also merge scenes associated with assigned sites from MySQL
+  if (user && !isAdmin && authAvailable()) {
+    try {
+      const assignedRows = await query<UserAssignmentSiteRow>(
+        `SELECT s.public_id, s.name, s.scene_id, a.role
+           FROM assignments a
+           JOIN sites s ON s.id = a.site_id
+           JOIN users u ON u.id = a.user_id
+          WHERE u.public_id = ?
+            AND s.status <> 'archived'
+          ORDER BY s.name ASC`,
+        [user.id],
+      )
+
+      const operations = await getSceneOperations()
+      const existingIds = new Set(scenes.map((s) => s.id))
+
+      for (const row of assignedRows) {
+        const targetId = row.scene_id || row.public_id
+        if (targetId && !existingIds.has(targetId)) {
+          let sceneMeta: SceneMeta | null = null
+          try {
+            const stored = await operations.loadStoredScene(targetId)
+            if (stored) {
+              sceneMeta = {
+                id: stored.id,
+                name: stored.name || row.name,
+                projectId: stored.projectId,
+                ownerId: stored.ownerId,
+                thumbnailUrl: stored.thumbnailUrl,
+                version: stored.version,
+                createdAt: stored.createdAt,
+                updatedAt: stored.updatedAt,
+                sizeBytes: stored.sizeBytes,
+                nodeCount: stored.nodeCount,
+                editorUrl: stored.editorUrl,
+                url: stored.url,
+                published: stored.published,
+                graphHash: stored.graphHash,
+              }
+            }
+          } catch {}
+
+          if (!sceneMeta) {
+            sceneMeta = {
+              id: targetId,
+              name: row.name,
+              projectId: null,
+              ownerId: null,
+              thumbnailUrl: null,
+              version: 1,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              sizeBytes: 0,
+              nodeCount: 0,
+              editorUrl: `/scene/${targetId}`,
+              url: `/scene/${targetId}`,
+              published: true,
+            }
+          }
+
+          scenes.push(sceneMeta)
+          existingIds.add(targetId)
+
+          const roleLower = (row.role || '').toLowerCase()
+          if ((roleLower === 'editor' || roleLower === 'admin') && !editableSceneIds.includes(targetId)) {
+            editableSceneIds.push(targetId)
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Could not load assigned sites for user in scenes page:', err)
     }
   }
 
