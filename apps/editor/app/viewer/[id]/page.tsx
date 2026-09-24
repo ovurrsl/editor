@@ -9,6 +9,7 @@ import {
   incrementProjectViews,
 } from '@/features/community/lib/projects/actions'
 import { CollectionsPanel } from './collections-panel'
+import { ViewerGuestCTA } from './viewer-guest-cta'
 
 type ViewerState =
   | { status: 'loading' }
@@ -16,6 +17,12 @@ type ViewerState =
   | { status: 'ready'; name: string; scene: SceneGraph }
 
 const EMPTY_SCENE: SceneGraph = { nodes: {}, rootNodeIds: [] }
+
+async function loadDemoScene(id: string): Promise<SceneGraph> {
+  const response = await fetch(`/demos/${id}.json`)
+  if (!response.ok) throw new Error(`Demo "${id}" not found`)
+  return (await response.json()) as SceneGraph
+}
 
 export default function ViewerPage() {
   const params = useParams<{ id: string }>()
@@ -25,6 +32,23 @@ export default function ViewerPage() {
   useEffect(() => {
     let cancelled = false
     setState({ status: 'loading' })
+
+    if (projectId.startsWith('demo_')) {
+      loadDemoScene(projectId)
+        .then((scene) => {
+          if (!cancelled) setState({ status: 'ready', name: 'Demo', scene })
+        })
+        .catch((error: unknown) => {
+          if (cancelled) return
+          setState({
+            status: 'error',
+            message: error instanceof Error ? error.message : 'Failed to load demo',
+          })
+        })
+      return () => {
+        cancelled = true
+      }
+    }
 
     getProjectModelPublic(projectId)
       .then((result) => {
@@ -95,6 +119,7 @@ export default function ViewerPage() {
       <div className="pointer-events-none absolute top-20 right-4 z-40">
         <CollectionsPanel />
       </div>
+      <ViewerGuestCTA />
     </div>
   )
 }
