@@ -5,16 +5,11 @@
 
 'use server'
 
-import type { AnyNode, AnyNodeId } from '@pascal-app/core'
-import { createServerSupabaseClient } from '../database/server'
+import type { SceneGraph } from '@pascal-app/editor'
 import { getSession } from '../auth/server'
-import { createId } from '../utils/id-generator'
+import { createServerSupabaseClient } from '../database/server'
 import type { ActionResult } from '../projects/actions'
-
-export interface SceneGraph {
-  nodes: Record<AnyNodeId, AnyNode>
-  rootNodeIds: AnyNodeId[]
-}
+import { createId } from '../utils/id-generator'
 
 export interface ProjectModel {
   id: string
@@ -30,7 +25,9 @@ export interface ProjectModel {
 /**
  * Get the latest model for a project (highest version)
  */
-export async function getProjectModel(projectId: string): Promise<ActionResult<ProjectModel | null>> {
+export async function getProjectModel(
+  projectId: string,
+): Promise<ActionResult<ProjectModel | null>> {
   try {
     const session = await getSession()
 
@@ -183,8 +180,9 @@ export async function saveProjectModel(
         scene_graph: sceneGraph,
         updated_at: new Date().toISOString(),
       }
-      const { data: updatedModel, error: updateError } = (await (supabase
-        .from('projects_models') as any)
+      const { data: updatedModel, error: updateError } = (await (
+        supabase.from('projects_models') as any
+      )
         .update(updateData)
         .eq('id', existingModel.id)
         .select()
@@ -214,8 +212,9 @@ export async function saveProjectModel(
         draft: true,
         scene_graph: sceneGraph,
       }
-      const { data: newModel, error: createError } = (await (supabase
-        .from('projects_models') as any)
+      const { data: newModel, error: createError } = (await (
+        supabase.from('projects_models') as any
+      )
         .insert(insertData)
         .select()
         .single()) as { data: ProjectModel | null; error: any }

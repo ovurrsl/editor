@@ -3,7 +3,7 @@ import { schema } from '@pascal-app/db'
 import type { BetterAuthOptions } from 'better-auth'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { magicLink } from 'better-auth/plugins'
+import { lastLoginMethod, magicLink } from 'better-auth/plugins'
 
 export interface SendMagicLinkParams {
   email: string
@@ -32,14 +32,16 @@ export interface AuthConfig {
  * - Custom session with activePropertyId
  * - Session cookie caching
  */
-export function createAuth(config: AuthConfig): ReturnType<typeof betterAuth> {
+export function createAuth(config: AuthConfig) {
   return betterAuth({
     appName: config.appName,
     baseURL: config.baseURL,
     trustedOrigins: [
       config.baseURL,
       process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : '',
-      process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL}` : '',
+      process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL}`
+        : '',
     ].filter(Boolean),
     secret: config.secret,
     basePath: '/api/auth',
@@ -66,6 +68,13 @@ export function createAuth(config: AuthConfig): ReturnType<typeof betterAuth> {
         },
       },
     },
+    // Account linking — always enabled so magic link + Google users can share accounts
+    account: {
+      accountLinking: {
+        enabled: true,
+        trustedProviders: ['google', 'email'],
+      },
+    },
     // Google OAuth provider (only enabled when credentials are provided)
     ...(config.googleClientId &&
       config.googleClientSecret && {
@@ -75,15 +84,11 @@ export function createAuth(config: AuthConfig): ReturnType<typeof betterAuth> {
             clientSecret: config.googleClientSecret,
           },
         },
-        account: {
-          accountLinking: {
-            enabled: true,
-            trustedProviders: ['google'],
-          },
-        },
       }),
     plugins: [
       ...(config.additionalPlugins ?? []),
+      // Track which login method was last used (e.g., "google", "magic-link")
+      lastLoginMethod(),
       // Magic link authentication
       ...(config.sendMagicLink
         ? [

@@ -5,10 +5,10 @@
 
 'use server'
 
-import { createServerSupabaseClient } from '../database/server'
 import { getSession } from '../auth/server'
+import { createServerSupabaseClient } from '../database/server'
 import { createId } from '../utils/id-generator'
-import type { CreateProjectParams, Project, Database } from './types'
+import type { CreateProjectParams, Project } from './types'
 
 export type ActionResult<T = unknown> = {
   success: boolean
@@ -178,8 +178,7 @@ export async function setActiveProject(projectId: string | null): Promise<Action
     const supabase = await createServerSupabaseClient()
 
     // Update session's active_project_id
-    const { error } = await (supabase
-      .from('auth_sessions') as any)
+    const { error } = await (supabase.from('auth_sessions') as any)
       .update({ active_project_id: projectId })
       .eq('user_id', session.user.id)
 
@@ -222,7 +221,13 @@ export async function createProject(params: CreateProjectParams): Promise<Action
     let addressId: string | null = null
 
     // Only create address if address data is provided
-    const hasAddressData = params.center || params.streetNumber || params.route || params.city || params.state || params.postalCode
+    const hasAddressData =
+      params.center ||
+      params.streetNumber ||
+      params.route ||
+      params.city ||
+      params.state ||
+      params.postalCode
     if (hasAddressData) {
       addressId = createId('address')
       const addressData = {
@@ -236,8 +241,7 @@ export async function createProject(params: CreateProjectParams): Promise<Action
         latitude: params.center ? params.center[1].toString() : undefined,
         longitude: params.center ? params.center[0].toString() : undefined,
       }
-      const { error: addressError } = (await (supabase
-        .from('projects_addresses') as any)
+      const { error: addressError } = (await (supabase.from('projects_addresses') as any)
         .insert(addressData)
         .select()
         .single()) as { data: any; error: any }
@@ -266,8 +270,7 @@ export async function createProject(params: CreateProjectParams): Promise<Action
             createdFrom: 'editor-app',
           },
     }
-    const { data, error } = (await (supabase
-      .from('projects') as any)
+    const { data, error } = (await (supabase.from('projects') as any)
       .insert(projectData)
       .select(`
         *,
@@ -460,9 +463,9 @@ export async function getPublicProjectsByUserId(userId: string): Promise<ActionR
  * Get a project model for viewing
  * Allows viewing if: project is public OR user owns the project
  */
-export async function getProjectModelPublic(projectId: string): Promise<
-  ActionResult<{ project: Project; model: any | null }>
-> {
+export async function getProjectModelPublic(
+  projectId: string,
+): Promise<ActionResult<{ project: Project; model: any | null; isOwner: boolean }>> {
   try {
     const session = await getSession()
     const supabase = await createServerSupabaseClient()
@@ -515,6 +518,7 @@ export async function getProjectModelPublic(projectId: string): Promise<
       data: {
         project: projectData as Project,
         model: model || null,
+        isOwner: !!isOwner,
       },
     }
   } catch (error) {
@@ -583,8 +587,7 @@ export async function updateProjectPrivacy(
     }
 
     // Update privacy
-    const { error } = await (supabase
-      .from('projects') as any)
+    const { error } = await (supabase.from('projects') as any)
       .update({ is_private: isPrivate })
       .eq('id', projectId)
 
@@ -608,12 +611,68 @@ export async function updateProjectPrivacy(
 }
 
 /**
+ * Update project visibility settings (privacy + public scan/guide visibility)
+ */
+export async function updateProjectVisibility(
+  projectId: string,
+  settings: {
+    isPrivate?: boolean
+    showScansPublic?: boolean
+    showGuidesPublic?: boolean
+  },
+): Promise<ActionResult> {
+  try {
+    const session = await getSession()
+
+    if (!session?.user) {
+      return { success: false, error: 'Not authenticated' }
+    }
+
+    const supabase = await createServerSupabaseClient()
+
+    // Verify ownership
+    const { data: project } = await supabase
+      .from('projects')
+      .select('owner_id')
+      .eq('id', projectId)
+      .single()
+
+    if ((project as any)?.owner_id !== session.user.id) {
+      return { success: false, error: 'Unauthorized' }
+    }
+
+    const updateData: Record<string, boolean> = {}
+    if (settings.isPrivate !== undefined) updateData.is_private = settings.isPrivate
+    if (settings.showScansPublic !== undefined)
+      updateData.show_scans_public = settings.showScansPublic
+    if (settings.showGuidesPublic !== undefined)
+      updateData.show_guides_public = settings.showGuidesPublic
+
+    if (Object.keys(updateData).length === 0) {
+      return { success: true, message: 'No changes' }
+    }
+
+    const { error } = await (supabase.from('projects') as any)
+      .update(updateData)
+      .eq('id', projectId)
+
+    if (error) {
+      return { success: false, error: error.message }
+    }
+
+    return { success: true, message: 'Visibility settings updated' }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update visibility settings',
+    }
+  }
+}
+
+/**
  * Update project name
  */
-export async function updateProjectName(
-  projectId: string,
-  name: string,
-): Promise<ActionResult> {
+export async function updateProjectName(projectId: string, name: string): Promise<ActionResult> {
   try {
     const session = await getSession()
 
@@ -648,8 +707,7 @@ export async function updateProjectName(
     }
 
     // Update name
-    const { error } = await (supabase
-      .from('projects') as any)
+    const { error } = await (supabase.from('projects') as any)
       .update({ name: name.trim() })
       .eq('id', projectId)
 
@@ -720,8 +778,7 @@ export async function updateProjectAddress(
     }
 
     // Update address
-    const { error } = await (supabase
-      .from('projects_addresses') as any)
+    const { error } = await (supabase.from('projects_addresses') as any)
       .update(addressData)
       .eq('id', (project as any).address_id)
 
@@ -748,12 +805,10 @@ export async function updateProjectAddress(
  * Migrate a local project to the cloud
  * Creates a new project with the local project's data
  */
-export async function migrateLocalProject(
-  localProject: {
-    name: string
-    scene_graph: any
-  },
-): Promise<ActionResult<{ id: string }>> {
+export async function migrateLocalProject(localProject: {
+  name: string
+  scene_graph: any
+}): Promise<ActionResult<{ id: string }>> {
   try {
     const session = await getSession()
 
@@ -959,8 +1014,7 @@ export async function toggleProjectLike(
 
     if (existingLike) {
       // Unlike - remove the like
-      const { error } = await (supabase
-        .from('projects_likes') as any)
+      const { error } = await (supabase.from('projects_likes') as any)
         .delete()
         .eq('id', (existingLike as any).id)
 
@@ -997,10 +1051,7 @@ export async function toggleProjectLike(
     } as any)
 
     // Update the project's like count cache
-    await (supabase
-      .from('projects') as any)
-      .update({ likes: likeCount || 0 })
-      .eq('id', projectId)
+    await (supabase.from('projects') as any).update({ likes: likeCount || 0 }).eq('id', projectId)
 
     return {
       success: true,
@@ -1022,7 +1073,7 @@ export async function toggleProjectLike(
  */
 export async function uploadProjectThumbnail(
   projectId: string,
-  blob: Blob
+  blob: Blob,
 ): Promise<{ success: true; data: { thumbnail_url: string } } | { success: false; error: string }> {
   try {
     const session = await getSession()
@@ -1033,7 +1084,10 @@ export async function uploadProjectThumbnail(
     // Validate file size (max 10MB)
     const MAX_SIZE = 10 * 1024 * 1024
     if (blob.size > MAX_SIZE) {
-      return { success: false, error: `Image too large (${(blob.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 10MB.` }
+      return {
+        success: false,
+        error: `Image too large (${(blob.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 10MB.`,
+      }
     }
 
     const supabase = await createServerSupabaseClient()
@@ -1075,8 +1129,7 @@ export async function uploadProjectThumbnail(
     const thumbnailUrl = `${urlData.publicUrl}?t=${Date.now()}`
 
     // Update the project with the new thumbnail URL
-    const { error: updateError } = await (supabase
-      .from('projects') as any)
+    const { error: updateError } = await (supabase.from('projects') as any)
       .update({ thumbnail_url: thumbnailUrl })
       .eq('id', projectId)
 

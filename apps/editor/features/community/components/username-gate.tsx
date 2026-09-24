@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '../lib/auth/hooks'
 import { getUsername } from '../lib/auth/actions'
+import { useAuth } from '../lib/auth/hooks'
 import { UsernameOnboardingDialog } from './username-onboarding-dialog'
 
 export function UsernameGate({ children }: { children: React.ReactNode }) {
@@ -17,10 +17,15 @@ export function UsernameGate({ children }: { children: React.ReactNode }) {
       setNeedsUsername(false)
       return
     }
-    getUsername().then((username) => {
-      setNeedsUsername(!username)
-      setChecking(false)
-    })
+    getUsername()
+      .then((username) => {
+        setNeedsUsername(!username)
+        setChecking(false)
+      })
+      .catch(() => {
+        setNeedsUsername(false)
+        setChecking(false)
+      })
   }, [isAuthenticated, isLoading])
 
   return (

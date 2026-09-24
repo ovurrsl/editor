@@ -10,16 +10,14 @@ export const projects = pgTable(
   (t) => ({
     id: id('project'),
     name: t.text('name'),
-    addressId: t
-      .text('address_id')
-      .references(() => addresses.id, { onDelete: 'set null' }),
-    ownerId: t
-      .text('owner_id')
-      .references(() => users.id, { onDelete: 'set null' }),
+    addressId: t.text('address_id').references(() => addresses.id, { onDelete: 'set null' }),
+    ownerId: t.text('owner_id').references(() => users.id, { onDelete: 'set null' }),
     detailsJson: t.jsonb('details_json'),
     metadata: t.jsonb('metadata'),
     // Community features
     isPrivate: t.boolean('is_private').notNull().default(true),
+    showScansPublic: t.boolean('show_scans_public').notNull().default(true),
+    showGuidesPublic: t.boolean('show_guides_public').notNull().default(true),
     views: t.integer('views').notNull().default(0),
     likes: t.integer('likes').notNull().default(0),
     thumbnailUrl: t.text('thumbnail_url'),

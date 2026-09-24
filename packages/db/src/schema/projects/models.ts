@@ -10,9 +10,7 @@ export const models = pgTable('projects_models', (t) => ({
   version: t.integer('version').default(1),
   description: t.text('description'),
   draft: t.boolean('draft').default(true),
-  projectId: t
-    .text('project_id')
-    .references(() => projects.id, { onDelete: 'set null' }),
+  projectId: t.text('project_id').references(() => projects.id, { onDelete: 'set null' }),
   sceneGraph: t.jsonb('scene_graph'),
   metadata: t.jsonb('metadata'),
   ...timestampsColumnsSoftDelete,

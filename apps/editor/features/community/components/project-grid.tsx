@@ -3,11 +3,11 @@
 import { Eye, Heart, Settings } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import type { Project } from '../lib/projects/types'
-import type { LocalProject } from '../lib/local-storage/project-store'
-import { ProjectSettingsDialog } from './project-settings-dialog'
-import { getUserProjectLikes, toggleProjectLike } from '../lib/projects/actions'
 import { useAuth } from '../lib/auth/hooks'
+import type { LocalProject } from '../lib/local-storage/project-store'
+import { getUserProjectLikes, toggleProjectLike } from '../lib/projects/actions'
+import type { Project } from '../lib/projects/types'
+import { ProjectSettingsDialog } from './project-settings-dialog'
 
 interface ProjectGridProps {
   projects: (Project | LocalProject)[]
@@ -57,9 +57,7 @@ export function ProjectGrid({
       return
     }
 
-    const projectIds = projects
-      .filter((p) => !isLocalProject(p))
-      .map((p) => p.id)
+    const projectIds = projects.filter((p) => !isLocalProject(p)).map((p) => p.id)
 
     if (projectIds.length === 0) return
 
@@ -97,7 +95,7 @@ export function ProjectGrid({
     setUserLikes((prev) => ({ ...prev, [projectId]: !wasLiked }))
     setLikeCounts((prev) => ({
       ...prev,
-      [projectId]: wasLiked ? currentCount - 1 : currentCount + 1
+      [projectId]: wasLiked ? currentCount - 1 : currentCount + 1,
     }))
 
     // Call server action
@@ -237,9 +235,7 @@ export function ProjectGrid({
                         >
                           <Heart
                             className={`w-3.5 h-3.5 ${
-                              userLikes[project.id]
-                                ? 'fill-red-500 text-red-500'
-                                : ''
+                              userLikes[project.id] ? 'fill-red-500 text-red-500' : ''
                             }`}
                           />
                           <span>{likeCounts[project.id] ?? project.likes}</span>

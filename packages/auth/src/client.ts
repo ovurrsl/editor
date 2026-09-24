@@ -1,4 +1,4 @@
-import { magicLinkClient } from 'better-auth/client/plugins'
+import { lastLoginMethodClient, magicLinkClient } from 'better-auth/client/plugins'
 import { createAuthClient } from 'better-auth/react'
 
 /**
@@ -13,8 +13,7 @@ function getAuthURL(): string {
 
   // SSR fallback - detect environment from Vercel variables
   const isDevelopment =
-    process.env.NODE_ENV === 'development' ||
-    process.env.NEXT_PUBLIC_VERCEL_ENV === 'development'
+    process.env.NODE_ENV === 'development' || process.env.NEXT_PUBLIC_VERCEL_ENV === 'development'
   const isPreview = process.env.NEXT_PUBLIC_VERCEL_ENV === 'preview'
   const isProduction =
     process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_VERCEL_ENV === 'production'
@@ -45,7 +44,7 @@ function getAuthURL(): string {
  */
 export const authClient = createAuthClient({
   baseURL: getAuthURL(),
-  plugins: [magicLinkClient()],
+  plugins: [magicLinkClient(), lastLoginMethodClient()],
 })
 
 /**

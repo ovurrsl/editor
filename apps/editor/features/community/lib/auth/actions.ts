@@ -1,10 +1,11 @@
 'use server'
 
+import { db, schema } from '@pascal-app/db'
+import { and, eq, ne, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { db, schema } from '@pascal-app/db'
-import { eq, and, ne, sql } from 'drizzle-orm'
 import { auth } from '@/lib/auth'
+import { createServerSupabaseClient } from '../database/server'
 import { getSession } from './server'
 
 /**
@@ -63,10 +64,15 @@ export async function updateUsername(
     return { success: false, error: 'Username is already taken' }
   }
 
-  await db
+  const updated = await db
     .update(schema.users)
     .set({ username: trimmed })
     .where(eq(schema.users.id, session.user.id))
+    .returning({ id: schema.users.id })
+
+  if (updated.length === 0) {
+    return { success: false, error: 'User not found. Please sign out and sign in again.' }
+  }
 
   revalidatePath('/')
   revalidatePath('/settings')
@@ -92,9 +98,7 @@ export async function getUsername(): Promise<string | null> {
 /**
  * Check if a username is available
  */
-export async function checkUsernameAvailability(
-  username: string,
-): Promise<{ available: boolean }> {
+export async function checkUsernameAvailability(username: string): Promise<{ available: boolean }> {
   const trimmed = username.trim()
   if (trimmed.length < 3 || !/^[a-zA-Z0-9_-]+$/.test(trimmed)) {
     return { available: false }
@@ -116,6 +120,8 @@ export async function getUserProfile(): Promise<{
   username: string | null
   githubUrl: string | null
   xUrl: string | null
+  youtubeUrl: string | null
+  emailNotifications: boolean
 } | null> {
   const session = await getSession()
   if (!session?.user) return null
@@ -125,6 +131,8 @@ export async function getUserProfile(): Promise<{
       username: schema.users.username,
       githubUrl: schema.users.githubUrl,
       xUrl: schema.users.xUrl,
+      youtubeUrl: schema.users.youtubeUrl,
+      emailNotifications: schema.users.emailNotifications,
     })
     .from(schema.users)
     .where(eq(schema.users.id, session.user.id))
@@ -139,6 +147,7 @@ export async function getUserProfile(): Promise<{
 export async function updateProfile(data: {
   githubUrl?: string | null
   xUrl?: string | null
+  youtubeUrl?: string | null
 }): Promise<{ success: boolean; error?: string }> {
   const session = await getSession()
   if (!session?.user) {
@@ -151,12 +160,16 @@ export async function updateProfile(data: {
   if (data.xUrl && !/^https:\/\/(www\.)?(x|twitter)\.com\/.+/.test(data.xUrl)) {
     return { success: false, error: 'Invalid X/Twitter URL' }
   }
+  if (data.youtubeUrl && !/^https:\/\/(www\.)?(youtube\.com|youtu\.be)\/.+/.test(data.youtubeUrl)) {
+    return { success: false, error: 'Invalid YouTube URL' }
+  }
 
   await db
     .update(schema.users)
     .set({
       githubUrl: data.githubUrl ?? null,
       xUrl: data.xUrl ?? null,
+      youtubeUrl: data.youtubeUrl ?? null,
     })
     .where(eq(schema.users.id, session.user.id))
 
@@ -176,6 +189,7 @@ export async function getPublicProfile(username: string): Promise<{
     username: string
     githubUrl: string | null
     xUrl: string | null
+    youtubeUrl: string | null
   }
   error?: string
 }> {
@@ -187,6 +201,7 @@ export async function getPublicProfile(username: string): Promise<{
       username: schema.users.username,
       githubUrl: schema.users.githubUrl,
       xUrl: schema.users.xUrl,
+      youtubeUrl: schema.users.youtubeUrl,
     })
     .from(schema.users)
     .where(sql`lower(${schema.users.username}) = lower(${username})`)
@@ -198,4 +213,92 @@ export async function getPublicProfile(username: string): Promise<{
   }
 
   return { success: true, data: user as typeof user & { username: string } }
+}
+
+/**
+ * Get connected accounts for the current user
+ */
+export async function getConnectedAccounts(): Promise<{ providerId: string; accountId: string }[]> {
+  const session = await getSession()
+  if (!session?.user) return []
+
+  const result = await db
+    .select({
+      providerId: schema.accounts.providerId,
+      accountId: schema.accounts.accountId,
+    })
+    .from(schema.accounts)
+    .where(eq(schema.accounts.userId, session.user.id))
+
+  return result
+}
+
+/**
+ * Upload avatar image to Supabase Storage and update user record
+ */
+export async function uploadAvatar(
+  formData: FormData,
+): Promise<{ success: boolean; imageUrl?: string; error?: string }> {
+  const session = await getSession()
+  if (!session?.user) {
+    return { success: false, error: 'Not authenticated' }
+  }
+
+  const file = formData.get('avatar') as File | null
+  if (!file) {
+    return { success: false, error: 'No file provided' }
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    return { success: false, error: 'File too large (max 5MB)' }
+  }
+
+  if (!file.type.startsWith('image/')) {
+    return { success: false, error: 'File must be an image' }
+  }
+
+  const supabase = await createServerSupabaseClient()
+  const ext = file.name.split('.').pop() || 'png'
+  const filename = `${session.user.id}/avatar.${ext}`
+
+  const { data: uploadData, error: uploadError } = await supabase.storage
+    .from('avatars')
+    .upload(filename, file, {
+      contentType: file.type,
+      upsert: true,
+    })
+
+  if (uploadError) {
+    return { success: false, error: `Upload failed: ${uploadError.message}` }
+  }
+
+  const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(uploadData.path)
+  const imageUrl = `${urlData.publicUrl}?t=${Date.now()}`
+
+  // Update user image in database
+  await db.update(schema.users).set({ image: imageUrl }).where(eq(schema.users.id, session.user.id))
+
+  revalidatePath('/')
+  revalidatePath('/settings')
+  return { success: true, imageUrl }
+}
+
+/**
+ * Update the current user's email notification preference
+ */
+export async function updateEmailNotifications(
+  enabled: boolean,
+): Promise<{ success: boolean; error?: string }> {
+  const session = await getSession()
+  if (!session?.user) {
+    return { success: false, error: 'Not authenticated' }
+  }
+
+  await db
+    .update(schema.users)
+    .set({ emailNotifications: enabled })
+    .where(eq(schema.users.id, session.user.id))
+
+  revalidatePath('/settings')
+  return { success: true }
 }

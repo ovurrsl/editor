@@ -16,9 +16,7 @@ export const sessions = pgTable('auth_sessions', (t) => ({
   // Custom: active project for the session context
   activeProjectId: t.text('active_project_id'),
   // Admin plugin support: tracks who is impersonating this session
-  impersonatedBy: t
-    .text('impersonated_by')
-    .references(() => users.id, { onDelete: 'set null' }),
+  impersonatedBy: t.text('impersonated_by').references(() => users.id, { onDelete: 'set null' }),
   ...timestamps,
 })).enableRLS()
 

@@ -3,12 +3,8 @@
  */
 
 import { create } from 'zustand'
+import { getActiveProject, getProjectById, getUserProjects } from './actions'
 import type { Project } from './types'
-import {
-  getActiveProject,
-  getUserProjects,
-  getProjectById,
-} from './actions'
 
 interface ProjectStore {
   // State
@@ -53,7 +49,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       set({
         activeProject: result.data || null,
         isLoading: false,
-        error: null
+        error: null,
       })
       // Note: Auto-select logic removed - now using URL-based routing
       // The URL parameter determines which project to load
@@ -61,7 +57,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
       set({
         error: result.error || 'Failed to fetch active project',
         activeProject: null,
-        isLoading: false
+        isLoading: false,
       })
     }
   },
@@ -91,9 +87,6 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   // Initialize - fetch both projects and active project
   initialize: async () => {
     set({ isLoading: true })
-    await Promise.all([
-      get().fetchProjects(),
-      get().fetchActiveProject(),
-    ])
+    await Promise.all([get().fetchProjects(), get().fetchActiveProject()])
   },
 }))

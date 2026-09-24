@@ -3,12 +3,8 @@
  * Stores projects and scenes in browser localStorage
  */
 
+import type { SceneGraph } from '@pascal-app/editor'
 import { createId } from '../utils/id-generator'
-
-export interface SceneGraph {
-  nodes: Record<string, any>
-  rootNodeIds: string[]
-}
 
 export interface LocalProject {
   id: string // Format: 'local_project_xyz'

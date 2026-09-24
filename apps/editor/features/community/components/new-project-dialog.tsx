@@ -2,9 +2,9 @@
 
 import { X } from 'lucide-react'
 import { useState } from 'react'
-import { createProject } from '../lib/projects/actions'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/primitives/dialog'
 import { Switch } from '@/components/ui/primitives/switch'
+import { createProject } from '../lib/projects/actions'
 
 interface NewProjectDialogProps {
   open: boolean
@@ -20,7 +20,12 @@ interface NewProjectDialogProps {
 /**
  * NewProjectDialog - Dialog for creating a new project with optional Google Maps address search
  */
-export function NewProjectDialog({ open, onOpenChange, onSuccess, localProjectData }: NewProjectDialogProps) {
+export function NewProjectDialog({
+  open,
+  onOpenChange,
+  onSuccess,
+  localProjectData,
+}: NewProjectDialogProps) {
   const [projectName, setProjectName] = useState(localProjectData?.name || '')
   const [isPrivate, setIsPrivate] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
@@ -72,10 +77,7 @@ export function NewProjectDialog({ open, onOpenChange, onSuccess, localProjectDa
 
   return (
     <Dialog open={open} onOpenChange={handleClose} modal={false}>
-      <DialogContent
-        className="sm:max-w-[500px]"
-        onInteractOutside={(e) => e.preventDefault()}
-      >
+      <DialogContent className="sm:max-w-[500px]" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Create New Project</DialogTitle>
           <button

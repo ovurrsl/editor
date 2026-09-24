@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/primitives/dialog'
-import { updateUsername, checkUsernameAvailability } from '../lib/auth/actions'
+import { checkUsernameAvailability, updateUsername } from '../lib/auth/actions'
 
 interface UsernameOnboardingDialogProps {
   open: boolean
@@ -20,8 +20,7 @@ export function UsernameOnboardingDialog({ open, onComplete }: UsernameOnboardin
   const validate = (value: string): string | null => {
     if (value.length < 3) return 'Must be at least 3 characters'
     if (value.length > 30) return 'Must be at most 30 characters'
-    if (!/^[a-zA-Z0-9_-]+$/.test(value))
-      return 'Only letters, numbers, hyphens, and underscores'
+    if (!/^[a-zA-Z0-9_-]+$/.test(value)) return 'Only letters, numbers, hyphens, and underscores'
     return null
   }
 
@@ -116,9 +115,7 @@ export function UsernameOnboardingDialog({ open, onComplete }: UsernameOnboardin
                 )}
               </div>
             )}
-            {validationError && (
-              <p className="text-destructive text-xs">{validationError}</p>
-            )}
+            {validationError && <p className="text-destructive text-xs">{validationError}</p>}
             {!username.trim() && (
               <p className="text-muted-foreground text-xs">
                 3-30 characters. Letters, numbers, hyphens, and underscores only.

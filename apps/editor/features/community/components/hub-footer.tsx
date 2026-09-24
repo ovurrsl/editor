@@ -1,5 +1,3 @@
-import Link from 'next/link'
-
 function GitHubIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">

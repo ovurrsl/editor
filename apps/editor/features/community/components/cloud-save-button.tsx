@@ -1,8 +1,8 @@
 'use client'
 
 import { Cloud, Home } from 'lucide-react'
-import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../lib/auth/hooks'
 import { useProjectStore } from '../lib/projects/store'
 import { ProfileDropdown } from './profile-dropdown'
@@ -22,7 +22,7 @@ interface CloudSaveButtonProps {
 export function CloudSaveButton({ projectId }: CloudSaveButtonProps) {
   const { isAuthenticated, isLoading } = useAuth()
   const [isSignInDialogOpen, setIsSignInDialogOpen] = useState(false)
-  const initialize = useProjectStore(state => state.initialize)
+  const initialize = useProjectStore((state) => state.initialize)
   const router = useRouter()
 
   const isLocalProject = projectId?.startsWith('local_')

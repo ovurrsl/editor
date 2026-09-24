@@ -41,7 +41,9 @@ export function LocalProjectMigrationDialog({
         <DialogHeader>
           <DialogTitle>Save Local Projects to Cloud</DialogTitle>
           <DialogDescription>
-            You have {localProjects.length} local {localProjects.length === 1 ? 'project' : 'projects'} that {localProjects.length === 1 ? 'hasn\'t' : 'haven\'t'} been saved to the cloud yet.
+            You have {localProjects.length} local{' '}
+            {localProjects.length === 1 ? 'project' : 'projects'} that{' '}
+            {localProjects.length === 1 ? "hasn't" : "haven't"} been saved to the cloud yet.
           </DialogDescription>
         </DialogHeader>
 

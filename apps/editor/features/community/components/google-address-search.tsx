@@ -4,7 +4,7 @@ import { Autocomplete, LoadScript } from '@react-google-maps/api'
 import { MapPin } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
-const libraries: ('places')[] = ['places']
+const libraries: 'places'[] = ['places']
 
 interface AddressComponents {
   streetNumber?: string
@@ -47,9 +47,7 @@ export function GoogleAddressSearch({ onAddressSelect, disabled }: GoogleAddress
     return (
       <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-destructive text-sm">
         <p className="font-medium">Google Maps API Key Missing</p>
-        <p className="mt-1 text-xs">
-          Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your .env.local file
-        </p>
+        <p className="mt-1 text-xs">Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your .env.local file</p>
       </div>
     )
   }
