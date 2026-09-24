@@ -1,6 +1,6 @@
 'use client'
 
-import { Editor, type SceneGraph, useEditor } from '@pascal-app/editor'
+import { Editor, type SceneGraph, useEditor, useViewer } from '@pascal-app/editor'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
@@ -8,13 +8,14 @@ import {
   getProjectModelPublic,
   incrementProjectViews,
 } from '@/features/community/lib/projects/actions'
+import type { ProjectOwner } from '@/features/community/lib/projects/types'
 import { CollectionsPanel } from './collections-panel'
 import { ViewerGuestCTA } from './viewer-guest-cta'
 
 type ViewerState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
-  | { status: 'ready'; name: string; scene: SceneGraph }
+  | { status: 'ready'; name: string; owner: ProjectOwner | null; scene: SceneGraph }
 
 const EMPTY_SCENE: SceneGraph = { nodes: {}, rootNodeIds: [] }
 
@@ -36,7 +37,7 @@ export default function ViewerPage() {
     if (projectId.startsWith('demo_')) {
       loadDemoScene(projectId)
         .then((scene) => {
-          if (!cancelled) setState({ status: 'ready', name: 'Demo', scene })
+          if (!cancelled) setState({ status: 'ready', name: 'Demo', owner: null, scene })
         })
         .catch((error: unknown) => {
           if (cancelled) return
@@ -58,10 +59,15 @@ export default function ViewerPage() {
           return
         }
         const scene = (result.data.model?.scene_graph as SceneGraph | null) ?? EMPTY_SCENE
-        setState({ status: 'ready', name: result.data.project.name, scene })
-        if (!result.data.isOwner) {
+        const { project, isOwner } = result.data
+        // Owners always see their scans and guides; visitors follow the project's
+        // public visibility settings.
+        if (!isOwner) {
+          useViewer.getState().setShowScans(project.show_scans_public !== false)
+          useViewer.getState().setShowGuides(project.show_guides_public !== false)
           incrementProjectViews(projectId)
         }
+        setState({ status: 'ready', name: project.name, owner: project.owner ?? null, scene })
       })
       .catch((error: unknown) => {
         if (cancelled) return
@@ -116,6 +122,19 @@ export default function ViewerPage() {
         previewScene={state.scene}
         projectId={`viewer_${projectId}`}
       />
+      <div className="pointer-events-none absolute top-4 left-1/2 z-40 -translate-x-1/2">
+        <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-border/60 bg-background/90 px-4 py-1.5 text-sm shadow-sm backdrop-blur">
+          <span className="font-medium">{state.name}</span>
+          {state.owner?.username && (
+            <Link
+              className="text-muted-foreground hover:text-foreground hover:underline"
+              href={`/u/${state.owner.username}`}
+            >
+              by @{state.owner.username}
+            </Link>
+          )}
+        </div>
+      </div>
       <div className="pointer-events-none absolute top-20 right-4 z-40">
         <CollectionsPanel />
       </div>
