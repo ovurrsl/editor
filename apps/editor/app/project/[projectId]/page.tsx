@@ -6,6 +6,7 @@ import { PascalWebXRButton } from '@webxr/plugin/pascal-editor'
 import { History } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { DevDebugMenu } from '@/components/dev-debug-menu'
 import { EDITOR_SIDEBAR_TABS } from '@/components/editor-sidebar-tabs'
 import { Button } from '@/components/ui/primitives/button'
 import {
@@ -215,6 +216,7 @@ export default function EditorPage() {
   return (
     <VersionHistoryContext.Provider value={historyContext}>
       <div className="relative h-screen w-screen">
+        <DevDebugMenu />
         <div className="pointer-events-none absolute top-3 right-3 z-50 flex items-start gap-2">
           <div className="pointer-events-auto">
             <PascalRadio />
