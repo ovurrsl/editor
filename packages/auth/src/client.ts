@@ -22,8 +22,10 @@ function getAuthURL(): string {
     return process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`
   }
 
-  if (isPreview && process.env.NEXT_PUBLIC_VERCEL_URL) {
-    return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
+  const previewHost =
+    process.env.NEXT_PUBLIC_VERCEL_BRANCH_URL || process.env.NEXT_PUBLIC_VERCEL_URL
+  if (isPreview && previewHost) {
+    return `https://${previewHost}`
   }
 
   if (isProduction) {
