@@ -7,6 +7,7 @@
 
 import { getSession } from '../auth/server'
 import { createServerSupabaseClient } from '../database/server'
+import { isSceneGraphEmpty } from '../models/scene-graph-utils'
 import { createId } from '../utils/id-generator'
 import type { CreateProjectParams, Project } from './types'
 
@@ -254,6 +255,8 @@ export async function createProject(params: CreateProjectParams): Promise<Action
       }
     }
 
+    const isEmpty = params.sceneGraph ? isSceneGraphEmpty(params.sceneGraph) : true
+
     // Create the project
     const projectData = {
       id: projectId,
@@ -261,6 +264,7 @@ export async function createProject(params: CreateProjectParams): Promise<Action
       address_id: addressId,
       owner_id: session.user.id,
       is_private: params.isPrivate !== undefined ? params.isPrivate : true,
+      is_empty: isEmpty,
       details_json: params.center
         ? {
             coordinates: params.center,
@@ -404,6 +408,7 @@ export async function getPublicProjects(): Promise<ActionResult<Project[]>> {
         owner:auth_users!owner_id(id, name, username, image)
       `)
       .eq('is_private', false)
+      .eq('is_empty', false)
       .order('views', { ascending: false })
       .limit(50)
 
@@ -503,15 +508,50 @@ export async function getProjectModelPublic(
       }
     }
 
-    // Get the model
-    const { data: model } = await supabase
-      .from('projects_models')
-      .select('*')
-      .eq('project_id', projectId)
-      .is('deleted_at', null)
-      .order('version', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+    const publishedVersion = projectData.published_model_version as number | null
+    let model: any | null = null
+
+    if (publishedVersion !== null) {
+      const { data: publishedModel } = await supabase
+        .from('projects_models')
+        .select('*')
+        .eq('project_id', projectId)
+        .eq('version', publishedVersion)
+        .eq('draft', false)
+        .is('deleted_at', null)
+        .limit(1)
+        .maybeSingle()
+
+      model = publishedModel ?? null
+    }
+
+    // Legacy fallback for projects created before version publishing was added.
+    if (!model) {
+      const { data: latestPublishedModel } = await supabase
+        .from('projects_models')
+        .select('*')
+        .eq('project_id', projectId)
+        .eq('draft', false)
+        .is('deleted_at', null)
+        .order('version', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (latestPublishedModel) {
+        model = latestPublishedModel
+      } else {
+        const { data: latestModel } = await supabase
+          .from('projects_models')
+          .select('*')
+          .eq('project_id', projectId)
+          .is('deleted_at', null)
+          .order('version', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        model = latestModel ?? null
+      }
+    }
 
     return {
       success: true,
@@ -907,7 +947,17 @@ export async function deleteProject(projectId: string): Promise<ActionResult> {
       }
     }
 
-    // Delete the project (cascade will delete related records)
+    // Delete project asset files from storage before deleting the project
+    const { data: assets } = await (supabase.from('project_assets') as any)
+      .select('storage_key')
+      .eq('project_id', projectId)
+
+    if (assets && assets.length > 0) {
+      const storageKeys = (assets as { storage_key: string }[]).map((a) => a.storage_key)
+      await supabase.storage.from('project-assets').remove(storageKeys)
+    }
+
+    // Delete the project (cascade will delete related records including project_assets rows)
     const { error } = await supabase.from('projects').delete().eq('id', projectId)
 
     if (error) {

@@ -1,10 +1,13 @@
 'use client'
 
-import { Editor, type SceneGraph } from '@pascal-app/editor'
+import { useScene } from '@pascal-app/core'
+import { applySceneGraphToEditor, Editor, type SceneGraph } from '@pascal-app/editor'
 import { PascalWebXRButton } from '@webxr/plugin/pascal-editor'
+import { History } from 'lucide-react'
 import { useParams } from 'next/navigation'
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { EDITOR_SIDEBAR_TABS } from '@/components/editor-sidebar-tabs'
+import { Button } from '@/components/ui/primitives/button'
 import {
   CommunityViewerToolbarLeft,
   CommunityViewerToolbarRight,
@@ -15,18 +18,48 @@ import {
   WebXRFeatureRuntime,
 } from '@/components/webxr-feature-gate'
 import { CloudSaveButton } from '@/features/community/components/cloud-save-button'
+import { FeedbackDialog } from '@/features/community/components/feedback-dialog'
+import {
+  VersionHistoryContext,
+  type VersionHistoryContextValue,
+  VersionHistoryPanel,
+} from '@/features/community/components/version-history-panel'
+import { deleteProjectAssetByUrl } from '@/features/community/lib/assets/actions'
 import { useAuth } from '@/features/community/lib/auth/hooks'
+import { submitFeedbackWithImages } from '@/features/community/lib/feedback/submit'
 import {
   getLocalProject,
   updateLocalProjectScene,
 } from '@/features/community/lib/local-storage/project-store'
-import { getProjectModel, saveProjectModel } from '@/features/community/lib/models/actions'
+import {
+  getProjectModel,
+  getProjectVersionByNumber,
+  saveProjectModel,
+  saveProjectVersion,
+} from '@/features/community/lib/models/actions'
 import { uploadProjectThumbnail } from '@/features/community/lib/projects/actions'
 import { useProjectStore } from '@/features/community/lib/projects/store'
+import { uploadAssetWithProgress } from '@/lib/upload-asset'
+
+const HISTORY_TAB = {
+  id: 'history',
+  label: 'History',
+  component: VersionHistoryPanel,
+  mobileDefaultSnap: 0.5,
+  mobileIcon: <History className="h-5 w-5" />,
+  icon: <History className="h-6 w-6" />,
+}
 
 function isLocalProjectId(projectId: string) {
   return projectId.startsWith('local_')
 }
+
+function currentSceneGraph(): SceneGraph {
+  const { nodes, rootNodeIds, collections, materials, installedPlugins } = useScene.getState()
+  return { nodes, rootNodeIds, collections, materials, installedPlugins }
+}
+
+type VersionPreview = { version: number; scene: SceneGraph }
 
 export default function EditorPage() {
   const params = useParams<{ projectId: string }>()
@@ -36,12 +69,22 @@ export default function EditorPage() {
   const setActiveProject = useProjectStore((state) => state.setActiveProject)
   const updateActiveThumbnail = useProjectStore((state) => state.updateActiveThumbnail)
   const webXRInstalled = useWebXRInstalled()
+  const [preview, setPreview] = useState<VersionPreview | null>(null)
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
+  // The editing scene to put back when a version preview closes.
+  const sceneBeforePreviewRef = useRef<SceneGraph | null>(null)
 
   useEffect(() => {
     if (isAuthenticated && !isLocal) {
       setActiveProject(projectId)
     }
   }, [projectId, isLocal, isAuthenticated, setActiveProject])
+
+  useEffect(() => {
+    if (preview || !sceneBeforePreviewRef.current) return
+    applySceneGraphToEditor(sceneBeforePreviewRef.current)
+    sceneBeforePreviewRef.current = null
+  }, [preview])
 
   // A thrown error surfaces the editor's load-failure retry instead of an empty
   // scene, so a transient fetch failure can never be autosaved over the cloud copy.
@@ -53,7 +96,7 @@ export default function EditorPage() {
     if (!result.success) {
       throw new Error(result.error ?? 'Failed to load project')
     }
-    return result.data?.scene_graph ?? null
+    return result.data?.model?.scene_graph ?? null
   }, [projectId, isLocal])
 
   const handleSave = useCallback(
@@ -81,41 +124,133 @@ export default function EditorPage() {
     [projectId, isLocal, updateActiveThumbnail],
   )
 
-  return (
-    <div className="relative h-screen w-screen">
-      <div className="pointer-events-none absolute top-3 right-3 z-50">
-        <CloudSaveButton projectId={projectId} />
-      </div>
-      <WebXRFeatureRuntime enabled={webXRInstalled}>
-        <WebXRFeatureConsumer>
-          {(vr) => (
-            <Editor
-              guardAgainstSceneWipe
-              immersive={vr?.session ? vr.immersive : undefined}
-              layoutVersion="v2"
-              onLoad={handleLoad}
-              onSave={handleSave}
-              onThumbnailCapture={isLocal ? undefined : handleThumbnailCapture}
-              projectId={projectId}
-              sidebarTabs={EDITOR_SIDEBAR_TABS}
-              viewerToolbarLeft={<CommunityViewerToolbarLeft />}
-              viewerToolbarRight={
-                <CommunityViewerToolbarRight
-                  vrButton={
-                    vr ? (
-                      <PascalWebXRButton
-                        className="flex h-8 w-8 items-center justify-center text-muted-foreground hover:bg-accent disabled:opacity-50"
-                        feature={vr}
-                      />
-                    ) : null
-                  }
-                  vrLabel="Enter VR"
-                />
-              }
-            />
-          )}
-        </WebXRFeatureConsumer>
-      </WebXRFeatureRuntime>
+  const handlePreview = useCallback(
+    async (version: number) => {
+      const result = await getProjectVersionByNumber(projectId, version)
+      const scene = result.data?.scene_graph
+      if (!scene) return
+      if (!sceneBeforePreviewRef.current) {
+        sceneBeforePreviewRef.current = currentSceneGraph()
+      }
+      setPreview({ version, scene })
+    },
+    [projectId],
+  )
+
+  // Flush the live scene into the draft first, so the locked version holds
+  // exactly what is on screen rather than the last debounced autosave.
+  const handleSaveVersion = useCallback(
+    async (options?: { publish?: boolean }) => {
+      const draftResult = await saveProjectModel(projectId, currentSceneGraph())
+      if (!draftResult.success) return draftResult.error ?? 'Failed to save draft'
+      const result = await saveProjectVersion(projectId, options)
+      setHistoryRefreshKey((key) => key + 1)
+      return result.success ? (result.message ?? null) : (result.error ?? 'Failed to save version')
+    },
+    [projectId],
+  )
+
+  const handleRestore = useCallback(async () => {
+    if (!preview) return
+    const result = await saveProjectModel(projectId, preview.scene, {
+      restoredFromVersion: preview.version,
+    })
+    if (!result.success) return
+    sceneBeforePreviewRef.current = preview.scene
+    setPreview(null)
+    setHistoryRefreshKey((key) => key + 1)
+  }, [projectId, preview])
+
+  const handleSaveShortcut = useCallback(() => {
+    if (isLocal || preview) return false
+    handleSaveVersion()
+    return true
+  }, [isLocal, preview, handleSaveVersion])
+
+  const historyContext = useMemo<VersionHistoryContextValue>(
+    () => ({
+      projectId,
+      previewVersion: preview?.version ?? null,
+      refreshKey: historyRefreshKey,
+      onPreview: handlePreview,
+      onSaveVersion: handleSaveVersion,
+    }),
+    [projectId, preview, historyRefreshKey, handlePreview, handleSaveVersion],
+  )
+
+  const sidebarTabs = useMemo(
+    () => (isLocal ? EDITOR_SIDEBAR_TABS : [...EDITOR_SIDEBAR_TABS, HISTORY_TAB]),
+    [isLocal],
+  )
+
+  const previewBanner = preview ? (
+    <div className="pointer-events-auto absolute top-3 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-full border border-border bg-background/95 px-4 py-1.5 text-sm shadow-lg backdrop-blur">
+      <span>Previewing v{preview.version}</span>
+      <Button onClick={handleRestore} size="sm">
+        Restore this version
+      </Button>
+      <Button onClick={() => setPreview(null)} size="sm" variant="outline">
+        Exit preview
+      </Button>
     </div>
+  ) : null
+
+  return (
+    <VersionHistoryContext.Provider value={historyContext}>
+      <div className="relative h-screen w-screen">
+        <div className="pointer-events-none absolute top-3 right-3 z-50 flex items-center gap-2">
+          <div className="pointer-events-auto">
+            <FeedbackDialog
+              onSubmit={submitFeedbackWithImages}
+              projectId={isLocal ? undefined : projectId}
+            />
+          </div>
+          <CloudSaveButton projectId={projectId} />
+        </div>
+        <WebXRFeatureRuntime enabled={webXRInstalled}>
+          <WebXRFeatureConsumer>
+            {(vr) => (
+              <Editor
+                guardAgainstSceneWipe
+                immersive={vr?.session ? vr.immersive : undefined}
+                isVersionPreviewMode={preview !== null}
+                layoutVersion="v2"
+                onLoad={handleLoad}
+                onSave={handleSave}
+                onSaveShortcut={handleSaveShortcut}
+                onThumbnailCapture={isLocal ? undefined : handleThumbnailCapture}
+                previewScene={preview?.scene}
+                projectId={projectId}
+                sidebarTabs={sidebarTabs}
+                sitePanelProps={
+                  isLocal
+                    ? undefined
+                    : {
+                        projectId,
+                        onUploadAsset: uploadAssetWithProgress,
+                        onDeleteAsset: deleteProjectAssetByUrl,
+                      }
+                }
+                viewerBanner={previewBanner}
+                viewerToolbarLeft={<CommunityViewerToolbarLeft />}
+                viewerToolbarRight={
+                  <CommunityViewerToolbarRight
+                    vrButton={
+                      vr ? (
+                        <PascalWebXRButton
+                          className="flex h-8 w-8 items-center justify-center text-muted-foreground hover:bg-accent disabled:opacity-50"
+                          feature={vr}
+                        />
+                      ) : null
+                    }
+                    vrLabel="Enter VR"
+                  />
+                }
+              />
+            )}
+          </WebXRFeatureConsumer>
+        </WebXRFeatureRuntime>
+      </div>
+    </VersionHistoryContext.Provider>
   )
 }

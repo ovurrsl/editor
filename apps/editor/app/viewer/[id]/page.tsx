@@ -8,6 +8,7 @@ import {
   getProjectModelPublic,
   incrementProjectViews,
 } from '@/features/community/lib/projects/actions'
+import { CollectionsPanel } from './collections-panel'
 
 type ViewerState =
   | { status: 'loading' }
@@ -91,6 +92,9 @@ export default function ViewerPage() {
         previewScene={state.scene}
         projectId={`viewer_${projectId}`}
       />
+      <div className="pointer-events-none absolute top-20 right-4 z-40">
+        <CollectionsPanel />
+      </div>
     </div>
   )
 }

@@ -13,11 +13,13 @@ export type DbProject = {
   created_at: string
   updated_at: string
   is_private: boolean
+  is_empty: boolean
   show_scans_public: boolean
   show_guides_public: boolean
   views: number
   likes: number
   thumbnail_url: string | null
+  published_model_version: number | null
 }
 
 export type DbProjectAddress = {
@@ -65,7 +67,14 @@ export type Database = {
           | 'likes'
           | 'show_scans_public'
           | 'show_guides_public'
-        > & { show_scans_public?: boolean; show_guides_public?: boolean }
+          | 'is_empty'
+          | 'published_model_version'
+        > & {
+          show_scans_public?: boolean
+          show_guides_public?: boolean
+          is_empty?: boolean
+          published_model_version?: number | null
+        }
         Update: Partial<Omit<DbProject, 'id' | 'created_at' | 'updated_at'>>
       }
       projects_addresses: {
@@ -114,11 +123,13 @@ export type Project = {
   updated_at: string
   // Community features
   is_private: boolean
+  is_empty: boolean
   show_scans_public: boolean
   show_guides_public: boolean
   views: number
   likes: number
   thumbnail_url: string | null
+  published_model_version: number | null
   address: {
     id: string
     street_number?: string

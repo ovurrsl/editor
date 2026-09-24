@@ -14,8 +14,10 @@ export const projects = pgTable(
     ownerId: t.text('owner_id').references(() => users.id, { onDelete: 'set null' }),
     detailsJson: t.jsonb('details_json'),
     metadata: t.jsonb('metadata'),
+    publishedModelVersion: t.integer('published_model_version'),
     // Community features
     isPrivate: t.boolean('is_private').notNull().default(true),
+    isEmpty: t.boolean('is_empty').notNull().default(true),
     showScansPublic: t.boolean('show_scans_public').notNull().default(true),
     showGuidesPublic: t.boolean('show_guides_public').notNull().default(true),
     views: t.integer('views').notNull().default(0),
