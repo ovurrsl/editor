@@ -256,7 +256,7 @@ function isPointInPolygon(pt: [number, number], vs: [number, number][]): boolean
           const raw = JSON.parse(fs.readFileSync(staticFile, 'utf-8'))
           stored = {
             id,
-            name: raw.name || (id === '6c5728d1aed7' ? 'güzeller Depo' : `Depo ${id}`),
+            name: raw.name || (id === '6c5728d1aed7' ? 'GÃ¼zeller Depo' : `Depo ${id}`),
             graph: {
               nodes: raw.nodes || {},
               rootNodeIds: raw.rootNodeIds || [],
@@ -390,7 +390,7 @@ function isPointInPolygon(pt: [number, number], vs: [number, number][]): boolean
     }
 
     const resolvedSiteName = siteName || stored?.name || 'Lojistik Depo';
-    const isGuzeller = resolvedSiteName.toLowerCase().includes('güzeller') || resolvedSiteName.toLowerCase().includes('güzeller') || id === '6c5728d1aed7';
+    const isGuzeller = resolvedSiteName.toLowerCase().includes('gÃ¼zeller') || resolvedSiteName.toLowerCase().includes('guzeller') || id === '6c5728d1aed7';
     const isBursa = resolvedSiteName.toLowerCase().includes('bursa') || id === '01JM1SITE00000000000000002';
     let baseModelUrl = `${origin}/api/scenes/${id}/model`;
     if (isGuzeller && id !== '6c5728d1aed7') {
@@ -403,7 +403,7 @@ function isPointInPolygon(pt: [number, number], vs: [number, number][]): boolean
       site: {
         id,
         name: resolvedSiteName,
-        city: 'Türkiye',
+        city: 'TÃ¼rkiye',
       },
       assets: {
         modelUrl: baseModelUrl,
