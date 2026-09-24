@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import fs from 'node:fs'
 import path from 'node:path'
+import { getSceneOperations } from '@/lib/scene-store-server'
+import { bakeModelToDisk } from '@/lib/bake-model-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,12 +60,6 @@ function resolveModelFilePath(id: string): string | null {
     }
   }
 
-  // Fallback to latest standard active model if exact scene file not present
-  for (const base of searchBases) {
-    candidates.push(path.join(base, 'public/assets/model', 'model_2026-09-22.glb'))
-    candidates.push(path.join(base, 'assets/model', 'model_2026-09-22.glb'))
-  }
-
   for (const p of candidates) {
     if (fs.existsSync(p)) {
       try {
@@ -78,7 +74,20 @@ function resolveModelFilePath(id: string): string | null {
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const { id } = await params
-  const filePath = resolveModelFilePath(id)
+  let filePath = resolveModelFilePath(id)
+
+  if (!filePath) {
+    // Attempt on-demand model bake from scene store
+    try {
+      const operations = await getSceneOperations()
+      const stored = await operations.loadStoredScene(id)
+      if (stored && Object.keys(stored.graph?.nodes || {}).length > 0) {
+        filePath = await bakeModelToDisk(id, stored)
+      }
+    } catch (bakeErr) {
+      console.warn(`On-demand bake failed for scene ${id}:`, bakeErr)
+    }
+  }
 
   if (!filePath) {
     const res = NextResponse.json({ error: 'Model GLB not found', id }, { status: 404 })

@@ -44,6 +44,10 @@ export interface SceneMeta {
   ownerId: string | null
   sizeBytes: number
   nodeCount: number
+  editorUrl?: string
+  url?: string
+  published?: boolean
+  graphHash?: string
 }
 
 // Card previews are stored inline in the scenes row, so they must stay small:

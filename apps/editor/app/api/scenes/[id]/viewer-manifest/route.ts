@@ -1,4 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
+import fs from 'node:fs'
+import path from 'node:path'
 import { query, type RowDataPacket } from '@panel/lib/db'
 import { getSceneOperations } from '@/lib/scene-store-server'
 
@@ -70,6 +72,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         areaM2: 2874.1,
         palletCapacity: 7086,
         color: '#06b6d4',
+        polygon: [
+          [-108.0, -55.0],
+          [-135.84, -55.0],
+          [-135.8, 64.3],
+          [-108.0, 64.3],
+        ],
       },
       {
         id: 'zone_zm80l2t21bzxx8t0',
@@ -80,6 +88,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         areaM2: 1398.0,
         palletCapacity: 4608,
         color: '#a855f7',
+        polygon: [
+          [-108.0, -55.0],
+          [-108.0, 64.3],
+          [-94.4664, 64.3],
+          [-94.4664, -55.0],
+        ],
       },
       {
         id: 'zone_849h6lrnoe2biitp',
@@ -90,6 +104,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         areaM2: 9157.4,
         palletCapacity: 25488,
         color: '#3b82f6',
+        polygon: [
+          [-94.4664, -55.0],
+          [-94.4664, 64.3],
+          [-47.8, 64.3],
+          [-47.8, 41.55],
+          [6.0, 41.59],
+          [6.05, -55.0],
+        ],
       },
       {
         id: 'zone_07ewdx8rjcf77xr8',
@@ -100,6 +122,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         areaM2: 6842.6,
         palletCapacity: 19752,
         color: '#84cc16',
+        polygon: [
+          [6.0, -55.0],
+          [6.0, 41.59],
+          [17.25, 41.6],
+          [17.2, 18.9],
+          [119.8, 18.9],
+          [119.76, -55.0],
+        ],
       },
       {
         id: 'zone_i6jzu76namlmrd31',
@@ -110,6 +140,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         areaM2: 450.0,
         palletCapacity: 0,
         color: '#f59e0b',
+        polygon: [
+          [-146.1, -83.8],
+          [-146.1, -78.7],
+          [-141.12, -78.59],
+          [-128.5, -91.71],
+          [-138.3, -91.6],
+        ],
       },
     ],
     metrics: {
@@ -134,27 +171,102 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return withViewerCors(request, res)
   }
 
-  // Otherwise, load from scene store or resolve through sites table
+function resolveStaticLayoutFile(id: string): string | null {
+  const searchBases = [
+    process.cwd(),
+    path.join(process.cwd(), 'apps/editor'),
+    path.join(process.cwd(), 'public'),
+    path.join(process.cwd(), 'apps/editor/public'),
+  ]
+
+  for (const base of searchBases) {
+    const specific = path.join(base, 'public/assets/data', `layout_${id}.json`)
+    if (fs.existsSync(specific)) return specific
+    const specificAlt = path.join(base, 'assets/data', `layout_${id}.json`)
+    if (fs.existsSync(specificAlt)) return specificAlt
+  }
+
+  return null
+}
+
+function calculatePolygonArea(poly: [number, number][]): number {
+  if (!Array.isArray(poly) || poly.length < 3) return 0
+  let area = 0
+  for (let i = 0; i < poly.length; i++) {
+    const curr = poly[i]
+    const next = poly[(i + 1) % poly.length]
+    if (!curr || !next) continue
+    const [x1, y1] = curr
+    const [x2, y2] = next
+    area += x1 * y2 - x2 * y1
+  }
+  return Math.round(Math.abs(area) / 2)
+}
+
+function isPointInPolygon(pt: [number, number], vs: [number, number][]): boolean {
+  const x = pt[0], y = pt[1]
+  let inside = false
+  for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+    const vi = vs[i]
+    const vj = vs[j]
+    if (!vi || !vj) continue
+    const [xi, yi] = vi
+    const [xj, yj] = vj
+    const intersect = ((yi > y) !== (yj > y)) && (x < ((xj - xi) * (y - yi)) / (yj - yi) + xi)
+    if (intersect) inside = !inside
+  }
+  return inside
+}
+
+  // Otherwise, load from scene store, sites table, or static layout file
   try {
-    const operations = await getSceneOperations()
-    let stored = await operations.loadStoredScene(id)
+    let stored: any = null
     let siteName = ''
 
-    if (!stored) {
-      try {
-        const siteRows = await query<RowDataPacket & { scene_id: string | null; name: string }>(
-          'SELECT scene_id, name FROM sites WHERE public_id = ? OR name = ? LIMIT 1',
-          [id, id],
-        )
-        const firstSite = siteRows[0]
-        if (firstSite) {
-          siteName = firstSite.name
-          if (firstSite.scene_id) {
-            stored = await operations.loadStoredScene(firstSite.scene_id)
+    try {
+      const operations = await getSceneOperations()
+      stored = await operations.loadStoredScene(id)
+
+      if (!stored) {
+        try {
+          const siteRows = await query<RowDataPacket & { scene_id: string | null; name: string }>(
+            'SELECT scene_id, name FROM sites WHERE public_id = ? OR name = ? LIMIT 1',
+            [id, id],
+          )
+          const firstSite = siteRows[0]
+          if (firstSite) {
+            siteName = firstSite.name
+            if (firstSite.scene_id) {
+              stored = await operations.loadStoredScene(firstSite.scene_id)
+            }
           }
+        } catch {
+          // Fall back gracefully if sites table query fails
         }
-      } catch {
-        // Fall back gracefully if sites table query fails
+      }
+    } catch (err) {
+      console.warn(`Could not load scene ${id} from database store:`, err)
+    }
+
+    // Static file fallback if not in database
+    if (!stored) {
+      const staticFile = resolveStaticLayoutFile(id)
+      if (staticFile) {
+        try {
+          const raw = JSON.parse(fs.readFileSync(staticFile, 'utf-8'))
+          stored = {
+            id,
+            name: raw.name || (id === '6c5728d1aed7' ? 'Güzeller Depo' : `Depo ${id}`),
+            graph: {
+              nodes: raw.nodes || {},
+              rootNodeIds: raw.rootNodeIds || [],
+              installedPlugins: raw.installedPlugins || [],
+            },
+          }
+          siteName = stored.name
+        } catch (e) {
+          console.warn(`Could not parse static layout for manifest ${id}:`, e)
+        }
       }
     }
 
@@ -164,25 +276,48 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Extract dynamic zones, metrics, and bounds from stored scene graph if available
-    let dynamicZones = BURSA_MANIFEST.zones
-    let dynamicMetrics = BURSA_MANIFEST.metrics
-    let dynamicBounds = BURSA_MANIFEST.building.bounds
+    let dynamicZones: any[] = []
+    let dynamicMetrics = {
+      totalRacks: 0,
+      totalPalletSlots: 0,
+      totalAreaM2: 0,
+      clearHeightM: 12.0,
+      docksCount: 0,
+    }
+    let dynamicBounds = {
+      min: [-50, 0, -50],
+      max: [50, 12, 50],
+    }
 
     if (stored?.graph?.nodes) {
       const allNodes = Object.values(stored.graph.nodes) as any[]
       const zoneNodes = allNodes.filter((n) => (n.type === 'zone' || n.kind === 'zone') && Array.isArray(n.polygon) && n.polygon.length >= 3)
       if (zoneNodes.length > 0) {
-        dynamicZones = zoneNodes.map((z, idx) => ({
-          id: z.id || `zone_${idx}`,
-          key: z.name?.toLowerCase() || `zone_${idx}`,
-          name: z.name || `Bölge ${idx + 1}`,
-          labelTr: z.name || `Bölge ${idx + 1}`,
-          labelEn: z.name || `Zone ${idx + 1}`,
-          areaM2: z.metadata?.area || 0,
-          palletCapacity: z.metadata?.palletSlots || 0,
-          color: z.color || '#3b82f6',
-          polygon: z.polygon,
-        }))
+        dynamicZones = zoneNodes.map((z, idx) => {
+          const poly = z.polygon as [number, number][]
+          const computedArea = calculatePolygonArea(poly)
+          let zonePallets = z.metadata?.palletSlots || 0
+          if (!zonePallets) {
+            const racksInZone = allNodes.filter(
+              (n) =>
+                ((n.kind || n.type || '').toLowerCase().includes('rack') || (n.name || '').toLowerCase().includes('rack')) &&
+                Array.isArray(n.position) &&
+                isPointInPolygon([n.position[0], n.position[2]], poly)
+            ).length
+            zonePallets = racksInZone > 0 ? racksInZone * 15 : 0
+          }
+          return {
+            id: z.id || `zone_${idx}`,
+            key: z.name?.toLowerCase().replace(/\s+/g, '_') || `zone_${idx}`,
+            name: z.name || `Bölge ${idx + 1}`,
+            labelTr: z.name || `Bölge ${idx + 1}`,
+            labelEn: z.name || `Zone ${idx + 1}`,
+            areaM2: z.metadata?.area || computedArea || 0,
+            palletCapacity: zonePallets,
+            color: z.color || '#3b82f6',
+            polygon: z.polygon,
+          }
+        })
       }
 
       // Compute rough bounds and node metrics
@@ -190,6 +325,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity
       let rackCount = 0
       let palletSlots = 0
+      let doorCount = 0
 
       for (const n of allNodes) {
         if (n.position && Array.isArray(n.position)) {
@@ -205,7 +341,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         const kindLower = (n.kind || n.type || '').toLowerCase()
         if (kindLower.includes('rack') || nameLower.includes('rack')) {
           rackCount++
-          palletSlots += 24 // average slots per bay
+          const levels = Number(n.levels || 5)
+          const perLevel = Number(n.palletsPerLevel || 3)
+          palletSlots += levels * perLevel
+        }
+        if (kindLower.includes('door') || nameLower.includes('door')) {
+          doorCount++
         }
       }
 
@@ -222,8 +363,29 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           totalPalletSlots: palletSlots,
           totalAreaM2: Math.max(2500, Math.round((maxX - minX) * (maxZ - minZ))),
           clearHeightM: 12.50,
-          docksCount: Math.max(4, Math.min(40, Math.floor(allNodes.length / 40))),
+          docksCount: doorCount > 0 ? doorCount : Math.max(4, Math.min(40, Math.floor(allNodes.length / 40))),
         }
+      }
+
+      if (dynamicZones.length === 0 && Number.isFinite(minX) && Number.isFinite(maxX)) {
+        dynamicZones = [
+          {
+            id: `zone_${id}_main`,
+            key: 'main',
+            name: 'Ana Depolama Alanı',
+            labelTr: 'Ana Depolama Alanı',
+            labelEn: 'Main Storage Area',
+            areaM2: dynamicMetrics.totalAreaM2,
+            palletCapacity: dynamicMetrics.totalPalletSlots,
+            color: '#3b82f6',
+            polygon: [
+              [Math.floor(minX - 2), Math.floor(minZ - 2)],
+              [Math.ceil(maxX + 2), Math.floor(minZ - 2)],
+              [Math.ceil(maxX + 2), Math.ceil(maxZ + 2)],
+              [Math.floor(minX - 2), Math.ceil(maxZ + 2)],
+            ],
+          },
+        ]
       }
     }
 

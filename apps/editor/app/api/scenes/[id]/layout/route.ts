@@ -55,12 +55,14 @@ function resolveStaticLayoutFile(id: string): string | null {
     if (fs.existsSync(specificAlt)) return specificAlt
   }
 
-  // Fallback to latest standard layout file
-  for (const base of searchBases) {
-    const def = path.join(base, 'public/assets/data/layout_2026-09-22.json')
-    if (fs.existsSync(def)) return def
-    const defAlt = path.join(base, 'assets/data/layout_2026-09-22.json')
-    if (fs.existsSync(defAlt)) return defAlt
+  // Fallback to latest standard layout file for Bursa scenes only
+  if (isBursa) {
+    for (const base of searchBases) {
+      const def = path.join(base, 'public/assets/data/layout_2026-09-22.json')
+      if (fs.existsSync(def)) return def
+      const defAlt = path.join(base, 'assets/data/layout_2026-09-22.json')
+      if (fs.existsSync(defAlt)) return defAlt
+    }
   }
 
   return null
