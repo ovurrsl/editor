@@ -19,6 +19,7 @@ import {
   WebXRFeatureRuntime,
 } from '@/components/webxr-feature-gate'
 import { CloudSaveButton } from '@/features/community/components/cloud-save-button'
+import { DoorWindowPresets } from '@/features/community/components/door-window-presets'
 import { FeedbackDialog } from '@/features/community/components/feedback-dialog'
 import { PascalRadio } from '@/features/community/components/pascal-radio'
 import { ProjectDropdown } from '@/features/community/components/project-dropdown'
@@ -240,6 +241,7 @@ export default function EditorPage() {
               <Editor
                 guardAgainstSceneWipe
                 immersive={vr?.session ? vr.immersive : undefined}
+                inspectorFooter={<DoorWindowPresets />}
                 isVersionPreviewMode={preview !== null}
                 layoutVersion="v2"
                 onLoad={handleLoad}

@@ -7,7 +7,8 @@ export * from './auth/verifications'
 
 // Feedback table
 export * from './feedback/feedback'
-
+// Presets table
+export * from './presets/presets'
 // Project tables
 export * from './projects/addresses'
 export * from './projects/assets'
