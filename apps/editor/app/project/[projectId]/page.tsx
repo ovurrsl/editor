@@ -37,7 +37,10 @@ import {
   saveProjectModel,
   saveProjectVersion,
 } from '@/features/community/lib/models/actions'
-import { uploadProjectThumbnail } from '@/features/community/lib/projects/actions'
+import {
+  updateProjectVisibility,
+  uploadProjectThumbnail,
+} from '@/features/community/lib/projects/actions'
 import { useProjectStore } from '@/features/community/lib/projects/store'
 import { uploadAssetWithProgress } from '@/lib/upload-asset'
 
@@ -68,6 +71,9 @@ export default function EditorPage() {
   const { isAuthenticated } = useAuth()
   const setActiveProject = useProjectStore((state) => state.setActiveProject)
   const updateActiveThumbnail = useProjectStore((state) => state.updateActiveThumbnail)
+  const activeProject = useProjectStore((state) =>
+    state.activeProject?.id === projectId ? state.activeProject : null,
+  )
   const webXRInstalled = useWebXRInstalled()
   const [preview, setPreview] = useState<VersionPreview | null>(null)
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0)
@@ -161,6 +167,15 @@ export default function EditorPage() {
     setHistoryRefreshKey((key) => key + 1)
   }, [projectId, preview])
 
+  const handleVisibilityChange = useCallback(
+    async (field: 'isPrivate' | 'showScansPublic' | 'showGuidesPublic', value: boolean) => {
+      const result = await updateProjectVisibility(projectId, { [field]: value })
+      if (!result.success) throw new Error(result.error ?? 'Failed to update visibility')
+      await setActiveProject(projectId)
+    },
+    [projectId, setActiveProject],
+  )
+
   const handleSaveShortcut = useCallback(() => {
     if (isLocal || preview) return false
     handleSaveVersion()
@@ -222,6 +237,20 @@ export default function EditorPage() {
                 previewScene={preview?.scene}
                 projectId={projectId}
                 sidebarTabs={sidebarTabs}
+                settingsPanelProps={
+                  activeProject
+                    ? {
+                        projectId,
+                        projectName: activeProject.name,
+                        projectVisibility: {
+                          isPrivate: activeProject.is_private,
+                          showScansPublic: activeProject.show_scans_public,
+                          showGuidesPublic: activeProject.show_guides_public,
+                        },
+                        onVisibilityChange: handleVisibilityChange,
+                      }
+                    : undefined
+                }
                 sitePanelProps={
                   isLocal
                     ? undefined
