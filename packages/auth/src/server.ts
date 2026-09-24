@@ -56,7 +56,7 @@ export function createAuth(config: AuthConfig): ReturnType<typeof betterAuth> {
       },
       additionalFields: {
         // Additional fields for the session table
-        activePropertyId: {
+        activeProjectId: {
           type: 'string',
         },
       },
