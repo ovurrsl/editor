@@ -19,6 +19,7 @@ import {
 } from '@/components/webxr-feature-gate'
 import { CloudSaveButton } from '@/features/community/components/cloud-save-button'
 import { FeedbackDialog } from '@/features/community/components/feedback-dialog'
+import { PascalRadio } from '@/features/community/components/pascal-radio'
 import { ProjectDropdown } from '@/features/community/components/project-dropdown'
 import {
   VersionHistoryContext,
@@ -214,7 +215,10 @@ export default function EditorPage() {
   return (
     <VersionHistoryContext.Provider value={historyContext}>
       <div className="relative h-screen w-screen">
-        <div className="pointer-events-none absolute top-3 right-3 z-50 flex items-center gap-2">
+        <div className="pointer-events-none absolute top-3 right-3 z-50 flex items-start gap-2">
+          <div className="pointer-events-auto">
+            <PascalRadio />
+          </div>
           {isAuthenticated && !isLocal && (
             <div className="pointer-events-auto">
               <ProjectDropdown projectId={projectId} />
