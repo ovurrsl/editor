@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -24,6 +25,18 @@ if (typeof globalThis.FileReader === 'undefined') {
   } as any
 }
 
+
+async function loadBaseModel(buffer: ArrayBuffer): Promise<THREE.Group> {
+  return new Promise((resolve, reject) => {
+    const loader = new GLTFLoader()
+    loader.parse(buffer, '', (gltf) => {
+      resolve(gltf.scene)
+    }, (err) => {
+      reject(err)
+    })
+  })
+}
+
 export async function bakeModelToDisk(sceneId: string, sceneData: any): Promise<string | null> {
   const nodes = sceneData.nodes || sceneData.graph?.nodes || {}
   const allNodes = Object.values(nodes) as any[]
@@ -35,8 +48,30 @@ export async function bakeModelToDisk(sceneId: string, sceneData: any): Promise<
     levelNodes.push({ id: `level_ground_${sceneId}`, elevation: 0 })
   }
 
-  const threeScene = new THREE.Scene()
+  let threeScene = new THREE.Scene()
   threeScene.name = 'scene-renderer'
+
+  let isGuzeller = false
+  const sceneName = (sceneData.name || '').toLowerCase()
+  if (sceneId !== '6c5728d1aed7' && (sceneName.includes('güzeller') || sceneName.includes('guzeller'))) {
+    isGuzeller = true
+    
+    let baseModelPath = path.join(process.cwd(), 'apps/editor/public/assets/model/model_6c5728d1aed7.glb')
+    if (!fs.existsSync(baseModelPath)) {
+        baseModelPath = path.join(process.cwd(), 'public/assets/model/model_6c5728d1aed7.glb')
+    }
+
+    if (baseModelPath) {
+      try {
+        const buf = fs.readFileSync(baseModelPath)
+        const arrayBuf = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
+        const loadedScene = await loadBaseModel(arrayBuf)
+        threeScene = loadedScene
+      } catch (e) {
+        console.error("Failed to load base model for baking", e)
+      }
+    }
+  }
 
   const buildingGroup = new THREE.Group()
   buildingGroup.name = buildingNode.id
@@ -73,7 +108,7 @@ export async function bakeModelToDisk(sceneId: string, sceneData: any): Promise<
   }
 
   // 1. Slabs
-  for (const node of allNodes) {
+  if (!isGuzeller) for (const node of allNodes) {
     if (node.type === 'slab' && Array.isArray(node.polygon) && node.polygon.length >= 3) {
       try {
         const poly = node.polygon
@@ -96,7 +131,7 @@ export async function bakeModelToDisk(sceneId: string, sceneData: any): Promise<
   }
 
   // 2. Walls
-  for (const node of allNodes) {
+  if (!isGuzeller) for (const node of allNodes) {
     if (node.type === 'wall' && Array.isArray(node.start) && Array.isArray(node.end)) {
       try {
         const [x1, z1] = node.start
@@ -121,7 +156,7 @@ export async function bakeModelToDisk(sceneId: string, sceneData: any): Promise<
   }
 
   // 3. Columns
-  for (const node of allNodes) {
+  if (!isGuzeller) for (const node of allNodes) {
     if (node.type === 'column') {
       try {
         const pos = Array.isArray(node.position) ? node.position : [0, 0, 0]
@@ -153,7 +188,7 @@ export async function bakeModelToDisk(sceneId: string, sceneData: any): Promise<
   }
 
   // 4. Doors
-  for (const node of allNodes) {
+  if (!isGuzeller) for (const node of allNodes) {
     if (node.type === 'door') {
       try {
         const pos = Array.isArray(node.position) ? node.position : [0, 0, 0]
