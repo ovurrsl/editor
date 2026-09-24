@@ -3,6 +3,8 @@
 @import "../../../styles/elevation.css";
 @source "../../../packages/editor/src";
 @source "../../../packages/nodes/src";
+@source "../../../packages/plugin-roof/src";
+@source "../../../packages/plugin-utilities/src";
 @source "../../../node_modules/@pascal-app/plugin-trees/src";
 @source "../../../node_modules/@mint/pascal-plugin/src";
 @source "../../../node_modules/@pascal-app/plugin-streetscape/src";
