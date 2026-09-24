@@ -1,7 +1,7 @@
 import { createAuth } from '@pascal-app/auth/server'
 import { db } from '@pascal-app/db'
 import { Resend } from 'resend'
-import { BASE_URL } from './utils'
+import { AUTH_BASE_URL } from './auth-base-url'
 
 // Initialize Resend only if API key is available
 const resendApiKey = process.env.RESEND_API_KEY
@@ -10,7 +10,7 @@ const resend = resendApiKey && resendApiKey.trim() !== '' ? new Resend(resendApi
 export const auth = createAuth({
   db,
   appName: 'Pascal Editor',
-  baseURL: BASE_URL,
+  baseURL: AUTH_BASE_URL,
   secret:
     process.env.BETTER_AUTH_SECRET ||
     'pascal-editor-production-secret-key-must-be-at-least-32-chars-long',

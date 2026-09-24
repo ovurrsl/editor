@@ -23,14 +23,9 @@ export const BASE_URL = (() => {
     return process.env.NEXT_PUBLIC_APP_URL || `http://localhost:${process.env.PORT || 3000}`
   }
 
-  // Preview deployments: the branch URL is stable across pushes, so it is the one
-  // that can be registered as an OAuth redirect URI. VERCEL_URL changes per deploy.
-  const previewHost =
-    process.env.NEXT_PUBLIC_VERCEL_BRANCH_URL ||
-    process.env.VERCEL_BRANCH_URL ||
-    process.env.NEXT_PUBLIC_VERCEL_URL
-  if (isPreview && previewHost) {
-    return `https://${previewHost}`
+  // Preview deployments: use Vercel branch URL
+  if (isPreview && process.env.NEXT_PUBLIC_VERCEL_URL) {
+    return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
   }
 
   // Production: use custom domain or Vercel production URL

@@ -1,5 +1,5 @@
 import { headers as nextHeaders } from 'next/headers'
-import { BASE_URL } from '@/lib/utils'
+import { AUTH_BASE_URL } from '@/lib/auth-base-url'
 
 /**
  * Get the current session from Better Auth backend (server-side)
@@ -9,7 +9,7 @@ export async function getSession() {
     const headersList = await nextHeaders()
 
     // Make authenticated request to the auth backend to get session
-    const response = await fetch(`${BASE_URL}/api/auth/get-session`, {
+    const response = await fetch(`${AUTH_BASE_URL}/api/auth/get-session`, {
       headers: {
         cookie: headersList.get('cookie') || '',
       },
