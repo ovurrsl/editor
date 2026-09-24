@@ -407,6 +407,7 @@ function isPointInPolygon(pt: [number, number], vs: [number, number][]): boolean
       },
       assets: {
         modelUrl: baseModelUrl,
+        racksEmbedded: isBursa,
         layoutUrl: `${origin}/api/scenes/${id}/layout`,
       },
       building: {
