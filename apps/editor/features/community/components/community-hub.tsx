@@ -59,7 +59,7 @@ export default function CommunityHub() {
     if (!isAuthenticated) {
       // Create local project for guest
       const project = createLocalProject('Untitled Project')
-      router.push(`/editor/${project.id}`)
+      router.push(`/project/${project.id}`)
     } else {
       // Open project creation dialog for authenticated users
       setIsNewProjectDialogOpen(true)
@@ -80,7 +80,7 @@ export default function CommunityHub() {
     if (result.success) {
       setUserProjects(result.data || [])
     }
-    router.push(`/editor/${projectId}`)
+    router.push(`/project/${projectId}`)
   }
 
   const handleSaveLocalToCloud = (localProject: LocalProject) => {
@@ -89,7 +89,7 @@ export default function CommunityHub() {
   }
 
   const handleProjectClick = (projectId: string) => {
-    router.push(`/editor/${projectId}`)
+    router.push(`/project/${projectId}`)
   }
 
   const handleViewProject = (projectId: string) => {

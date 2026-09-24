@@ -3,7 +3,7 @@
  */
 
 export function getEditorUrl(projectId: string): string {
-  return `/editor/${projectId}`
+  return `/project/${projectId}`
 }
 
 export function getViewerUrl(projectId: string): string {
