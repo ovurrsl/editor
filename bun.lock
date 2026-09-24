@@ -342,6 +342,9 @@
       "name": "@pascal-app/plugin-roof",
       "version": "0.1.0",
       "devDependencies": {
+        "@pascal-app/core": "^1.0.1",
+        "@pascal-app/editor": "^1.0.1",
+        "@pascal-app/viewer": "^1.0.1",
         "@pascal/typescript-config": "*",
         "@types/react": "^19",
         "@types/react-dom": "^19",
@@ -361,6 +364,9 @@
       "name": "@pascal-app/plugin-utilities",
       "version": "0.1.0",
       "devDependencies": {
+        "@pascal-app/core": "^1.0.1",
+        "@pascal-app/editor": "^1.0.1",
+        "@pascal-app/viewer": "^1.0.1",
         "@pascal/typescript-config": "*",
         "@types/react": "^19",
         "@types/react-dom": "^19",
