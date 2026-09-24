@@ -19,6 +19,7 @@ import {
 } from '@/components/webxr-feature-gate'
 import { CloudSaveButton } from '@/features/community/components/cloud-save-button'
 import { FeedbackDialog } from '@/features/community/components/feedback-dialog'
+import { ProjectDropdown } from '@/features/community/components/project-dropdown'
 import {
   VersionHistoryContext,
   type VersionHistoryContextValue,
@@ -214,6 +215,11 @@ export default function EditorPage() {
     <VersionHistoryContext.Provider value={historyContext}>
       <div className="relative h-screen w-screen">
         <div className="pointer-events-none absolute top-3 right-3 z-50 flex items-center gap-2">
+          {isAuthenticated && !isLocal && (
+            <div className="pointer-events-auto">
+              <ProjectDropdown projectId={projectId} />
+            </div>
+          )}
           <div className="pointer-events-auto">
             <FeedbackDialog
               onSubmit={submitFeedbackWithImages}

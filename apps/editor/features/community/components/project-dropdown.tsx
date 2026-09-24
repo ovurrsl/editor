@@ -1,43 +1,76 @@
 'use client'
 
-import { Check, ChevronDown, Home, Plus } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowLeft, Check, ChevronDown, Pencil, Plus } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/primitives/dropdown-menu'
 import { cn } from '@/lib/utils'
+import { updateProjectName } from '../lib/projects/actions'
 import { useProjectStore } from '../lib/projects/store'
 import { NewProjectDialog } from './new-project-dialog'
 
 /**
- * ProjectDropdown - Shows active project and allows switching between projects
- * Note: useProjectScene() is called in the Editor component, not here.
- * Having it in both places caused duplicate subscriptions and 2x server action calls.
+ * Editor project menu (feat/roof icon-rail menu + sidebar-header title):
+ * shows the project name, renames it inline, switches to another project,
+ * goes back to the community hub or creates a new project.
  */
-export function ProjectDropdown() {
-  // Use project store
+export function ProjectDropdown({ projectId }: { projectId: string }) {
+  const router = useRouter()
   const projects = useProjectStore((state) => state.projects)
-  const activeProject = useProjectStore((state) => state.activeProject)
-  const isLoading = useProjectStore((state) => state.isLoading)
+  const activeProject = useProjectStore((state) =>
+    state.activeProject?.id === projectId ? state.activeProject : null,
+  )
   const setActiveProject = useProjectStore((state) => state.setActiveProject)
   const fetchProjects = useProjectStore((state) => state.fetchProjects)
 
   const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false)
+  const [isRenaming, setIsRenaming] = useState(false)
+  const [draftName, setDraftName] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  const handleProjectSelect = async (projectId: string) => {
-    await setActiveProject(projectId)
+  useEffect(() => {
+    fetchProjects()
+  }, [fetchProjects])
+
+  useEffect(() => {
+    if (isRenaming) inputRef.current?.select()
+  }, [isRenaming])
+
+  const startRename = () => {
+    setDraftName(activeProject?.name ?? '')
+    setIsRenaming(true)
   }
 
-  const handleAddNew = () => {
-    setIsNewProjectDialogOpen(true)
+  const commitRename = async () => {
+    setIsRenaming(false)
+    const name = draftName.trim()
+    if (!name || name === activeProject?.name) return
+    const result = await updateProjectName(projectId, name)
+    if (result.success) {
+      await Promise.all([setActiveProject(projectId), fetchProjects()])
+    }
   }
 
-  const handleProjectCreated = async (projectId: string) => {
-    // Set the newly created project as active (this will also fetch projects)
-    await setActiveProject(projectId)
+  if (isRenaming) {
+    return (
+      <input
+        className="h-9 w-[220px] rounded-lg border border-border bg-background px-3 text-sm shadow-lg outline-none focus:ring-2 focus:ring-primary"
+        onBlur={commitRename}
+        onChange={(e) => setDraftName(e.target.value)}
+        ref={inputRef}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.currentTarget.blur()
+          if (e.key === 'Escape') setIsRenaming(false)
+        }}
+        value={draftName}
+      />
+    )
   }
 
   return (
@@ -45,39 +78,41 @@ export function ProjectDropdown() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
-            className="flex h-9 items-center gap-2 rounded-lg border border-border bg-background/95 px-3 text-sm shadow-lg backdrop-blur-md transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-50 focus:outline-none"
-            disabled={isLoading}
+            className="flex h-9 items-center gap-2 rounded-lg border border-border bg-background/95 px-3 text-sm shadow-lg backdrop-blur-md transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none"
             type="button"
           >
-            <Home className="h-4 w-4" />
-            <span className="max-w-[150px] truncate">
-              {activeProject
-                ? activeProject.name
-                : projects.length > 0
-                  ? 'Select Project'
-                  : 'Add Project'}
+            <span className="max-w-[180px] truncate font-medium">
+              {activeProject?.name ?? 'Project'}
             </span>
             <ChevronDown className="h-3 w-3 opacity-50" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[280px]">
-          {/* Project list */}
+          <DropdownMenuItem className="cursor-pointer" onClick={startRename}>
+            <Pencil className="mr-2 h-4 w-4" />
+            <span>Rename project</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem className="cursor-pointer" onClick={() => router.push('/')}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            <span>Back to community</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           {projects.length > 0 ? (
             <div className="max-h-[300px] overflow-y-auto">
               {projects.map((project) => (
                 <DropdownMenuItem
                   className={cn(
                     'cursor-pointer text-sm',
-                    activeProject?.id === project.id && 'cursor-default bg-accent',
+                    project.id === projectId && 'cursor-default bg-accent',
                   )}
                   key={project.id}
-                  onClick={() =>
-                    activeProject?.id === project.id ? null : handleProjectSelect(project.id)
-                  }
+                  onClick={() => {
+                    if (project.id !== projectId) router.push(`/project/${project.id}`)
+                  }}
                 >
                   <div className="flex w-full items-center justify-between gap-2">
                     <div className="flex-1 truncate font-medium">{project.name}</div>
-                    {activeProject?.id === project.id && (
+                    {project.id === projectId && (
                       <Check className="h-4 w-4 shrink-0 text-primary" />
                     )}
                   </div>
@@ -89,19 +124,21 @@ export function ProjectDropdown() {
               No projects yet
             </div>
           )}
-
-          {/* Add new project option */}
-          <DropdownMenuItem className="cursor-pointer" onClick={handleAddNew}>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="cursor-pointer"
+            onClick={() => setIsNewProjectDialogOpen(true)}
+          >
             <Plus className="mr-2 h-4 w-4" />
-            <span>Add new project</span>
+            <span>New project</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
       <NewProjectDialog
-        open={isNewProjectDialogOpen}
         onOpenChange={setIsNewProjectDialogOpen}
-        onSuccess={handleProjectCreated}
+        onSuccess={(newProjectId) => router.push(`/project/${newProjectId}`)}
+        open={isNewProjectDialogOpen}
       />
     </>
   )
