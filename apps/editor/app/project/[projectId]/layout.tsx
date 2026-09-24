@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { UsernameGate } from '@/features/community/components/username-gate'
 
 export const metadata: Metadata = {
   title: 'Editor Workspace',
@@ -14,5 +15,9 @@ export default function EditorProjectLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  return <div style={{ cursor: "url('/cursor.svg') 4 2, default" }}>{children}</div>
+  return (
+    <div style={{ cursor: "url('/cursor.svg') 4 2, default" }}>
+      <UsernameGate>{children}</UsernameGate>
+    </div>
+  )
 }

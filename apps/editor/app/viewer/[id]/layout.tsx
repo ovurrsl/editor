@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { UsernameGate } from '@/features/community/components/username-gate'
 
 export const metadata: Metadata = {
   title: 'Project Viewer',
@@ -10,5 +11,5 @@ export default function ViewerLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  return children
+  return <UsernameGate>{children}</UsernameGate>
 }
