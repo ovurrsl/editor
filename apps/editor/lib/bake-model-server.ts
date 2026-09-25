@@ -64,6 +64,16 @@ export async function bakeModelToDisk(sceneId: string, sceneData: any): Promise<
         const arrayBuf = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
         const loadedScene = await loadBaseModel(arrayBuf)
         threeScene = loadedScene
+        const toRemove: any[] = []
+        threeScene.traverse((obj: any) => {
+          const kind = (obj.userData?.kind || '').toLowerCase()
+          if (kind === 'rack' || kind === 'warehouse:pallet-rack' || obj.userData?.isAsset === true || (obj.name && obj.name.toLowerCase().includes('pallet'))) {
+            toRemove.push(obj)
+          }
+        })
+        toRemove.forEach(obj => {
+          if (obj.parent) obj.parent.remove(obj)
+        })
       } catch (e) {
         console.error("Failed to load base model for baking", e)
       }
