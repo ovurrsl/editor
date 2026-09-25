@@ -830,7 +830,10 @@ export function GlbScene({
     // visible from above and the ray reaches their contents — but only when the
     // focused level actually has rooms. Focusing a zone-less floor keeps the
     // building intact (otherwise its roof would just vanish with nothing to show).
-    const revealing = !walk && selection.levelId != null && levelsWithZones.has(selection.levelId)
+    const isGuzeller = url.includes('3d142606072b')
+    const revealing =
+      (!walk && selection.levelId != null && levelsWithZones.has(selection.levelId)) ||
+      (isGuzeller && !walk)
     // Shadow-caster-only: hidden roof/ceiling meshes keep casting sun shadows
     // so interiors show window light patches instead of uniform sun flood.
     for (const mesh of occluderOwnMeshes) {
