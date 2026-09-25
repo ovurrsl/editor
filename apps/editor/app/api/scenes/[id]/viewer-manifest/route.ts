@@ -396,7 +396,7 @@ function isPointInPolygon(pt: [number, number], vs: [number, number][]): boolean
     
     let baseModelUrl = `${origin}/api/scenes/${id}/model`;
     
-    if (isGuzeller && id !== '6c5728d1aed7') {
+    if (isGuzeller && id !== '6c5728d1aed7' && id !== '3d142606072b' && id !== '79d99be52799') {
       baseModelUrl = `${origin}/api/scenes/6c5728d1aed7/model`;
     } else if (isBursa && id !== '01JM1SITE00000000000000002') {
       baseModelUrl = `${origin}/api/scenes/01JM1SITE00000000000000002/model`;
@@ -429,3 +429,4 @@ function isPointInPolygon(pt: [number, number], vs: [number, number][]): boolean
     return withViewerCors(request, res)
   }
 }
+

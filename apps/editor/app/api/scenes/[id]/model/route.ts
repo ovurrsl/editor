@@ -53,7 +53,8 @@ function resolveModelFilePath(id: string): string | null {
     
   const isGuzeller =
     id === '6c5728d1aed7' ||
-    id === '79d99be52799'
+    id === '79d99be52799' ||
+    id === '3d142606072b'
 
   for (const base of searchBases) {
     candidates.push(path.join(base, 'public/assets/model', `model_${id}.glb`))
@@ -133,3 +134,4 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return withViewerCors(request, res)
   }
 }
+
