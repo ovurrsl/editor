@@ -392,12 +392,13 @@ function isPointInPolygon(pt: [number, number], vs: [number, number][]): boolean
     const resolvedSiteName = siteName || stored?.name || 'Lojistik Depo';
     const isGuzeller = resolvedSiteName.toLowerCase().includes('güzeller') || resolvedSiteName.toLowerCase().includes('guzeller') || id === '6c5728d1aed7';
     const isBursa = resolvedSiteName.toLowerCase().includes('bursa') || id === '01JM1SITE00000000000000002';
+    
     let baseModelUrl = `${origin}/api/scenes/${id}/model`;
-    if (isGuzeller && id !== '6c5728d1aed7') {
-      baseModelUrl = `${origin}/api/scenes/6c5728d1aed7/model`;
-    } else if (isBursa && id !== '01JM1SITE00000000000000002') {
+    
+    if (isBursa && id !== '01JM1SITE00000000000000002') {
       baseModelUrl = `${origin}/api/scenes/01JM1SITE00000000000000002/model`;
     }
+    
     const manifest = {
       version: '1.0',
       site: {

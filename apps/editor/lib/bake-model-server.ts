@@ -100,7 +100,7 @@ export async function bakeModelToDisk(sceneId: string, sceneData: any): Promise<
   }
 
   // 1. Slabs
-  if (!isGuzeller) for (const node of allNodes) {
+  for (const node of allNodes) {
     if (node.type === 'slab' && Array.isArray(node.polygon) && node.polygon.length >= 3) {
       try {
         const poly = node.polygon
@@ -121,7 +121,7 @@ export async function bakeModelToDisk(sceneId: string, sceneData: any): Promise<
   }
 
   // 2. Walls
-  if (!isGuzeller) for (const node of allNodes) {
+  for (const node of allNodes) {
     if (node.type === 'wall' && Array.isArray(node.start) && Array.isArray(node.end)) {
       try {
         const [x1, z1] = node.start
@@ -145,7 +145,7 @@ export async function bakeModelToDisk(sceneId: string, sceneData: any): Promise<
   }
 
   // 3. Columns
-  if (!isGuzeller) for (const node of allNodes) {
+  for (const node of allNodes) {
     if (node.type === 'column') {
       try {
         const pos = Array.isArray(node.position) ? node.position : [0, 0, 0]
@@ -173,7 +173,7 @@ export async function bakeModelToDisk(sceneId: string, sceneData: any): Promise<
   }
 
   // 4. Doors
-  if (!isGuzeller) for (const node of allNodes) {
+  for (const node of allNodes) {
     if (node.type === 'door') {
       try {
         const pos = Array.isArray(node.position) ? node.position : [0, 0, 0]
@@ -192,114 +192,7 @@ export async function bakeModelToDisk(sceneId: string, sceneData: any): Promise<
     }
   }
 
-  // 5. Racks via InstancedMesh
-  const racks = allNodes.filter(n => n.type === 'warehouse:pallet-rack' || (n.type === 'item' && (n.name?.toLowerCase().includes('rack') || n.name?.toLowerCase().includes('shelf'))))
-  
-  if (racks.length > 0) {
-    let totalPosts = 0
-    let totalBeams = 0
-    
-    for (const node of racks) {
-      const levels = Math.max(2, Math.min(8, Number(node.levels || 5)))
-      totalPosts += 4
-      totalBeams += levels * 2
-    }
 
-    const sharedUprightGeom = new THREE.BoxGeometry(0.1, 1, 0.1)
-    const sharedBeamGeom = new THREE.BoxGeometry(1, 0.12, 0.08)
-    const rackUprightMat = new THREE.MeshStandardMaterial({ roughness: 0.5 })
-    const rackBeamMat = new THREE.MeshStandardMaterial({ roughness: 0.5 })
-
-    const instancedPosts = new THREE.InstancedMesh(sharedUprightGeom, rackUprightMat, totalPosts)
-    const instancedBeams = new THREE.InstancedMesh(sharedBeamGeom, rackBeamMat, totalBeams)
-    
-    instancedPosts.userData = { kind: 'upright', isAsset: true }
-    instancedBeams.userData = { kind: 'beam', isAsset: true }
-
-    const tempObj = new THREE.Object3D()
-    const rackPos = new THREE.Vector3()
-    const rackQuat = new THREE.Quaternion()
-    const c = new THREE.Color()
-
-    let postIdx = 0
-    let beamIdx = 0
-
-    for (const node of racks) {
-      try {
-        const pos = Array.isArray(node.position) ? node.position : [0, 0, 0]
-        const h = Math.max(4.0, Number(node.uprightHeight || node.height || 10.0))
-        const d = Math.max(0.8, Number(node.depth || 1.1))
-        const bw = Math.max(1.5, Number(node.bayClearWidth || node.width || 2.7))
-        const levels = Math.max(2, Math.min(8, Number(node.levels || 5)))
-
-        rackPos.set(pos[0], pos[1], pos[2])
-        if (Array.isArray(node.rotation)) {
-          tempObj.rotation.set(node.rotation[0] || 0, node.rotation[1] || 0, node.rotation[2] || 0)
-          rackQuat.copy(tempObj.quaternion)
-        } else {
-          rackQuat.identity()
-        }
-
-        const upColor = c.set(node.uprightColor || 0x1e40af)
-        const bmColor = c.set(node.beamColor || 0xf97316)
-
-        const halfW = bw / 2
-        const halfD = d / 2
-        const postOffsets = [
-          [-halfW, h / 2, -halfD],
-          [-halfW, h / 2, halfD],
-          [halfW, h / 2, -halfD],
-          [halfW, h / 2, halfD],
-        ]
-
-        for (const offset of postOffsets) {
-          tempObj.position.set(offset[0] as number, offset[1] as number, offset[2] as number)
-          tempObj.position.applyQuaternion(rackQuat)
-          tempObj.position.add(rackPos)
-          tempObj.quaternion.copy(rackQuat)
-          tempObj.scale.set(1, h, 1)
-          tempObj.updateMatrix()
-          
-          instancedPosts.setMatrixAt(postIdx, tempObj.matrix)
-          instancedPosts.setColorAt(postIdx, upColor)
-          postIdx++
-        }
-
-        const levelSpacing = (h - 0.5) / levels
-        for (let l = 1; l <= levels; l++) {
-          const beamY = l * levelSpacing
-          
-          tempObj.position.set(0, beamY, halfD)
-          tempObj.position.applyQuaternion(rackQuat)
-          tempObj.position.add(rackPos)
-          tempObj.quaternion.copy(rackQuat)
-          tempObj.scale.set(bw, 1, 1)
-          tempObj.updateMatrix()
-          instancedBeams.setMatrixAt(beamIdx, tempObj.matrix)
-          instancedBeams.setColorAt(beamIdx, bmColor)
-          beamIdx++
-          
-          tempObj.position.set(0, beamY, -halfD)
-          tempObj.position.applyQuaternion(rackQuat)
-          tempObj.position.add(rackPos)
-          tempObj.quaternion.copy(rackQuat)
-          tempObj.scale.set(bw, 1, 1)
-          tempObj.updateMatrix()
-          instancedBeams.setMatrixAt(beamIdx, tempObj.matrix)
-          instancedBeams.setColorAt(beamIdx, bmColor)
-          beamIdx++
-        }
-      } catch (e) {}
-    }
-    
-    instancedPosts.instanceMatrix.needsUpdate = true
-    if(instancedPosts.instanceColor) instancedPosts.instanceColor.needsUpdate = true
-    instancedBeams.instanceMatrix.needsUpdate = true
-    if(instancedBeams.instanceColor) instancedBeams.instanceColor.needsUpdate = true
-
-    buildingGroup.add(instancedPosts)
-    buildingGroup.add(instancedBeams)
-  }
 
   return new Promise((resolve) => {
     const exporter = new GLTFExporter()
