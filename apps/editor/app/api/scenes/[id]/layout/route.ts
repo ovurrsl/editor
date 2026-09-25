@@ -72,26 +72,30 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const { id } = await params
 
   // 1. Try to load live scene graph from database store
-  try {
-    const operations = await getSceneOperations()
-    const stored = await operations.loadStoredScene(id)
-    if (stored?.graph && Object.keys(stored.graph.nodes || {}).length > 0) {
-      const layoutData = {
-        id: stored.id,
-        name: stored.name,
-        nodes: stored.graph.nodes,
-        rootNodeIds: stored.graph.rootNodeIds || [],
-        installedPlugins: stored.graph.installedPlugins || [],
+  const isGuzeller = ['6c5728d1aed7', '79d99be52799', '3d142606072b'].includes(id)
+  
+  if (!isGuzeller) {
+    try {
+      const operations = await getSceneOperations()
+      const stored = await operations.loadStoredScene(id)
+      if (stored?.graph && Object.keys(stored.graph.nodes || {}).length > 0) {
+        const layoutData = {
+          id: stored.id,
+          name: stored.name,
+          nodes: stored.graph.nodes,
+          rootNodeIds: stored.graph.rootNodeIds || [],
+          installedPlugins: stored.graph.installedPlugins || [],
+        }
+        const res = NextResponse.json(layoutData, {
+          headers: {
+            'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
+          },
+        })
+        return withViewerCors(request, res)
       }
-      const res = NextResponse.json(layoutData, {
-        headers: {
-          'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
-        },
-      })
-      return withViewerCors(request, res)
+    } catch (err) {
+      console.warn(`Could not load scene ${id} from database store:`, err)
     }
-  } catch (err) {
-    console.warn(`Could not load scene ${id} from database store:`, err)
   }
 
   // 2. Try static file fallback from assets
