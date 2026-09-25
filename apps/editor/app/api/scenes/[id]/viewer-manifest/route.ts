@@ -394,7 +394,7 @@ function isPointInPolygon(pt: [number, number], vs: [number, number][]): boolean
     const isBursa = resolvedSiteName.toLowerCase().includes('bursa') || id === '01JM1SITE00000000000000002';
     let baseModelUrl = `${origin}/api/scenes/${id}/model`;
     if (isGuzeller && id !== '6c5728d1aed7') {
-      baseModelUrl = `${origin}/api/scenes/${id}/model`;
+      baseModelUrl = `${origin}/api/scenes/6c5728d1aed7/model`;
     } else if (isBursa && id !== '01JM1SITE00000000000000002') {
       baseModelUrl = `${origin}/api/scenes/01JM1SITE00000000000000002/model`;
     }
@@ -407,7 +407,7 @@ function isPointInPolygon(pt: [number, number], vs: [number, number][]): boolean
       },
       assets: {
         modelUrl: baseModelUrl,
-        racksEmbedded: isBursa || (isGuzeller && id !== '6c5728d1aed7'),
+        racksEmbedded: isBursa,
         layoutUrl: `${origin}/api/scenes/${id}/layout`,
       },
       building: {
