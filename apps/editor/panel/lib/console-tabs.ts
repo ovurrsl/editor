@@ -62,7 +62,7 @@ export const TAB_META: Record<ConsoleTab, TabMeta> = {
   addresses: { labelKey: 'addresses' },
   // Scene ownership moves data between accounts — same blast radius as the
   // org settings, so the same gate.
-  scenes: { labelKey: 'scenes', permission: 'admin_access' },
+  scenes: { labelKey: 'scenes', permission: 'edit_projects' },
   jobs: { labelKey: 'jobs' },
   integrations: { labelKey: 'integrations', permission: 'admin_access' },
   updates: { labelKey: 'changelog' },
