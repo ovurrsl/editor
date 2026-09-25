@@ -52,6 +52,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     },
     assets: {
       modelUrl: `${origin}/api/scenes/${id}/model`,
+      racksEmbedded: true,
       layoutUrl: `${origin}/api/scenes/${id}/layout`,
       planCadUrl: `${origin}/assets/data/plan_cad.json`,
     },
@@ -395,7 +396,9 @@ function isPointInPolygon(pt: [number, number], vs: [number, number][]): boolean
     
     let baseModelUrl = `${origin}/api/scenes/${id}/model`;
     
-    if (isBursa && id !== '01JM1SITE00000000000000002') {
+    if (isGuzeller && id !== '6c5728d1aed7') {
+      baseModelUrl = `${origin}/api/scenes/6c5728d1aed7/model`;
+    } else if (isBursa && id !== '01JM1SITE00000000000000002') {
       baseModelUrl = `${origin}/api/scenes/01JM1SITE00000000000000002/model`;
     }
     
@@ -408,7 +411,7 @@ function isPointInPolygon(pt: [number, number], vs: [number, number][]): boolean
       },
       assets: {
         modelUrl: baseModelUrl,
-        racksEmbedded: isBursa,
+        racksEmbedded: true,
         layoutUrl: `${origin}/api/scenes/${id}/layout`,
       },
       building: {
