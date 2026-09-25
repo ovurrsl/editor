@@ -16,8 +16,10 @@ import {
   environmentPresentation,
 } from '@pascal-app/plugin-environment'
 import { poolHostPanel, poolPlugin } from '@pascal-app/plugin-pool'
+import { registerRoofCommands, roofHostPanel, roofPlugin } from '@pascal-app/plugin-roof'
 import { streetscapeHostPanel, streetscapePlugin } from '@pascal-app/plugin-streetscape'
 import { treesHostPanel, treesPlugin } from '@pascal-app/plugin-trees'
+import { utilitiesHostPanel, utilitiesPlugin } from '@pascal-app/plugin-utilities'
 import { registerViewerPresentation } from '@pascal-app/viewer'
 import { webXRHostPanel, webXRPlugin } from '@webxr/plugin'
 
@@ -115,6 +117,12 @@ registerEditorHostPanel({
 })
 extendPluginDiscovery(async () => [webXRPlugin])
 registerEditorHostPanel(webXRHostPanel)
+// Auto roof and site utilities, from upstream construction-documents/main.
+extendPluginDiscovery(async () => [roofPlugin])
+registerEditorHostPanel(roofHostPanel)
+registerRoofCommands()
+extendPluginDiscovery(async () => [utilitiesPlugin])
+registerEditorHostPanel(utilitiesHostPanel)
 
 loadBuiltinsSync()
 void loadExternalPlugins()
