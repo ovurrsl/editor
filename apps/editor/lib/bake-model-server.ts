@@ -45,12 +45,12 @@ export async function bakeModelToDisk(sceneId: string, sceneData: any): Promise<
     levelNodes.push({ id: `level_ground_${sceneId}`, elevation: 0 })
   }
 
-  let threeScene = new THREE.Scene()
+  let threeScene: any = new THREE.Scene()
   threeScene.name = 'scene-renderer'
 
   let isGuzeller = false
   const sceneName = (sceneData.name || '').toLowerCase()
-  if (sceneId !== '6c5728d1aed7' && (sceneName.includes('güzeller') || sceneName.includes('guzeller'))) {
+  if (sceneId !== '6c5728d1aed7' && (sceneName.includes('gï¿½zeller') || sceneName.includes('guzeller'))) {
     isGuzeller = true
     
     let baseModelPath = path.join(process.cwd(), 'apps/editor/public/assets/model/model_6c5728d1aed7.glb')
@@ -243,7 +243,7 @@ export async function bakeModelToDisk(sceneId: string, sceneData: any): Promise<
         ]
 
         for (const offset of postOffsets) {
-          tempObj.position.set(offset[0], offset[1], offset[2])
+          tempObj.position.set(offset[0] as number, offset[1] as number, offset[2] as number)
           tempObj.position.applyQuaternion(rackQuat)
           tempObj.position.add(rackPos)
           tempObj.quaternion.copy(rackQuat)
