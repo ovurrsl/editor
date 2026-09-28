@@ -31,7 +31,7 @@ const nextConfig: NextConfig = {
     browserToTerminal: true,
   },
   outputFileTracingExcludes: {
-    '*': ['./public/assets/data/**', './public/assets/model/**', './public/viewer/**'],
+    '*': ['./public/assets/data/**', './public/assets/model/**', './public/viewer/**', './viewer_dist/**'],
   },
   typescript: {
     ignoreBuildErrors: true,
