@@ -428,7 +428,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       },
       assets: {
         modelUrl: baseModelUrl,
-        racksEmbedded: true,
+        racksEmbedded: isBursa,
         layoutUrl: `${origin}/api/scenes/${id}/layout`,
       },
       building: {
