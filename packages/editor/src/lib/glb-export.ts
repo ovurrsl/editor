@@ -218,6 +218,8 @@ export function prepareSceneForExport(
 
   stampIdentity(scene, retainedCloneByOriginal, nodes, clipNamesByNode)
 
+  trimInstancedMeshes(scene)
+
   return { scene, animations: clips }
 }
 
@@ -1114,4 +1116,18 @@ function stampIdentity(
     }
     target.userData = extras
   }
+}
+
+
+function trimInstancedMeshes(root: THREE.Object3D) {
+  root.traverse((child: any) => {
+    if (child.isInstancedMesh && child.count < child.instanceMatrix.count) {
+      child.instanceMatrix.array = child.instanceMatrix.array.slice(0, child.count * 16)
+      child.instanceMatrix.count = child.count
+      if (child.instanceColor) {
+        child.instanceColor.array = child.instanceColor.array.slice(0, child.count * 3)
+        child.instanceColor.count = child.count
+      }
+    }
+  })
 }
