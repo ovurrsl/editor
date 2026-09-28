@@ -54,7 +54,7 @@ function resolveModelFilePath(id: string): string | null {
   const isGuzeller = id === '6c5728d1aed7' || id === '79d99be52799' || id === '3d142606072b'
 
   for (const base of searchBases) {
-    candidates.push(path.join(process.cwd(), '.next/cache/baked-scenes', `scene_${id}.glb`))
+    candidates.push(path.join(process.cwd(), '.next/cache/baked-scenes-v2', `scene_${id}.glb`))
     candidates.push(path.join(base, 'public/assets/model', `model_${id}.glb`))
     candidates.push(path.join(base, 'assets/model', `model_${id}.glb`))
     candidates.push(path.join(base, 'viewer_dist/assets/model', `model_${id}.glb`))

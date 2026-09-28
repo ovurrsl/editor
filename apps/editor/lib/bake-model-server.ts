@@ -13,16 +13,43 @@ if (typeof globalThis.Blob === 'undefined') {
     ) {}
   } as any
 }
+
 if (typeof globalThis.FileReader === 'undefined') {
   globalThis.FileReader = class FileReader {
     onload: any
+    onloadend: any
     onerror: any
+    result: any
     readAsArrayBuffer(blob: any) {
-      if (blob && blob.parts) {
-        setTimeout(() => this.onload({ target: { result: Buffer.from(blob.parts.join('')) } }), 0)
-      } else {
-        setTimeout(() => this.onerror(new Error('Invalid Blob')), 0)
-      }
+      setTimeout(() => {
+        try {
+          if (blob && blob.parts) {
+            this.result = Buffer.from(blob.parts.join(''))
+          } else if (blob && typeof blob.arrayBuffer === 'function') {
+            blob.arrayBuffer().then((buf: ArrayBuffer) => {
+              this.result = buf
+              if (this.onloadend) this.onloadend({ target: this })
+              if (this.onload) this.onload({ target: this })
+            }).catch((err: any) => {
+              if (this.onerror) this.onerror(err)
+            })
+            return
+          } else {
+            this.result = Buffer.alloc(0)
+          }
+          if (this.onloadend) this.onloadend({ target: this })
+          if (this.onload) this.onload({ target: this })
+        } catch (err) {
+          if (this.onerror) this.onerror(err)
+        }
+      }, 0)
+    }
+    readAsDataURL(blob: any) {
+      setTimeout(() => {
+        this.result = 'data:application/octet-stream;base64,'
+        if (this.onloadend) this.onloadend({ target: this })
+        if (this.onload) this.onload({ target: this })
+      }, 0)
     }
   } as any
 }
@@ -338,6 +365,9 @@ export async function bakeModelToDisk(sceneId: string, sceneData: any): Promise<
       } catch (e) {}
     }
 
+    instancedPosts.count = postIdx
+    instancedBeams.count = beamIdx
+
     instancedPosts.instanceMatrix.needsUpdate = true
     if (instancedPosts.instanceColor) instancedPosts.instanceColor.needsUpdate = true
     instancedBeams.instanceMatrix.needsUpdate = true
@@ -353,7 +383,7 @@ export async function bakeModelToDisk(sceneId: string, sceneData: any): Promise<
       threeScene,
       (gltf: any) => {
         try {
-          const outDir = path.join(process.cwd(), '.next/cache/baked-scenes')
+          const outDir = path.join(process.cwd(), '.next/cache/baked-scenes-v2')
           if (!fs.existsSync(outDir)) {
             fs.mkdirSync(outDir, { recursive: true })
           }
