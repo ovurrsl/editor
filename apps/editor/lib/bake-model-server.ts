@@ -69,6 +69,12 @@ export async function bakeModelToDisk(sceneId: string, sceneData: any): Promise<
       'apps/editor/public/assets/model/model_6c5728d1aed7.glb',
     )
     if (!fs.existsSync(baseModelPath)) {
+      baseModelPath = path.join(process.cwd(), 'apps/editor/viewer_dist/assets/model/model_6c5728d1aed7.glb')
+    }
+    if (!fs.existsSync(baseModelPath)) {
+      baseModelPath = path.join(process.cwd(), 'public/viewer/assets/model/model_6c5728d1aed7.glb')
+    }
+    if (!fs.existsSync(baseModelPath)) {
       baseModelPath = path.join(process.cwd(), 'public/assets/model/model_6c5728d1aed7.glb')
     }
 
