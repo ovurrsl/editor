@@ -65,6 +65,8 @@ jobs:
           mkdir -p bundle
           cp -a apps/editor/.next/standalone/apps/editor/.next bundle/.next
           cp -a apps/editor/.next/standalone/apps/editor/public bundle/public
+            mkdir -p bundle/public/viewer
+            cp -a apps/editor/viewer_dist/. bundle/public/viewer/
           cp -a apps/editor/.next/standalone/apps/editor/server.js bundle/server.js
           cp .github/deploy/package.json bundle/package.json
           cp .github/deploy/README.md bundle/README.md
