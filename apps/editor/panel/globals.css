@@ -3,6 +3,7 @@
 @source not "./public/assets/**";
 @source not "**/*.json";
 @source not "**/*.glb";
+@source not "../viewer_dist/**";
 
 /*
  * Token scale lifted verbatim from the prototype's <helmet> block, which itself

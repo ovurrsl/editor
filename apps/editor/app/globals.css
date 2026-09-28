@@ -5,6 +5,7 @@
 @source not "./public/assets/**";
 @source not "**/*.json";
 @source not "**/*.glb";
+@source not "../viewer_dist/**";
 @source "../../../packages/editor/src";
 @source "../../../packages/nodes/src";
 @source "../../../node_modules/@pascal-app/plugin-trees/src";
