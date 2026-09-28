@@ -411,12 +411,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const isBursa =
       resolvedSiteName.toLowerCase().includes('bursa') || id === '01JM1SITE00000000000000002'
 
-    let baseModelUrl = `${origin}/api/scenes/${id}/model`
+    const cacheBuster = Date.now();
+      let baseModelUrl = `${origin}/api/scenes/${id}/model?v=${cacheBuster}`
 
     if (isGuzeller && id !== '6c5728d1aed7' && id !== '3d142606072b' && id !== '79d99be52799') {
-      baseModelUrl = `${origin}/api/scenes/6c5728d1aed7/model`
+      baseModelUrl = `${origin}/api/scenes/6c5728d1aed7/model?v=${cacheBuster}`
     } else if (isBursa && id !== '01JM1SITE00000000000000002') {
-      baseModelUrl = `${origin}/api/scenes/01JM1SITE00000000000000002/model`
+      baseModelUrl = `${origin}/api/scenes/01JM1SITE00000000000000002/model?v=${cacheBuster}`
     }
 
     const manifest = {

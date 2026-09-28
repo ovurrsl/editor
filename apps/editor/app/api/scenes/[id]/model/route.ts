@@ -153,7 +153,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
     
     const targetPath = path.join(targetDir, `scene_${id}.glb`)
-    fs.writeFileSync(targetPath, Buffer.from(buffer))
+    fs.writeFileSync(targetPath, Buffer.from(buffer));
+    const publicDir = path.join(process.cwd(), 'public/assets/model');
+    if (!fs.existsSync(publicDir)) { fs.mkdirSync(publicDir, { recursive: true }); }
+    fs.writeFileSync(path.join(publicDir, model_.glb), Buffer.from(buffer));
+    const viewerDistDir = path.join(process.cwd(), 'viewer_dist/assets/model');
+    if (!fs.existsSync(viewerDistDir)) { fs.mkdirSync(viewerDistDir, { recursive: true }); }
+    fs.writeFileSync(path.join(viewerDistDir, model_.glb), Buffer.from(buffer));
     
     return NextResponse.json({ success: true, path: targetPath })
   } catch (error) {

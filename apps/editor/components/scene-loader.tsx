@@ -199,15 +199,33 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
         return
       }
 
-      try {
-        const modelExport = useEditor.getState().modelExport
-        let glbBlob = null;
-        if (modelExport) {
-           const result = await modelExport('glb', { download: false })
-           if (result && result.blob) glbBlob = result.blob
+      let glbBlob = null;
+        try {
+          const modelExport = useEditor.getState().modelExport
+          if (modelExport) {
+             const result = await modelExport('glb', { download: false })
+             if (result && result.blob) glbBlob = result.blob
+          }
+        } catch (e) {
+          console.error('GLB Export Error:', e);
+          if (typeof window !== 'undefined') window.alert('3D Model disa aktarilamadi (GLB Export Error). Viewer guncellenmeyecek: ' + String(e));
         }
 
-        const response = await fetch(`/api/scenes/${meta.id}`, {
+        if (glbBlob) {
+           try {
+             const putRes = await fetch(`/api/scenes/${meta.id}/model`, {
+               method: 'PUT',
+               body: glbBlob,
+               keepalive: options?.keepalive
+             })
+             if (!putRes.ok) console.error('Failed to upload GLB:', putRes.status);
+           } catch(e) {
+             console.error('Failed to upload GLB:', e);
+           }
+        }
+
+        try {
+const response = await fetch(`/api/scenes/${meta.id}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
