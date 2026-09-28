@@ -1,0 +1,46 @@
+<IfModule mod_mime.c>
+  AddType application/wasm .wasm
+  AddType model/gltf-binary .glb
+  AddType image/webp .webp
+  AddType application/json .json
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header set Access-Control-Allow-Origin "*"
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # 1. Allow static assets unconditionally (styles, scripts, wasm, images, models)
+  RewriteCond %{REQUEST_URI} \.(css|js|wasm|svg|png|jpg|webp|woff2|ico|glb|json|map)$ [NC]
+  RewriteRule ^ - [L]
+
+  # 2. Gatekeeper: If unauthenticated (no launch_token in URL AND no dt_session cookie)
+  # redirect directly to the central panel sign-in page with return parameter
+  RewriteCond %{QUERY_STRING} !(launch_token|token)= [NC]
+  RewriteCond %{HTTP_COOKIE} !dt_session= [NC]
+  RewriteRule ^(.*)$ https://opex.help/signin?redirect=https://viewer.opex.help/ [R=302,L]
+
+  # 3. Standard SPA Fallback
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/html "access plus 0 seconds"
+  ExpiresByType model/gltf-binary "access plus 1 month"
+  ExpiresByType application/wasm "access plus 1 month"
+  ExpiresByType image/webp "access plus 1 month"
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+</IfModule>
