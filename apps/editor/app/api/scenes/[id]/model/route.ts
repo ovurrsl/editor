@@ -138,3 +138,26 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return withViewerCors(request, res)
   }
 }
+
+
+export async function PUT(request: NextRequest, { params }: RouteParams) {
+  const { id } = await params
+  
+  try {
+    const blob = await request.blob()
+    const buffer = await blob.arrayBuffer()
+    const targetDir = path.join(process.cwd(), '.next/cache/baked-scenes-v2')
+    
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true })
+    }
+    
+    const targetPath = path.join(targetDir, `scene_${id}.glb`)
+    fs.writeFileSync(targetPath, Buffer.from(buffer))
+    
+    return NextResponse.json({ success: true, path: targetPath })
+  } catch (error) {
+    console.error('Failed to save GLB:', error)
+    return NextResponse.json({ error: 'Failed to save GLB' }, { status: 500 })
+  }
+}

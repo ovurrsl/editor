@@ -1,5 +1,6 @@
 'use client'
 
+import { useEditor } from '@pascal-app/editor'
 import type { SceneGraph } from '@pascal-app/editor'
 import { useRouter } from 'next/navigation'
 import { useCallback, useState } from 'react'
@@ -92,8 +93,24 @@ export function SaveButton({ sceneId, name, version, getGraph }: SaveButtonProps
       setStatus('No project to save')
       return
     }
+    
+    const modelExport = useEditor.getState().modelExport
+    let glbBlob = null;
+    if (modelExport) {
+       setStatus('Generating 3D model...')
+       try {
+         const result = await modelExport('glb', { download: false })
+         if (result && result.blob) {
+            glbBlob = result.blob
+         }
+       } catch (err) {
+         console.warn('Silent GLB export failed:', err)
+       }
+    }
+    
     setIsSaving(true)
-    setStatus(null)
+    setStatus('Saving project...')
+
     try {
       const response = await fetch(`/api/scenes/${sceneId}`, {
         method: 'PUT',
@@ -115,7 +132,21 @@ export function SaveButton({ sceneId, name, version, getGraph }: SaveButtonProps
         setStatus(`Save failed (${response.status})`)
         return
       }
+      
+      if (response.ok && glbBlob) {
+         setStatus('Saving 3D model...')
+         try {
+           await fetch(`/api/scenes/${sceneId}/model`, {
+             method: 'PUT',
+             body: glbBlob
+           })
+         } catch(e) {
+           console.warn('Failed to upload GLB:', e)
+         }
+      }
+      
       setStatus('Saved')
+
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Save failed')
     } finally {
