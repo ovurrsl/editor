@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
-import {
-  CommunityViewerToolbarCenter,
-  CommunityViewerToolbarLeft,
-  CommunityViewerToolbarRight,
-} from './viewer-toolbar'
 import type { ScenePresence } from './use-scene-presence'
+import { CommunityViewerToolbarLeft, CommunityViewerToolbarRight } from './viewer-toolbar'
 
 const mockViewerPresence: ScenePresence = {
   loaded: true,
@@ -43,7 +39,9 @@ const mockEditorPresence: ScenePresence = {
 
 describe('R3 & R4: CommunityViewerToolbar & Active Editor Badge', () => {
   it('R4: CommunityViewerToolbarLeft in editor mode renders ViewModeControl with 2D, 3D, and Split view options', () => {
-    const markup = renderToStaticMarkup(<CommunityViewerToolbarLeft presence={mockEditorPresence} />)
+    const markup = renderToStaticMarkup(
+      <CommunityViewerToolbarLeft presence={mockEditorPresence} />,
+    )
     expect(markup).toContain('3D')
     expect(markup).toContain('2D')
     expect(markup).toContain('Split')
@@ -51,20 +49,14 @@ describe('R3 & R4: CommunityViewerToolbar & Active Editor Badge', () => {
 
   it('R4: CommunityViewerToolbarLeft in viewer mode is completely hidden (null)', () => {
     const markup = renderToStaticMarkup(
-      <CommunityViewerToolbarLeft
-        currentUserId="user_bob_456"
-        presence={mockViewerPresence}
-      />,
+      <CommunityViewerToolbarLeft currentUserId="user_bob_456" presence={mockViewerPresence} />,
     )
     expect(markup).toBe('')
   })
 
   it('R3: CommunityViewerToolbarLeft renders active editor badge when user is the editor', () => {
     const markup = renderToStaticMarkup(
-      <CommunityViewerToolbarLeft
-        currentUserId="user_alice_123"
-        presence={mockEditorPresence}
-      />,
+      <CommunityViewerToolbarLeft currentUserId="user_alice_123" presence={mockEditorPresence} />,
     )
     expect(markup).toContain('active-editor-badge')
     expect(markup).toContain('Editor')
@@ -98,13 +90,17 @@ describe('R3 & R4: CommunityViewerToolbar & Active Editor Badge', () => {
   })
 
   it('CommunityViewerToolbarRight renders display controls when in editor mode', () => {
-    const markup = renderToStaticMarkup(<CommunityViewerToolbarRight presence={mockEditorPresence} />)
+    const markup = renderToStaticMarkup(
+      <CommunityViewerToolbarRight presence={mockEditorPresence} />,
+    )
     expect(markup).toContain('Display')
     expect(markup).toContain('Preview')
   })
 
   it('CommunityViewerToolbarRight hides controls when not in editor mode', () => {
-    const markup = renderToStaticMarkup(<CommunityViewerToolbarRight presence={mockViewerPresence} />)
+    const markup = renderToStaticMarkup(
+      <CommunityViewerToolbarRight presence={mockViewerPresence} />,
+    )
     expect(markup).toBe('')
   })
 })

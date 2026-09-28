@@ -2,9 +2,7 @@
  * Analytical bounding box computation for the floorplan view.
  * Inspects positioned nodes, wall/fence endpoints (start & end), and slab/zone/ceiling polygon vertices.
  */
-export function computeFloorplanAnalyticalBounds(
-  nodes: Record<string, unknown> | unknown[],
-): {
+export function computeFloorplanAnalyticalBounds(nodes: Record<string, unknown> | unknown[]): {
   x: number
   y: number
   width: number

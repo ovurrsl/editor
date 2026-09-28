@@ -359,12 +359,7 @@ async function loadUpstream(): Promise<Cache> {
         channelVersion: viewerVersion,
       })
 
-  const entries: ReleaseEntry[] = [
-    ...editorItems,
-    ...pluginItems,
-    ...consoleItems,
-    ...viewerItems,
-  ]
+  const entries: ReleaseEntry[] = [...editorItems, ...pluginItems, ...consoleItems, ...viewerItems]
 
   return { entries: byNewest(entries), live: true, fetchedAt: Date.now() }
 }

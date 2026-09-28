@@ -1,18 +1,18 @@
 'use client'
 
+import type { WarehouseLocation } from '@panel/lib/types'
+import { Maximize2, Minus, Plus } from 'lucide-react'
 import React, {
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+  type WheelEvent as ReactWheelEvent,
   useCallback,
   useEffect,
   useId,
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent as ReactKeyboardEvent,
-  type PointerEvent as ReactPointerEvent,
-  type WheelEvent as ReactWheelEvent,
 } from 'react'
-import { Maximize2, Minus, Plus } from 'lucide-react'
-import type { WarehouseLocation } from '@panel/lib/types'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -192,7 +192,7 @@ function renderFloorplanGeometry(g: FloorplanGeometry, key: string | number): Re
       const tx = t?.translate?.[0] ?? t?.translation?.[0] ?? 0
       const ty = t?.translate?.[1] ?? t?.translation?.[1] ?? 0
       const rot = t?.rotate ?? t?.rotation ?? 0
-      const rotDeg = ((rot) * 180) / Math.PI
+      const rotDeg = (rot * 180) / Math.PI
       const transform = g.transform ? `translate(${tx} ${ty}) rotate(${rotDeg})` : undefined
       return (
         <g key={key} transform={transform} opacity={g.opacity}>
@@ -315,7 +315,15 @@ function buildRackFloorplan(
           : isPaper
             ? '#64748B'
             : '#475569'
-  const strokeWidth = isSelected ? 0.045 : (isMultiSelected || isRowSelected) ? 0.035 : isHovered ? 0.03 : (isZoomedOut ? 0.025 : 0.018)
+  const strokeWidth = isSelected
+    ? 0.045
+    : isMultiSelected || isRowSelected
+      ? 0.035
+      : isHovered
+        ? 0.03
+        : isZoomedOut
+          ? 0.025
+          : 0.018
   const fill = isSelected
     ? '#FEE2E2'
     : isMultiSelected
@@ -323,12 +331,26 @@ function buildRackFloorplan(
       : isRowSelected
         ? '#FEF3C7'
         : isHovered
-          ? (isPaper ? '#F8FAFC' : '#1E293B')
+          ? isPaper
+            ? '#F8FAFC'
+            : '#1E293B'
           : isPaper
             ? '#FFFFFF'
             : '#1E293B'
-  const steelFill = isSelected ? '#DC2626' : (isMultiSelected || isRowSelected) ? '#D97706' : isPaper ? '#334155' : '#94A3B8'
-  const beamStroke = isSelected ? '#DC2626' : (isMultiSelected || isRowSelected) ? '#D97706' : isPaper ? '#64748B' : '#475569'
+  const steelFill = isSelected
+    ? '#DC2626'
+    : isMultiSelected || isRowSelected
+      ? '#D97706'
+      : isPaper
+        ? '#334155'
+        : '#94A3B8'
+  const beamStroke = isSelected
+    ? '#DC2626'
+    : isMultiSelected || isRowSelected
+      ? '#D97706'
+      : isPaper
+        ? '#64748B'
+        : '#475569'
 
   const children: FloorplanGeometry[] = []
 
@@ -478,7 +500,11 @@ function buildRackFloorplan(
 
   // 7. Active Level Filter Slot Addresses (e.g. 1L-01-A1, 1L-01-A2, 1L-01-A3)
   if (!isZoomedOut && activeLevelFilter && activeLevelFilter !== 'All') {
-    const lvlChar = activeLevelFilter.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(-1) || 'A'
+    const lvlChar =
+      activeLevelFilter
+        .replace(/[^A-Za-z0-9]/g, '')
+        .toUpperCase()
+        .slice(-1) || 'A'
     for (let i = 0; i < numSlots; i++) {
       const pos = i + 1
       const slotCenterX = -width / 2 + slotGap + slotW / 2 + i * (slotW + slotGap)
@@ -761,7 +787,11 @@ export function Interactive2DCanvas({
       const b = entry.bounds
 
       // Viewport culling: skip if outside viewBox (unless selected or multi-selected)
-      if (!isSelected && !isMultiSelected && (b.maxX < minX || b.minX > maxX || b.maxY < minY || b.minY > maxY)) {
+      if (
+        !isSelected &&
+        !isMultiSelected &&
+        (b.maxX < minX || b.minX > maxX || b.maxY < minY || b.minY > maxY)
+      ) {
         continue
       }
 
@@ -787,7 +817,17 @@ export function Interactive2DCanvas({
     }
 
     return results
-  }, [rackNodes, viewBox, selectedRackId, selectedRackIds, hoveredRackId, selectedRowLabel, activeLevelFilter, canvasTheme, isZoomedOut])
+  }, [
+    rackNodes,
+    viewBox,
+    selectedRackId,
+    selectedRackIds,
+    hoveredRackId,
+    selectedRowLabel,
+    activeLevelFilter,
+    canvasTheme,
+    isZoomedOut,
+  ])
 
   const visibleAisleHeaders = useMemo(() => {
     if (aisleHeaders.length <= 50) return aisleHeaders
@@ -799,7 +839,8 @@ export function Interactive2DCanvas({
     const maxY = viewBox.y + viewBox.height + padY
 
     return aisleHeaders.filter((h) => {
-      if (selectedRowLabel && h.rowLabel.toUpperCase() === selectedRowLabel.toUpperCase()) return true
+      if (selectedRowLabel && h.rowLabel.toUpperCase() === selectedRowLabel.toUpperCase())
+        return true
       return !(h.x + 2 < minX || h.x - 2 > maxX || h.y + 2 < minY || h.y - 2 > maxY)
     })
   }, [aisleHeaders, viewBox, selectedRowLabel])
@@ -1013,12 +1054,24 @@ export function Interactive2DCanvas({
 
             {/* Selection Glow Filter */}
             <filter id="dt-rack-glow" x="-30%" y="-30%" width="160%" height="160%">
-              <feDropShadow dx="0" dy="0" stdDeviation="0.2" floodColor="#DC2626" floodOpacity="0.9" />
+              <feDropShadow
+                dx="0"
+                dy="0"
+                stdDeviation="0.2"
+                floodColor="#DC2626"
+                floodOpacity="0.9"
+              />
             </filter>
 
             {/* Multi-Selection Glow Filter */}
             <filter id="dt-rack-multi-glow" x="-30%" y="-30%" width="160%" height="160%">
-              <feDropShadow dx="0" dy="0" stdDeviation="0.18" floodColor="#D97706" floodOpacity="0.85" />
+              <feDropShadow
+                dx="0"
+                dy="0"
+                stdDeviation="0.18"
+                floodColor="#D97706"
+                floodOpacity="0.85"
+              />
             </filter>
           </defs>
 
@@ -1124,7 +1177,13 @@ export function Interactive2DCanvas({
                   className="cursor-pointer"
                   style={{ cursor: 'pointer' }}
                   pointerEvents="all"
-                  filter={isSelected ? 'url(#dt-rack-glow)' : isMultiSelected ? 'url(#dt-rack-multi-glow)' : undefined}
+                  filter={
+                    isSelected
+                      ? 'url(#dt-rack-glow)'
+                      : isMultiSelected
+                        ? 'url(#dt-rack-multi-glow)'
+                        : undefined
+                  }
                   onPointerDown={(e) => {
                     e.stopPropagation()
                   }}
@@ -1144,14 +1203,28 @@ export function Interactive2DCanvas({
                   {/* Selection Pin Indicator */}
                   {isSelected && (
                     <g pointerEvents="none">
-                      <circle cx={posX} cy={posZ} r={0.35} fill="#DC2626" stroke="#FFFFFF" strokeWidth={0.06} />
+                      <circle
+                        cx={posX}
+                        cy={posZ}
+                        r={0.35}
+                        fill="#DC2626"
+                        stroke="#FFFFFF"
+                        strokeWidth={0.06}
+                      />
                       <circle cx={posX} cy={posZ} r={0.12} fill="#FFFFFF" />
                     </g>
                   )}
                   {isMultiSelected && !isSelected && (
                     <g pointerEvents="none">
-                      <circle cx={posX} cy={posZ} r={0.28} fill="#D97706" stroke="#FFFFFF" strokeWidth={0.04} />
-                      <circle cx={posX} cy={posZ} r={0.10} fill="#FFFFFF" />
+                      <circle
+                        cx={posX}
+                        cy={posZ}
+                        r={0.28}
+                        fill="#D97706"
+                        stroke="#FFFFFF"
+                        strokeWidth={0.04}
+                      />
+                      <circle cx={posX} cy={posZ} r={0.1} fill="#FFFFFF" />
                     </g>
                   )}
                 </g>
@@ -1216,12 +1289,18 @@ export function Interactive2DCanvas({
         <div className="flex items-center gap-4">
           <span>
             Toplam Raf: {rackNodes.length}
-            {visibleRackEntries.length !== rackNodes.length ? ` (${visibleRackEntries.length} görünür)` : ''}
+            {visibleRackEntries.length !== rackNodes.length
+              ? ` (${visibleRackEntries.length} görünür)`
+              : ''}
           </span>
-          <span>Yapısal: {slabEntries.length} Zemin · {wallEntries.length} Duvar · {columnEntries.length} Kolon</span>
+          <span>
+            Yapısal: {slabEntries.length} Zemin · {wallEntries.length} Duvar ·{' '}
+            {columnEntries.length} Kolon
+          </span>
           {selectedRackEntry && (
             <span className="text-red-400 font-semibold font-mono">
-              Seçili: SIRA {selectedRackEntry.rowLabel || '?'} · GÖZ {selectedRackEntry.bayIndex} (ID: {selectedRackEntry.id})
+              Seçili: SIRA {selectedRackEntry.rowLabel || '?'} · GÖZ {selectedRackEntry.bayIndex}{' '}
+              (ID: {selectedRackEntry.id})
             </span>
           )}
         </div>

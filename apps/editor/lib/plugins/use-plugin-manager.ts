@@ -1,7 +1,7 @@
 'use client'
 
-import { create } from 'zustand'
 import { useScene } from '@pascal-app/core'
+import { create } from 'zustand'
 
 export interface PluginManagerState {
   installPlugin: (pluginId: string) => Promise<boolean>

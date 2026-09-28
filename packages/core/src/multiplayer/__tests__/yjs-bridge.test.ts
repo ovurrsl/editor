@@ -1,12 +1,11 @@
-import { describe, it, expect, beforeEach } from 'bun:test'
+import { beforeEach, describe, expect, it } from 'bun:test'
 import * as Y from 'yjs'
-import useScene, { clearSceneHistory } from '../../store/use-scene'
-import { bindZustandToYjs } from '../yjs-bridge'
-import { writeNodeToYMap, readNodeFromYMap } from '../crdt-schema'
-import { SiteNode } from '../../schema/nodes/site'
 import { BuildingNode } from '../../schema/nodes/building'
+import { SiteNode } from '../../schema/nodes/site'
 import { WallNode } from '../../schema/nodes/wall'
-import type { AnyNode, AnyNodeId } from '../../schema/types'
+import useScene, { clearSceneHistory } from '../../store/use-scene'
+import { readNodeFromYMap, writeNodeToYMap } from '../crdt-schema'
+import { bindZustandToYjs } from '../yjs-bridge'
 
 describe('Bidirectional Zustand <-> Yjs Bridge', () => {
   beforeEach(() => {

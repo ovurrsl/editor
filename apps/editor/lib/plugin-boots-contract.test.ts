@@ -66,7 +66,7 @@ describe('Milestone 1: PascalOrg Boots Eklenti Entegrasyonu ve Sözleşme Doğru
 
   test('JobNode şeması geçerli veri yapısını doğrular ve geçersiz alanları reddeder', async () => {
     const { JobNode } = await import('@pascal-app/plugin-boots')
-    
+
     // Geçerli varsayılan node (id: 'job_*', type: 'boots:job')
     const validNode = {
       id: 'job_test_123',

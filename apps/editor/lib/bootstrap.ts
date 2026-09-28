@@ -1,4 +1,5 @@
 import { mintHostPanel, mintPlugin } from '@mint/pascal-plugin'
+import { warehouseCatalogPanel, warehousePlugin } from '@ovurrsl/plugin-warehouse'
 import {
   type AnyNodeDefinition,
   discoverPlugins,
@@ -14,7 +15,6 @@ import { bonesHostPanel, bonesPlugin } from '@pascal-app/plugin-bones'
 import { bootsHostPanel, bootsPlugin } from '@pascal-app/plugin-boots'
 import { streetscapeHostPanel, streetscapePlugin } from '@pascal-app/plugin-streetscape'
 import { treesHostPanel, treesPlugin } from '@pascal-app/plugin-trees'
-import { warehouseCatalogPanel, warehousePlugin } from '@ovurrsl/plugin-warehouse'
 
 // Idempotency guards: HMR can reload this module, but `registerNode`
 // throws on duplicate kinds. Flags live in the module closure so they
@@ -114,7 +114,8 @@ registerEditorHostPanel({
   ...bonesHostPanel,
   defaultInstalled: false,
   label: 'Bones (Mühendislik Röntgeni)',
-  description: 'Duvar karkasları, döşeme, çatı ve elektrik altyapısını gösteren mühendislik röntgeni.',
+  description:
+    'Duvar karkasları, döşeme, çatı ve elektrik altyapısını gösteren mühendislik röntgeni.',
 })
 
 // 4. Articraft 3D & AI

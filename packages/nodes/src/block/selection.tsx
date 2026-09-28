@@ -1869,7 +1869,8 @@ function BlockEditor({
       }
       if (!worldPoint) return false
       target.getWorldScale(_blockScale)
-      const tolerance = componentRadius * Math.max(_blockScale.x, _blockScale.y, _blockScale.z) * 1.5
+      const tolerance =
+        componentRadius * Math.max(_blockScale.x, _blockScale.y, _blockScale.z) * 1.5
       return event.ray.origin.distanceTo(worldPoint) <= nearestSurface.distance + tolerance
     },
     [componentRadius, displayTopology, mode, target, xray],

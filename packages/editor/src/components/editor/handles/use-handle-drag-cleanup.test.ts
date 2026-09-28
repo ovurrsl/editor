@@ -28,7 +28,11 @@ describe('swallowNextClick lifecycle and event cleanup', () => {
           }
         }
       },
-      dispatchEvent: (event: { type: string; preventDefault: () => void; stopPropagation: () => void }) => {
+      dispatchEvent: (event: {
+        type: string
+        preventDefault: () => void
+        stopPropagation: () => void
+      }) => {
         const set = listeners.get(event.type)
         if (set) {
           for (const entry of Array.from(set)) {
@@ -91,7 +95,11 @@ describe('swallowNextClick lifecycle and event cleanup', () => {
           }
         }
       },
-      dispatchEvent: (event: { type: string; preventDefault: () => void; stopPropagation: () => void }) => {
+      dispatchEvent: (event: {
+        type: string
+        preventDefault: () => void
+        stopPropagation: () => void
+      }) => {
         const set = listeners.get(event.type)
         if (set) {
           for (const entry of Array.from(set)) {

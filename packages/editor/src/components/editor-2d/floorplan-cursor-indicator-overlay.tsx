@@ -88,12 +88,14 @@ export const FloorplanCursorIndicatorOverlay = memo(function FloorplanCursorIndi
     return null
   }, [activeFloorplanToolConfig, floorplanSelectionTool, mode, structureLayer])
 
-  const cachedOverlayRectRef = useRef<{ left: number; top: number; width: number; height: number }>({
-    left: 0,
-    top: 0,
-    width: 0,
-    height: 0,
-  })
+  const cachedOverlayRectRef = useRef<{ left: number; top: number; width: number; height: number }>(
+    {
+      left: 0,
+      top: 0,
+      width: 0,
+      height: 0,
+    },
+  )
 
   useLayoutEffect(() => {
     const anchor = anchorRef.current

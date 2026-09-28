@@ -1,7 +1,7 @@
+import { useScene } from '@pascal-app/core'
 import { useThree } from '@react-three/fiber'
 import { useLayoutEffect, useRef } from 'react'
 import type { Camera } from 'three'
-import { useScene } from '@pascal-app/core'
 import useViewer from '../../store/use-viewer'
 
 export type FrameLimiterProps = {
@@ -150,8 +150,7 @@ const FrameLimiter: React.FC<FrameLimiterProps> = ({
       qy: camera.quaternion.y,
       qz: camera.quaternion.z,
       qw: camera.quaternion.w,
-      zoom:
-        'zoom' in camera && typeof (camera as any).zoom === 'number' ? (camera as any).zoom : 1,
+      zoom: 'zoom' in camera && typeof (camera as any).zoom === 'number' ? (camera as any).zoom : 1,
     }
 
     function syncSize() {
@@ -349,4 +348,3 @@ const FrameLimiter: React.FC<FrameLimiterProps> = ({
 }
 
 export default FrameLimiter
-

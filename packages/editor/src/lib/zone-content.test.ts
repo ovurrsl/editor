@@ -33,7 +33,7 @@ const warehousePlugin: Plugin = {
       schemaVersion: 1,
       schema: z.object({}) as any,
       category: 'furnish',
-      defaults: () => ({} as any),
+      defaults: () => ({}) as any,
       capabilities: { deletable: true },
     },
     {
@@ -41,7 +41,7 @@ const warehousePlugin: Plugin = {
       schemaVersion: 1,
       schema: z.object({}) as any,
       category: 'furnish',
-      defaults: () => ({} as any),
+      defaults: () => ({}) as any,
       capabilities: { deletable: true },
     },
     {
@@ -49,7 +49,7 @@ const warehousePlugin: Plugin = {
       schemaVersion: 1,
       schema: z.object({}) as any,
       category: 'furnish',
-      defaults: () => ({} as any),
+      defaults: () => ({}) as any,
       capabilities: { deletable: true },
     },
     {
@@ -57,7 +57,7 @@ const warehousePlugin: Plugin = {
       schemaVersion: 1,
       schema: z.object({}) as any,
       category: 'furnish',
-      defaults: () => ({} as any),
+      defaults: () => ({}) as any,
       capabilities: { deletable: true },
     },
     {
@@ -65,7 +65,7 @@ const warehousePlugin: Plugin = {
       schemaVersion: 1,
       schema: z.object({}) as any,
       category: 'furnish',
-      defaults: () => ({} as any),
+      defaults: () => ({}) as any,
       capabilities: { deletable: true },
     },
     {
@@ -73,7 +73,7 @@ const warehousePlugin: Plugin = {
       schemaVersion: 1,
       schema: z.object({}) as any,
       category: 'furnish',
-      defaults: () => ({} as any),
+      defaults: () => ({}) as any,
       capabilities: { deletable: true },
     },
     {
@@ -81,7 +81,7 @@ const warehousePlugin: Plugin = {
       schemaVersion: 1,
       schema: z.object({}) as any,
       category: 'furnish',
-      defaults: () => ({} as any),
+      defaults: () => ({}) as any,
       capabilities: { deletable: true },
     },
     {
@@ -89,7 +89,7 @@ const warehousePlugin: Plugin = {
       schemaVersion: 1,
       schema: z.object({}) as any,
       category: 'furnish',
-      defaults: () => ({} as any),
+      defaults: () => ({}) as any,
       capabilities: { deletable: true },
     },
     {
@@ -97,7 +97,7 @@ const warehousePlugin: Plugin = {
       schemaVersion: 1,
       schema: z.object({}) as any,
       category: 'furnish',
-      defaults: () => ({} as any),
+      defaults: () => ({}) as any,
       capabilities: { deletable: true },
     },
     {
@@ -105,7 +105,7 @@ const warehousePlugin: Plugin = {
       schemaVersion: 1,
       schema: z.object({}) as any,
       category: 'furnish',
-      defaults: () => ({} as any),
+      defaults: () => ({}) as any,
       capabilities: { deletable: true },
     },
     {
@@ -113,7 +113,7 @@ const warehousePlugin: Plugin = {
       schemaVersion: 1,
       schema: z.object({}) as any,
       category: 'furnish',
-      defaults: () => ({} as any),
+      defaults: () => ({}) as any,
       capabilities: { deletable: true },
     },
   ],
@@ -1472,7 +1472,15 @@ describe('collectZoneContentIds - Tier 4: Real-World Application Scenarios', () 
     for (let i = 1; i <= 20; i++) {
       const id = `floor_pallet_${i}`
       floorPalletIds.push(id)
-      nodes.push(positioned(id, 'warehouse:pallet', (i % 10) * 4 + 2, Math.floor(i / 10) * 4 + 2, 'level_ground'))
+      nodes.push(
+        positioned(
+          id,
+          'warehouse:pallet',
+          (i % 10) * 4 + 2,
+          Math.floor(i / 10) * 4 + 2,
+          'level_ground',
+        ),
+      )
     }
 
     // 15 Tote Carts
@@ -1480,7 +1488,15 @@ describe('collectZoneContentIds - Tier 4: Real-World Application Scenarios', () 
     for (let i = 1; i <= 15; i++) {
       const id = `tote_cart_${i}`
       cartIds.push(id)
-      nodes.push(positioned(id, 'warehouse:tote-cart', (i % 5) * 8 + 3, Math.floor(i / 5) * 8 + 3, 'level_ground'))
+      nodes.push(
+        positioned(
+          id,
+          'warehouse:tote-cart',
+          (i % 5) * 8 + 3,
+          Math.floor(i / 5) * 8 + 3,
+          'level_ground',
+        ),
+      )
     }
 
     // 8 Standard Items

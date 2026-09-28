@@ -138,12 +138,21 @@ describe('buildLevelDuplicateCreateOps', () => {
       type: 'slab',
       slots: { top: 'library:concrete' },
       materialPreset: 'smooth_concrete',
-      polygon: [[0, 0], [10, 0], [10, 10], [0, 10]],
+      polygon: [
+        [0, 0],
+        [10, 0],
+        [10, 10],
+        [0, 10],
+      ],
     }
     const strippedSlab = stripMaterials(slabNode)
     expect(strippedSlab.slots).toBeUndefined()
     expect(strippedSlab.materialPreset).toBeUndefined()
-    expect(strippedSlab.polygon).toEqual([[0, 0], [10, 0], [10, 10], [0, 10]])
+    expect(strippedSlab.polygon).toEqual([
+      [0, 0],
+      [10, 0],
+      [10, 10],
+      [0, 10],
+    ])
   })
 })
-

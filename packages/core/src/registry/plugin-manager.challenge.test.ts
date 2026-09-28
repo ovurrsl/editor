@@ -1,11 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'bun:test'
 import { z } from 'zod'
-import { getRegistryVersion, nodeRegistry } from './registry'
-import {
-  PluginManager,
-  type LazyPluginDescriptor,
-} from './plugin-manager'
-import type { AnyNodeDefinition, Plugin } from './types'
+import { PluginManager } from './plugin-manager'
+import { nodeRegistry } from './registry'
+import type { AnyNodeDefinition } from './types'
 
 describe('EMPIRICAL ADVERSARIAL CHALLENGE: Core PluginManager Stress & Invariants', () => {
   let manager: PluginManager

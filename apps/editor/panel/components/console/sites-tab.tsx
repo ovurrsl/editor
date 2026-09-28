@@ -29,7 +29,11 @@ export function SitesTab() {
   const [template, setTemplate] = useState<Template>('empty')
   const [footprint, setFootprint] = useState('')
   const [busy, setBusy] = useState(false)
-  const [sharingSite, setSharingSite] = useState<{ id: string; name: string; sceneId: string } | null>(null)
+  const [sharingSite, setSharingSite] = useState<{
+    id: string
+    name: string
+    sceneId: string
+  } | null>(null)
   const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null)
 
   const notify = useCallback((message: string, tone: 'success' | 'error' = 'success') => {
@@ -314,7 +318,11 @@ export function SitesTab() {
                     }
                   }}
                   className="h-[26px] shrink-0 rounded-[6px] border border-border bg-field px-[8px] text-[11px] font-medium text-fg hover:bg-hover disabled:opacity-40"
-                  title={lang === 'tr' ? 'Projeye kullanıcı ve roller ata' : 'Assign users and roles to project'}
+                  title={
+                    lang === 'tr'
+                      ? 'Projeye kullanıcı ve roller ata'
+                      : 'Assign users and roles to project'
+                  }
                 >
                   {lang === 'tr' ? 'Kullanıcılar' : 'Users'}
                 </button>
@@ -346,7 +354,10 @@ export function SitesTab() {
           onClose={() => setSharingSite(null)}
           onSaved={() => {
             setSharingSite(null)
-            notify(lang === 'tr' ? 'Kullanıcı yetkileri kaydedildi.' : 'User permissions saved.', 'success')
+            notify(
+              lang === 'tr' ? 'Kullanıcı yetkileri kaydedildi.' : 'User permissions saved.',
+              'success',
+            )
             void load()
           }}
           onError={(msg) => notify(msg, 'error')}

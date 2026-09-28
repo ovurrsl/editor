@@ -28,20 +28,25 @@ if (typeof globalThis.window === 'undefined') {
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import {
+  acquireSceneReadOnlyLease,
   BuildingNode,
   LevelNode,
-  WallNode,
   useScene,
-  acquireSceneReadOnlyLease,
+  WallNode,
 } from '@pascal-app/core'
 import { useViewer } from '@pascal-app/viewer'
+import { isNodeEditLocked } from '../lib/edit-lock'
 import useEditor from '../store/use-editor'
 import useInteractionScope from '../store/use-interaction-scope'
-import { isNodeEditLocked } from '../lib/edit-lock'
 
 describe('R2: Seamless Role Transfer & Lock Elimination', () => {
   const buildingA = BuildingNode.parse({ id: 'building_1', children: ['level_1'] })
-  const levelA = LevelNode.parse({ id: 'level_1', parentId: 'building_1', level: 0, children: ['wall_1'] })
+  const levelA = LevelNode.parse({
+    id: 'level_1',
+    parentId: 'building_1',
+    level: 0,
+    children: ['wall_1'],
+  })
   const wall1 = WallNode.parse({ id: 'wall_1', parentId: 'level_1', start: [0, 0], end: [5, 0] })
 
   beforeEach(() => {

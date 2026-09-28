@@ -1,12 +1,12 @@
 import * as http from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { WebSocketServer, WebSocket } from 'ws'
-import * as Y from 'yjs'
-import * as syncProtocol from 'y-protocols/sync'
-import * as awarenessProtocol from 'y-protocols/awareness'
-import * as encoding from 'lib0/encoding'
 import * as decoding from 'lib0/decoding'
-import type { AnyNode, AnyNodeId } from '../../schema/types'
+import * as encoding from 'lib0/encoding'
+import { WebSocket, WebSocketServer } from 'ws'
+import * as awarenessProtocol from 'y-protocols/awareness'
+import * as syncProtocol from 'y-protocols/sync'
+import * as Y from 'yjs'
+import type { AnyNode } from '../../schema/types'
 import type { SceneSnapshot } from '../../store/history-control'
 
 // Protocol Message Codes
@@ -36,21 +36,21 @@ export interface UserPresenceState {
 }
 
 import {
+  type CycleHealingResult,
   healSceneCycles,
-  writeNodeToYMap,
   readNodeFromYMap,
   snapshotToYDoc,
+  writeNodeToYMap,
   yDocToSnapshot,
-  type CycleHealingResult,
 } from '../index'
 
 export {
+  type CycleHealingResult,
   healSceneCycles,
-  writeNodeToYMap,
   readNodeFromYMap,
   snapshotToYDoc,
+  writeNodeToYMap,
   yDocToSnapshot,
-  type CycleHealingResult,
 }
 
 // Server Room state
@@ -253,7 +253,7 @@ export class CollabServer {
 
       if (typeof (this.server as any).closeAllConnections === 'function') {
         try {
-          (this.server as any).closeAllConnections()
+          ;(this.server as any).closeAllConnections()
         } catch {}
       }
 
@@ -613,7 +613,8 @@ export async function createMultiplayerTestHarness(options?: {
   sceneId?: string
   initialSnapshot?: SceneSnapshot
 }): Promise<MultiplayerTestHarness> {
-  const sceneId = options?.sceneId || `test-scene-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+  const sceneId =
+    options?.sceneId || `test-scene-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
   const server = new CollabServer()
   const port = await server.start()
 
@@ -624,7 +625,10 @@ export async function createMultiplayerTestHarness(options?: {
 
   const clients: SimulatedMultiplayerClient[] = []
 
-  const createClient = async (role: ClientRole, userId?: string): Promise<SimulatedMultiplayerClient> => {
+  const createClient = async (
+    role: ClientRole,
+    userId?: string,
+  ): Promise<SimulatedMultiplayerClient> => {
     const id = userId || `${role}-${clients.length + 1}`
     const client = new SimulatedMultiplayerClient(role, id, sceneId, port)
     await client.connect()

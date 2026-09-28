@@ -2,16 +2,15 @@ import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'b
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { WallNode, SiteNode, BuildingNode, LevelNode } from '@pascal-app/core/schema'
 import {
-  computeSceneGraphDiff,
-  applySceneGraphPatch,
   applySceneGraphPatchToStore,
+  computeSceneGraphDiff,
   type SceneGraph,
   type SceneGraphPatch,
 } from '@pascal-app/core'
-import { NextRequest } from 'next/server'
+import { BuildingNode, LevelNode, SiteNode, WallNode } from '@pascal-app/core/schema'
 import useScene from '@pascal-app/core/store'
+import { NextRequest } from 'next/server'
 
 const tempDir = mkdtempSync(join(tmpdir(), 'diff-sync-benchmark-test-'))
 const SCENE_ID = 'diff-sync-scene'
@@ -47,13 +46,13 @@ for (let i = 0; i < 48; i++) {
   INITIAL_GRAPH.nodes[w.id] = w
 }
 
-
 let PUT_SCENE: typeof import('../route')['PUT']
 let PATCH_SCENE: typeof import('../route')['PATCH']
 let GET_EVENTS: typeof import('./route')['GET']
 let restoreEnv: () => void
 
-let currentSessionUser: { id: string; email: string; role: 'admin' | 'editor' | 'viewer' } | null = null
+let currentSessionUser: { id: string; email: string; role: 'admin' | 'editor' | 'viewer' } | null =
+  null
 let mockAuthAvailable = false
 
 beforeAll(async () => {
@@ -227,7 +226,11 @@ describe('R1 & R2: Differential REST/SSE Synchronization & Performance Benchmark
     expect(diff).not.toBeNull()
 
     const fullGraphPayloadJson = JSON.stringify({ name: 'Benchmark Scene', graph: targetGraph })
-    const patchPayloadJson = JSON.stringify({ name: 'Benchmark Scene', patch: diff, baseVersion: version })
+    const patchPayloadJson = JSON.stringify({
+      name: 'Benchmark Scene',
+      patch: diff,
+      baseVersion: version,
+    })
 
     const fullGraphSizeBytes = Buffer.byteLength(fullGraphPayloadJson, 'utf8')
     const patchSizeBytes = Buffer.byteLength(patchPayloadJson, 'utf8')

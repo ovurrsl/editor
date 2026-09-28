@@ -185,8 +185,7 @@ function RightColumn({
           : {
               borderTopLeftRadius: 16,
               clipPath: 'inset(0 0 0 0 round 16px 0 0 0)',
-              boxShadow:
-                '-4px -2px 16px rgba(0, 0, 0, 0.08), -1px 0 4px rgba(0, 0, 0, 0.04)',
+              boxShadow: '-4px -2px 16px rgba(0, 0, 0, 0.08), -1px 0 4px rgba(0, 0, 0, 0.04)',
             }
       }
     >

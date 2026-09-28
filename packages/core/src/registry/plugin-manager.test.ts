@@ -1,10 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'bun:test'
 import { z } from 'zod'
-import { getRegistryVersion, nodeRegistry, onRegistryChange } from './registry'
-import {
-  PluginManager,
-  type LazyPluginDescriptor,
-} from './plugin-manager'
+import { type LazyPluginDescriptor, PluginManager } from './plugin-manager'
+import { getRegistryVersion, nodeRegistry } from './registry'
 import type { AnyNodeDefinition, Plugin } from './types'
 
 describe('PluginManager', () => {

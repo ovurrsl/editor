@@ -7,10 +7,9 @@
  */
 
 import * as fs from 'node:fs'
-import * as path from 'node:path'
 import {
-  parseWarehouseExcel,
   applyExcelLayoutToScene,
+  parseWarehouseExcel,
   seedLocationsFromExcel,
   type WarehouseLayoutResult,
 } from '../panel/lib/excel-ingest'
@@ -38,7 +37,9 @@ async function main() {
   console.log(`\n📂 Excel Source : ${excelPath}`)
   console.log(`🌐 3D Scene Ref : ${scenePath}`)
   console.log(`🏢 Target Site  : ${siteId}`)
-  console.log(`⚡ Seed Mode    : ${shouldSeed ? 'ENABLED' : 'DISABLED (dry run, use --seed to persist)'}\n`)
+  console.log(
+    `⚡ Seed Mode    : ${shouldSeed ? 'ENABLED' : 'DISABLED (dry run, use --seed to persist)'}\n`,
+  )
 
   if (!fs.existsSync(excelPath)) {
     console.error(`❌ Error: Excel file not found at ${excelPath}`)
@@ -73,12 +74,16 @@ async function main() {
   console.log(`• Active Bay Grid : ${layout.totalBays} bays`)
   console.log(`• Active Pallets  : ${layout.totalPallets.toLocaleString()} pallets`)
   console.log(`• Gross Pallets   : ${layout.grossPallets.toLocaleString()} pallets`)
-  console.log(`• Locations Master: ${layout.locations.length.toLocaleString()} discrete slot addresses`)
+  console.log(
+    `• Locations Master: ${layout.locations.length.toLocaleString()} discrete slot addresses`,
+  )
 
   if (layout.skippedCols.length > 0) {
     console.log(`\n⚠️  Skipped Inactive Columns (${layout.skippedCols.length}):`)
     for (const sc of layout.skippedCols) {
-      console.log(`   - Col ${sc.colLetter} (#${sc.colIndex}): ${sc.aisleCode || 'N/A'} -> ${sc.reason}`)
+      console.log(
+        `   - Col ${sc.colLetter} (#${sc.colIndex}): ${sc.aisleCode || 'N/A'} -> ${sc.reason}`,
+      )
     }
   }
 
@@ -86,7 +91,7 @@ async function main() {
   console.log('-'.repeat(50))
   for (const [zone, metrics] of Object.entries(layout.summaryByZone)) {
     console.log(
-      `• ${zone.padEnd(12)}: ${String(metrics.runs).padStart(2)} runs | ${String(metrics.bays).padStart(4)} bays | ${metrics.pallets.toLocaleString().padStart(6)} pallets`
+      `• ${zone.padEnd(12)}: ${String(metrics.runs).padStart(2)} runs | ${String(metrics.bays).padStart(4)} bays | ${metrics.pallets.toLocaleString().padStart(6)} pallets`,
     )
   }
 
@@ -94,7 +99,9 @@ async function main() {
   console.log('-'.repeat(50))
   const sampleAddresses = layout.locations.slice(0, 5).concat(layout.locations.slice(-5))
   for (const loc of sampleAddresses) {
-    console.log(`• ${loc.addressId.padEnd(16)} -> Barcode: ${loc.barcode.padEnd(18)} [${loc.zoneCode}]`)
+    console.log(
+      `• ${loc.addressId.padEnd(16)} -> Barcode: ${loc.barcode.padEnd(18)} [${loc.zoneCode}]`,
+    )
   }
 
   // 3. Scene Graph Mapping
@@ -127,7 +134,9 @@ async function main() {
     console.log('\n' + '='.repeat(70))
     console.log('  💾 BULK LOCATION SEEDING (DATABASE / STORE)')
     console.log('='.repeat(70))
-    console.log(`⏳ Seeding ${layout.locations.length.toLocaleString()} locations in chunks of 1,000...`)
+    console.log(
+      `⏳ Seeding ${layout.locations.length.toLocaleString()} locations in chunks of 1,000...`,
+    )
     const seedStart = performance.now()
     const seedResult = await seedLocationsFromExcel(layout, siteId)
     const seedTime = ((performance.now() - seedStart) / 1000).toFixed(2)

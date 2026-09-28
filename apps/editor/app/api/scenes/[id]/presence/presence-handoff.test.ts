@@ -22,7 +22,8 @@ let DELETE: typeof import('./route')['DELETE']
 let restoreEnv: () => void
 
 // Configurable mock session user
-let currentSessionUser: { id: string; email: string; role: 'admin' | 'editor' | 'viewer' } | null = null
+let currentSessionUser: { id: string; email: string; role: 'admin' | 'editor' | 'viewer' } | null =
+  null
 let mockAuthAvailable = false
 
 beforeAll(async () => {
@@ -158,7 +159,11 @@ describe('POST & DELETE /api/scenes/[id]/presence (Presence & Role Handoff)', ()
 
     const res = await POST(presencePostRequest(SCENE_ID, { wantsEdit: true }), paramsFor(SCENE_ID))
     expect(res.status).toBe(200)
-    const data = (await res.json()) as { isEditor: boolean; canEdit: boolean; editor: { userId: string } | null }
+    const data = (await res.json()) as {
+      isEditor: boolean
+      canEdit: boolean
+      editor: { userId: string } | null
+    }
     expect(data.isEditor).toBe(true)
     expect(data.canEdit).toBe(true)
     expect(data.editor?.userId).toBe('user_alice')
@@ -214,7 +219,10 @@ describe('POST & DELETE /api/scenes/[id]/presence (Presence & Role Handoff)', ()
 
     // Bob heartbeats
     currentSessionUser = { id: 'user_bob', email: 'bob@example.com', role: 'editor' }
-    const bobHeartbeat = await POST(presencePostRequest(SCENE_ID, { wantsEdit: true }), paramsFor(SCENE_ID))
+    const bobHeartbeat = await POST(
+      presencePostRequest(SCENE_ID, { wantsEdit: true }),
+      paramsFor(SCENE_ID),
+    )
     const bobData = (await bobHeartbeat.json()) as { isEditor: boolean; editor: { userId: string } }
     expect(bobData.isEditor).toBe(true)
     expect(bobData.editor.userId).toBe('user_bob')
@@ -380,7 +388,10 @@ describe('POST & DELETE /api/scenes/[id]/presence (Presence & Role Handoff)', ()
 
     // Turn 3: Alice passes control to Bob
     currentSessionUser = { id: 'user_alice', email: 'alice@example.com', role: 'editor' }
-    const t3 = await POST(presencePostRequest(SCENE_ID, { transferToUserId: 'user_bob' }), paramsFor(SCENE_ID))
+    const t3 = await POST(
+      presencePostRequest(SCENE_ID, { transferToUserId: 'user_bob' }),
+      paramsFor(SCENE_ID),
+    )
     const t3Data = (await t3.json()) as { isEditor: boolean; editor: { userId: string } }
     expect(t3Data.isEditor).toBe(false)
     expect(t3Data.editor.userId).toBe('user_bob')

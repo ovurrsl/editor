@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
-import { allRoles, hasPermission, permissionsForRole } from './auth/roles'
-import { CONSOLE_TABS, railEntries, TAB_META, tabLabel, tabPermission } from './console-tabs'
+import { allRoles, permissionsForRole } from './auth/roles'
+import { CONSOLE_TABS, railEntries, TAB_META, tabLabel } from './console-tabs'
 import { dictionaryFor } from './i18n'
-import { PERMISSIONS, type Permission, type Role } from './types'
+import { PERMISSIONS } from './types'
 
 describe('Warehouse Addressing & Dynamic RBAC Suite', () => {
   describe('1. Permissions and Roles Definitions', () => {

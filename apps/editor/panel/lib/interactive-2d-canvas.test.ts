@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test'
-import React, { createElement } from 'react'
-import { renderToStaticMarkup } from 'react-dom/server'
 import type { PalletRackNode } from '@ovurrsl/plugin-warehouse'
 import type { FloorplanPreviewScene } from '@pascal-app/editor'
+import React, { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 
 // Initialize React mock dispatcher for headless VDOM traversal when needed
 const reactInternals =
@@ -25,9 +25,7 @@ import {
   Interactive2DCanvas,
   type Interactive2DCanvasProps,
 } from '../components/console/interactive-2d-canvas'
-import {
-  RackPropertyEditorCard,
-} from '../components/console/rack-property-editor-card'
+import { RackPropertyEditorCard } from '../components/console/rack-property-editor-card'
 import { formatIndustrialAddress } from './excel-ingest'
 
 // ============================================================================
@@ -265,7 +263,8 @@ describe('Admin 2D Canvas Security & Lockout Suite', () => {
       // Find the VDOM element representing rack-01
       const rackNode = findVNode(
         vdom,
-        (n) => n.props?.['data-node-id'] === 'rack-01' || n.props?.['data-testid'] === 'rack-rack-01',
+        (n) =>
+          n.props?.['data-node-id'] === 'rack-01' || n.props?.['data-testid'] === 'rack-rack-01',
       )
       expect(rackNode).not.toBeNull()
 

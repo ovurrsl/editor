@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { readFileSync, existsSync, readdirSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import React from 'react'
 import { EditorLayoutV2 } from '../components/editor/editor-layout-v2'
@@ -12,16 +12,37 @@ describe('Strict Zero-Mutation & Slot Isolation Invariant Tests', () => {
     resolve(process.cwd(), '../../..'),
     'E:\\Digital Twin',
   ]
-  const projectRoot = rootCandidates.find((dir) => existsSync(join(dir, 'Digitaltwin'))) ?? 'E:\\Digital Twin'
+  const projectRoot =
+    rootCandidates.find((dir) => existsSync(join(dir, 'Digitaltwin'))) ?? 'E:\\Digital Twin'
 
   describe('Slot Isolation in EditorLayoutV2', () => {
     test('mounts slots into dedicated layout regions cleanly', () => {
-      const mockToolbarCenter = React.createElement('div', { id: 'test-center-toolbar' }, 'Center Tools')
+      const mockToolbarCenter = React.createElement(
+        'div',
+        { id: 'test-center-toolbar' },
+        'Center Tools',
+      )
       const mockToolbarLeft = React.createElement('div', { id: 'test-left-toolbar' }, 'Left Tools')
-      const mockToolbarRight = React.createElement('div', { id: 'test-right-toolbar' }, 'Right Tools')
-      const mockStageOverlay = React.createElement('div', { id: 'test-stage-overlay' }, 'Stage Overlay')
-      const mockSidebarOverlay = React.createElement('div', { id: 'test-sidebar-overlay' }, 'Sidebar Overlay')
-      const mockViewerContent = React.createElement('div', { id: 'test-viewer-canvas' }, 'Canvas Area')
+      const mockToolbarRight = React.createElement(
+        'div',
+        { id: 'test-right-toolbar' },
+        'Right Tools',
+      )
+      const mockStageOverlay = React.createElement(
+        'div',
+        { id: 'test-stage-overlay' },
+        'Stage Overlay',
+      )
+      const mockSidebarOverlay = React.createElement(
+        'div',
+        { id: 'test-sidebar-overlay' },
+        'Sidebar Overlay',
+      )
+      const mockViewerContent = React.createElement(
+        'div',
+        { id: 'test-viewer-canvas' },
+        'Canvas Area',
+      )
 
       const element = React.createElement(EditorLayoutV2, {
         viewerToolbarCenter: mockToolbarCenter,
@@ -31,7 +52,8 @@ describe('Strict Zero-Mutation & Slot Isolation Invariant Tests', () => {
         sidebarOverlay: mockSidebarOverlay,
         viewerContent: mockViewerContent,
         sidebarTabs: [{ id: 'build', label: 'Build', icon: 'build' as any }],
-        renderTabContent: (tabId: string) => React.createElement('div', { id: `tab-content-${tabId}` }),
+        renderTabContent: (tabId: string) =>
+          React.createElement('div', { id: `tab-content-${tabId}` }),
       } as any)
 
       expect(element).toBeDefined()
@@ -44,12 +66,14 @@ describe('Strict Zero-Mutation & Slot Isolation Invariant Tests', () => {
   })
 
   describe('Forensic Invariant Protection: scene-loader.tsx', () => {
-    const sceneLoaderPath = [
-      join(projectRoot, 'editor', 'apps', 'editor', 'components', 'scene-loader.tsx'),
-      join(projectRoot, 'apps', 'editor', 'components', 'scene-loader.tsx'),
-      resolve(process.cwd(), 'apps/editor/components/scene-loader.tsx'),
-      resolve(import.meta.dir, '../../../../apps/editor/components/scene-loader.tsx'),
-    ].find((p) => existsSync(p)) ?? join(projectRoot, 'editor', 'apps', 'editor', 'components', 'scene-loader.tsx')
+    const sceneLoaderPath =
+      [
+        join(projectRoot, 'editor', 'apps', 'editor', 'components', 'scene-loader.tsx'),
+        join(projectRoot, 'apps', 'editor', 'components', 'scene-loader.tsx'),
+        resolve(process.cwd(), 'apps/editor/components/scene-loader.tsx'),
+        resolve(import.meta.dir, '../../../../apps/editor/components/scene-loader.tsx'),
+      ].find((p) => existsSync(p)) ??
+      join(projectRoot, 'editor', 'apps', 'editor', 'components', 'scene-loader.tsx')
 
     test('verifies scene-loader.tsx exists and is pristine', () => {
       expect(existsSync(sceneLoaderPath)).toBe(true)
@@ -77,11 +101,12 @@ describe('Strict Zero-Mutation & Slot Isolation Invariant Tests', () => {
   })
 
   describe('Forensic Invariant Protection: Database & Migrations', () => {
-    const migrationsDir = [
-      join(projectRoot, 'Digitaltwin', 'panel-migrations'),
-      resolve(process.cwd(), 'apps/editor/panel/migrations'),
-      resolve(import.meta.dir, '../../../../apps/editor/panel/migrations'),
-    ].find((dir) => existsSync(dir)) ?? join(projectRoot, 'Digitaltwin', 'panel-migrations')
+    const migrationsDir =
+      [
+        join(projectRoot, 'Digitaltwin', 'panel-migrations'),
+        resolve(process.cwd(), 'apps/editor/panel/migrations'),
+        resolve(import.meta.dir, '../../../../apps/editor/panel/migrations'),
+      ].find((dir) => existsSync(dir)) ?? join(projectRoot, 'Digitaltwin', 'panel-migrations')
 
     test('verifies zero added SQL migrations and pristine migration count', () => {
       expect(existsSync(migrationsDir)).toBe(true)

@@ -4935,6 +4935,7 @@ const EMPTY_DRAFT_ANCHOR_POINTS: Array<{ x: number; y: number; isPrimary: boolea
 const DRAFT_AXIS_GUIDE_EXTENT = 1000
 
 import { computeFloorplanAnalyticalBounds } from '../../lib/floorplan-bounds'
+
 export { computeFloorplanAnalyticalBounds } from '../../lib/floorplan-bounds'
 
 export function FloorplanPanel({
@@ -10333,13 +10334,11 @@ export function FloorplanPanel({
         state.currentClientX,
         state.currentClientY,
       )
-      const svgDomRect = cachedSvgRectRef.current.width > 0
-        ? screenRectFromDomRect(cachedSvgRectRef.current as DOMRect)
-        : screenRectFromDomRect(svg.getBoundingClientRect())
-      const clampedRect = intersectScreenRects(
-        rect,
-        svgDomRect,
-      )
+      const svgDomRect =
+        cachedSvgRectRef.current.width > 0
+          ? screenRectFromDomRect(cachedSvgRectRef.current as DOMRect)
+          : screenRectFromDomRect(svg.getBoundingClientRect())
+      const clampedRect = intersectScreenRects(rect, svgDomRect)
 
       if (!clampedRect) {
         hideScreenRectangleSelectionElement(element)
@@ -10379,9 +10378,12 @@ export function FloorplanPanel({
           event.clientX,
           event.clientY,
         )
-        const svgDomRect = cachedSvgRectRef.current.width > 0
-          ? screenRectFromDomRect(cachedSvgRectRef.current as DOMRect)
-          : (svg ? screenRectFromDomRect(svg.getBoundingClientRect()) : null)
+        const svgDomRect =
+          cachedSvgRectRef.current.width > 0
+            ? screenRectFromDomRect(cachedSvgRectRef.current as DOMRect)
+            : svg
+              ? screenRectFromDomRect(svg.getBoundingClientRect())
+              : null
         const clampedRect = svgDomRect ? intersectScreenRects(rect, svgDomRect) : null
         const ids = svg && clampedRect ? collectFloorplanScreenSelectionIds(clampedRect, svg) : []
 
@@ -10724,7 +10726,10 @@ export function FloorplanPanel({
         !wallEndpointDragRef.current &&
         !siteVertexDragState
       ) {
-        const rect = cachedSvgRectRef.current.width > 0 ? cachedSvgRectRef.current : event.currentTarget.getBoundingClientRect()
+        const rect =
+          cachedSvgRectRef.current.width > 0
+            ? cachedSvgRectRef.current
+            : event.currentTarget.getBoundingClientRect()
         const nextPosition = {
           x: event.clientX - rect.left,
           y: event.clientY - rect.top,
@@ -10773,7 +10778,10 @@ export function FloorplanPanel({
 
       event.preventDefault()
       event.stopPropagation()
-      const rect = cachedSvgRectRef.current.width > 0 ? cachedSvgRectRef.current : svgRef.current?.getBoundingClientRect()
+      const rect =
+        cachedSvgRectRef.current.width > 0
+          ? cachedSvgRectRef.current
+          : svgRef.current?.getBoundingClientRect()
       if (rect) {
         setFloorplanCursorPosition({
           x: event.clientX - rect.left,
@@ -10803,7 +10811,10 @@ export function FloorplanPanel({
 
   const handleMarqueePointerMove = useCallback(
     (event: ReactPointerEvent<SVGRectElement>) => {
-      const rect = cachedSvgRectRef.current.width > 0 ? cachedSvgRectRef.current : svgRef.current?.getBoundingClientRect()
+      const rect =
+        cachedSvgRectRef.current.width > 0
+          ? cachedSvgRectRef.current
+          : svgRef.current?.getBoundingClientRect()
       if (rect) {
         setFloorplanCursorPosition({
           x: event.clientX - rect.left,
@@ -10964,7 +10975,8 @@ export function FloorplanPanel({
     }
 
     const getFallbackClientPoint = () => {
-      const rect = cachedSvgRectRef.current.width > 0 ? cachedSvgRectRef.current : svg.getBoundingClientRect()
+      const rect =
+        cachedSvgRectRef.current.width > 0 ? cachedSvgRectRef.current : svg.getBoundingClientRect()
       return {
         clientX: rect.left + rect.width / 2,
         clientY: rect.top + rect.height / 2,

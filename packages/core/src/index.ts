@@ -278,6 +278,7 @@ export {
   toSceneMaterialRef,
   unregisterLibraryMaterials,
 } from './material-library'
+export * from './multiplayer'
 export type {
   FloorPlacedFootprint,
   FloorPlacedFootprintContext,
@@ -455,9 +456,9 @@ export type { SceneGraph } from './utils/clone-scene-graph'
 export { cloneLevelSubtree, cloneSceneGraph, forkSceneGraph } from './utils/clone-scene-graph'
 export type { SceneGraphPatch } from './utils/scene-diff'
 export {
-  computeSceneGraphDiff,
   applySceneGraphPatch,
   applySceneGraphPatchToStore,
+  computeSceneGraphDiff,
 } from './utils/scene-diff'
 export { isObject } from './utils/types'
 export {
@@ -469,5 +470,3 @@ export {
   type ValidationSeverity,
   validateBuildJson,
 } from './validation/validate-build-json'
-export * from './multiplayer'
-

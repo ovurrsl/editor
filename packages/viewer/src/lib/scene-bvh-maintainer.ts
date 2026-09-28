@@ -1,4 +1,4 @@
-import { type BufferGeometry, DoubleSide, FrontSide, Matrix4, Mesh, Object3D, Ray, type Raycaster, Sphere, Vector3 } from 'three'
+import { type BufferGeometry, Matrix4, Mesh, type Object3D, Ray, Sphere, Vector3 } from 'three'
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree, MeshBVH } from 'three-mesh-bvh'
 
 export type SceneBvhMaintainerOptions = {
@@ -119,7 +119,9 @@ export function ensureObject3DVersionTracked(mesh: Object3D): void {
  * that dynamic moving meshes receive fresh, accurate inverse matrices.
  */
 export function getMeshWorldInverseMatrix(mesh: Object3D): Matrix4 {
-  let inv = (mesh as any)._worldInverseMatrix as (Matrix4 & { _v?: number; _c?: Float64Array }) | undefined
+  let inv = (mesh as any)._worldInverseMatrix as
+    | (Matrix4 & { _v?: number; _c?: Float64Array })
+    | undefined
   if (!inv) {
     inv = new Matrix4() as Matrix4 & { _v?: number; _c?: Float64Array }
     inv._v = -1
@@ -195,12 +197,22 @@ export function intersectTriangleDirect(
   const i1x = i1 * 3
   const i2x = i2 * 3
 
-  const aX = positions[i0x]!, aY = positions[i0x + 1]!, aZ = positions[i0x + 2]!
-  const bX = positions[i1x]!, bY = positions[i1x + 1]!, bZ = positions[i1x + 2]!
-  const cX = positions[i2x]!, cY = positions[i2x + 1]!, cZ = positions[i2x + 2]!
+  const aX = positions[i0x]!,
+    aY = positions[i0x + 1]!,
+    aZ = positions[i0x + 2]!
+  const bX = positions[i1x]!,
+    bY = positions[i1x + 1]!,
+    bZ = positions[i1x + 2]!
+  const cX = positions[i2x]!,
+    cY = positions[i2x + 1]!,
+    cZ = positions[i2x + 2]!
 
-  const edge1X = bX - aX, edge1Y = bY - aY, edge1Z = bZ - aZ
-  const edge2X = cX - aX, edge2Y = cY - aY, edge2Z = cZ - aZ
+  const edge1X = bX - aX,
+    edge1Y = bY - aY,
+    edge1Z = bZ - aZ
+  const edge2X = cX - aX,
+    edge2Y = cY - aY,
+    edge2Z = cZ - aZ
 
   const dir = ray.direction
   const orig = ray.origin
@@ -219,7 +231,9 @@ export function intersectTriangleDirect(
   }
 
   const invDet = 1.0 / det
-  const tvecX = orig.x - aX, tvecY = orig.y - aY, tvecZ = orig.z - aZ
+  const tvecX = orig.x - aX,
+    tvecY = orig.y - aY,
+    tvecZ = orig.z - aZ
 
   const u = (tvecX * pvecX + tvecY * pvecY + tvecZ * pvecZ) * invDet
   if (!(u >= 0 && u <= 1)) return null
@@ -252,12 +266,22 @@ export function getTriangleNormalDirect(
   const i1x = i1 * 3
   const i2x = i2 * 3
 
-  const ax = positions[i0x]!, ay = positions[i0x + 1]!, az = positions[i0x + 2]!
-  const bx = positions[i1x]!, by = positions[i1x + 1]!, bz = positions[i1x + 2]!
-  const cx = positions[i2x]!, cy = positions[i2x + 1]!, cz = positions[i2x + 2]!
+  const ax = positions[i0x]!,
+    ay = positions[i0x + 1]!,
+    az = positions[i0x + 2]!
+  const bx = positions[i1x]!,
+    by = positions[i1x + 1]!,
+    bz = positions[i1x + 2]!
+  const cx = positions[i2x]!,
+    cy = positions[i2x + 1]!,
+    cz = positions[i2x + 2]!
 
-  const abx = bx - ax, aby = by - ay, abz = bz - az
-  const acx = cx - ax, acy = cy - ay, acz = cz - az
+  const abx = bx - ax,
+    aby = by - ay,
+    abz = bz - az
+  const acx = cx - ax,
+    acy = cy - ay,
+    acz = cz - az
 
   const nx = aby * acz - abz * acy
   const ny = abz * acx - abx * acz
@@ -274,7 +298,11 @@ export function getTriangleNormalDirect(
 if (typeof MeshBVH !== 'undefined' && MeshBVH.prototype) {
   const origRaycastObject3D = MeshBVH.prototype.raycastObject3D
   if (!(origRaycastObject3D as any)._isOptimized) {
-    MeshBVH.prototype.raycastObject3D = function (object: any, raycaster: any, intersects: any = []) {
+    MeshBVH.prototype.raycastObject3D = function (
+      object: any,
+      raycaster: any,
+      intersects: any = [],
+    ) {
       const { geometry, material } = object
       if (material === undefined) return intersects
 

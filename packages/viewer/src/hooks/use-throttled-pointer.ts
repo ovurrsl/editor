@@ -63,7 +63,10 @@ export function useThrottledPointer(
     if (!canvas) return
 
     // Cache canvas rect on resize/scroll via ResizeObserver (Zero getBoundingClientRect in mousemove)
-    let cachedRect = typeof canvas.getBoundingClientRect === 'function' ? canvas.getBoundingClientRect() : { left: 0, top: 0, width: 1, height: 1 }
+    let cachedRect =
+      typeof canvas.getBoundingClientRect === 'function'
+        ? canvas.getBoundingClientRect()
+        : { left: 0, top: 0, width: 1, height: 1 }
     let resizeObserver: ResizeObserver | null = null
 
     if (typeof ResizeObserver !== 'undefined') {

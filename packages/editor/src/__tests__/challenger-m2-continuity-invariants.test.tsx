@@ -29,31 +29,24 @@ type RafFn = (callback: (time: number) => void) => number
 }
 ;(globalThis as any).cancelAnimationFrame = () => {}
 
-import { afterEach, beforeEach, describe, expect, test, mock } from 'bun:test'
-import * as React from 'react'
-import * as Y from 'yjs'
-import * as syncProtocol from 'y-protocols/sync'
-import * as awarenessProtocol from 'y-protocols/awareness'
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 import {
   type AnyNodeId,
-  BuildingNode,
-  LevelNode,
-  WallNode,
-  SlabNode,
-  ItemNode,
-  useScene,
   acquireSceneReadOnlyLease,
-  MultiplayerAwarenessService,
+  BuildingNode,
+  SlabNode,
+  useScene,
+  WallNode,
 } from '@pascal-app/core'
 import { useViewer } from '@pascal-app/viewer'
-import useEditor from '../store/use-editor'
-import { useMultiplayer, type UseMultiplayerOptions, type UseMultiplayerResult } from '../hooks/use-multiplayer'
+import * as React from 'react'
+import { decideExitFlush, useAutoSave } from '../hooks/use-auto-save'
 import {
-  useAutoSave,
-  decideExitFlush,
-  createStoredNodeCountTracker,
-  isSuspiciousNodeDrop,
-} from '../hooks/use-auto-save'
+  type UseMultiplayerOptions,
+  type UseMultiplayerResult,
+  useMultiplayer,
+} from '../hooks/use-multiplayer'
+import useEditor from '../store/use-editor'
 
 // ── Mock WebSocket Harness ──────────────────────────────────────────────────
 class MockWebSocket {
@@ -102,7 +95,8 @@ class MockWebSocket {
 }
 
 // ── Deterministic React 19 Hook Execution Harness ───────────────────────────
-const reactInternals = (React as any).__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE
+const reactInternals = (React as any)
+  .__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE
 
 class HookHarness<Props, Result> {
   private hookFn: (props: Props) => Result
@@ -154,8 +148,7 @@ class HookHarness<Props, Result> {
       useState: (initialState: any) => {
         const idx = this.hookIndex++
         if (this.hookStates[idx] === undefined) {
-          this.hookStates[idx] =
-            typeof initialState === 'function' ? initialState() : initialState
+          this.hookStates[idx] = typeof initialState === 'function' ? initialState() : initialState
         }
         const setState = (action: any) => {
           const nextVal = typeof action === 'function' ? action(this.hookStates[idx]) : action
@@ -216,7 +209,10 @@ class HookHarness<Props, Result> {
         }
       },
 
-      useSyncExternalStore: (subscribe: (onStoreChange: () => void) => () => void, getSnapshot: () => any) => {
+      useSyncExternalStore: (
+        subscribe: (onStoreChange: () => void) => () => void,
+        getSnapshot: () => any,
+      ) => {
         const idx = this.hookIndex++
         if (this.hookStates[idx] === undefined) {
           const unsub = subscribe(() => {
@@ -373,7 +369,9 @@ describe('Challenger M2: Connection Continuity, State Invariants & Leak Auditing
       expect(harness.current.doc).toBe(initialDoc)
       expect(harness.current.doc!.isDestroyed).toBe(false)
 
-      const demotedPresence = harness.current.awarenessService!.getPresences().get(harness.current.localClientId!)
+      const demotedPresence = harness.current
+        .awarenessService!.getPresences()
+        .get(harness.current.localClientId!)
       expect(demotedPresence?.role).toBe('viewer')
       expect(initialWs.sentMessages.length).toBeGreaterThan(wsSentBefore2)
 
@@ -544,7 +542,9 @@ describe('Challenger M2: Connection Continuity, State Invariants & Leak Auditing
         const selectedSlab = selectedIds.find(
           (id) => state.nodes[id as AnyNodeId]?.type === 'slab',
         ) as SlabNode['id'] | undefined
-        const slab = selectedSlab ? (state.nodes[selectedSlab as AnyNodeId] as SlabNode | undefined) : null
+        const slab = selectedSlab
+          ? (state.nodes[selectedSlab as AnyNodeId] as SlabNode | undefined)
+          : null
         const isManual =
           selectedSlab !== undefined &&
           editingHole?.nodeId === selectedSlab &&
@@ -612,13 +612,10 @@ describe('Challenger M2: Connection Continuity, State Invariants & Leak Auditing
         readOnly: false,
       } as never)
 
-      const harness = new HookHarness(
-        (props) => useAutoSave(props),
-        {
-          onSave: onSaveMock,
-          onDirty: onDirtyMock,
-        },
-      )
+      const harness = new HookHarness((props) => useAutoSave(props), {
+        onSave: onSaveMock,
+        onDirty: onDirtyMock,
+      })
       // Scene load finishes
       harness.current.isLoadingSceneRef.current = false
 

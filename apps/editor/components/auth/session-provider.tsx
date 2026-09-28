@@ -2,11 +2,7 @@
 
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react'
 
-import {
-  type ConsoleSessionResponse,
-  resolveSessionUser,
-  type SessionUser,
-} from './session-utils'
+import { type ConsoleSessionResponse, resolveSessionUser, type SessionUser } from './session-utils'
 
 export type { SessionUser }
 

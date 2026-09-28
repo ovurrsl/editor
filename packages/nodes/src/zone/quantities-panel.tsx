@@ -481,7 +481,7 @@ function ZoneTakeoffSection({
     setExporting(true)
     try {
       const contentIds = collectZoneObjectIds(nodes, zone)
-      // @ts-ignore - Dynamically loaded optional external plugin
+      // @ts-expect-error - Dynamically loaded optional external plugin
       const warehouse = (await import('@ovurrsl/plugin-warehouse')) as any
       if (
         typeof warehouse?.calculateWarehouseBOM === 'function' &&

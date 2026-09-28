@@ -1,5 +1,5 @@
-import { describe, expect, test } from 'bun:test';
-import { AssetUrl } from './asset-url';
+import { describe, expect, test } from 'bun:test'
+import { AssetUrl } from './asset-url'
 
 describe('AssetUrl Adversarial SVG9XSS Payload Injection Stress', () => {
   test('strictly rejects diverse SVG data URI formats and payloads', () => {
@@ -15,12 +15,12 @@ describe('AssetUrl Adversarial SVG9XSS Payload Injection Stress', () => {
       'data:image/svg+xml;param=val,<svg></svg>',
       'data:image/svg+xml ',
       'data:image/svg+xml;test',
-    ];
+    ]
     for (const payload of svgPayloads) {
-      const result = AssetUrl.safeParse(payload);
-      expect(result.success).toBe(false);
+      const result = AssetUrl.safeParse(payload)
+      expect(result.success).toBe(false)
     }
-  });
+  })
 
   test('strictly rejects non-image executable data URIs and dangerous schemes', () => {
     const dangerousUrls = [
@@ -37,12 +37,12 @@ describe('AssetUrl Adversarial SVG9XSS Payload Injection Stress', () => {
       'file://C:/Windows/System32/drivers/etc/hosts',
       'http://169.254.169.254/latest/meta-data',
       'http://metadata.google.internal/computeMetadata/v1/',
-    ];
+    ]
     for (const url of dangerousUrls) {
-      const result = AssetUrl.safeParse(url);
-      expect(result.success).toBe(false);
+      const result = AssetUrl.safeParse(url)
+      expect(result.success).toBe(false)
     }
-  });
+  })
 
   test('strictly accepts legitimate raster images and internal asset handles', () => {
     const validUrls = [
@@ -56,10 +56,10 @@ describe('AssetUrl Adversarial SVG9XSS Payload Injection Stress', () => {
       'https://cdn.pascal.app/assets/rack.glb',
       'http://localhost:3000/models/test.glb',
       'http://127.0.0.1:8080/textures/wood.png',
-    ];
+    ]
     for (const url of validUrls) {
-      const result = AssetUrl.safeParse(url);
-      expect(result.success).toBe(true);
+      const result = AssetUrl.safeParse(url)
+      expect(result.success).toBe(true)
     }
-  });
-});
+  })
+})

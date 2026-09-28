@@ -49,11 +49,7 @@ export function PresencePopover({
   const editorName = editor ? displayName(editor.email, editor.userId) : null
 
   return (
-    <PopoverPrimitive.Root
-      defaultOpen={defaultOpen}
-      onOpenChange={onOpenChange}
-      open={open}
-    >
+    <PopoverPrimitive.Root defaultOpen={defaultOpen} onOpenChange={onOpenChange} open={open}>
       <div
         aria-label="Presence avatars"
         className={cn('relative inline-flex items-center', className)}
@@ -94,90 +90,90 @@ export function PresencePopover({
           side="bottom"
           sideOffset={8}
         >
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between border-border/40 border-b pb-1.5">
-                <span className="font-semibold text-foreground text-xs">
-                  Çevrimiçi Kullanıcılar ({present.length})
-                </span>
-              </div>
-
-              {present.length === 0 ? (
-                <div className="py-2 text-center text-muted-foreground text-xs">
-                  Kimse çevrimiçi değil
-                </div>
-              ) : (
-                <div className="flex flex-col divide-y divide-border/40">
-                  {present.map((person) => {
-                    const name = displayName(person.email, person.userId)
-                    const isSelf = person.userId === currentUserId
-                    return (
-                      <div
-                        className={cn(
-                          'flex items-center justify-between py-1.5',
-                          isSelf && 'rounded-md bg-primary/10 px-1.5 font-semibold text-foreground',
-                        )}
-                        key={person.userId}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={cn(
-                              'flex h-5 w-5 items-center justify-center rounded-full bg-muted font-medium text-[10px]',
-                              person.isEditor && 'ring-1 ring-emerald-500 text-emerald-500',
-                            )}
-                          >
-                            {initials(name)}
-                          </span>
-                          <span className="text-xs">{name}</span>
-                          {isSelf ? (
-                            <span className="rounded bg-primary/10 px-1 py-0.5 font-medium text-[9px] text-primary">
-                              (Sen)
-                            </span>
-                          ) : null}
-                          {person.isEditor ? (
-                            <span className="rounded bg-emerald-500/15 px-1 py-0.5 font-medium text-[9px] text-emerald-500">
-                              editör
-                            </span>
-                          ) : (
-                            <span className="text-[9px] text-muted-foreground">izleyici</span>
-                          )}
-                        </div>
-
-                        {/* Role handoff button: only shown for active editor next to other viewers */}
-                        {isEditor && !isSelf && !person.isEditor ? (
-                          <button
-                            className="rounded border border-border bg-background px-2 py-0.5 font-medium text-[10px] text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                            onClick={() => onPassControl?.(person.userId)}
-                            type="button"
-                          >
-                            Yetki Devret
-                          </button>
-                        ) : null}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-
-              {/* Bottom status and actions */}
-              {!isEditor && canEdit && editor === null ? (
-                <button
-                  className="mt-1 w-full rounded-md bg-primary py-1 font-medium text-primary-foreground text-xs transition-colors hover:bg-primary/90"
-                  onClick={onTakeOver}
-                  type="button"
-                >
-                  Düzenlemeye geç
-                </button>
-              ) : !isEditor && editorName ? (
-                <p className="border-border/30 border-t pt-1.5 text-[11px] text-muted-foreground">
-                  {editorName} düzenliyor — siz izliyorsunuz
-                </p>
-              ) : isEditor ? (
-                <p className="border-border/30 border-t pt-1.5 font-medium text-[11px] text-emerald-500">
-                  Düzenliyorsunuz
-                </p>
-              ) : null}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between border-border/40 border-b pb-1.5">
+              <span className="font-semibold text-foreground text-xs">
+                Çevrimiçi Kullanıcılar ({present.length})
+              </span>
             </div>
-          </PopoverPrimitive.Content>
+
+            {present.length === 0 ? (
+              <div className="py-2 text-center text-muted-foreground text-xs">
+                Kimse çevrimiçi değil
+              </div>
+            ) : (
+              <div className="flex flex-col divide-y divide-border/40">
+                {present.map((person) => {
+                  const name = displayName(person.email, person.userId)
+                  const isSelf = person.userId === currentUserId
+                  return (
+                    <div
+                      className={cn(
+                        'flex items-center justify-between py-1.5',
+                        isSelf && 'rounded-md bg-primary/10 px-1.5 font-semibold text-foreground',
+                      )}
+                      key={person.userId}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            'flex h-5 w-5 items-center justify-center rounded-full bg-muted font-medium text-[10px]',
+                            person.isEditor && 'ring-1 ring-emerald-500 text-emerald-500',
+                          )}
+                        >
+                          {initials(name)}
+                        </span>
+                        <span className="text-xs">{name}</span>
+                        {isSelf ? (
+                          <span className="rounded bg-primary/10 px-1 py-0.5 font-medium text-[9px] text-primary">
+                            (Sen)
+                          </span>
+                        ) : null}
+                        {person.isEditor ? (
+                          <span className="rounded bg-emerald-500/15 px-1 py-0.5 font-medium text-[9px] text-emerald-500">
+                            editör
+                          </span>
+                        ) : (
+                          <span className="text-[9px] text-muted-foreground">izleyici</span>
+                        )}
+                      </div>
+
+                      {/* Role handoff button: only shown for active editor next to other viewers */}
+                      {isEditor && !isSelf && !person.isEditor ? (
+                        <button
+                          className="rounded border border-border bg-background px-2 py-0.5 font-medium text-[10px] text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                          onClick={() => onPassControl?.(person.userId)}
+                          type="button"
+                        >
+                          Yetki Devret
+                        </button>
+                      ) : null}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Bottom status and actions */}
+            {!isEditor && canEdit && editor === null ? (
+              <button
+                className="mt-1 w-full rounded-md bg-primary py-1 font-medium text-primary-foreground text-xs transition-colors hover:bg-primary/90"
+                onClick={onTakeOver}
+                type="button"
+              >
+                Düzenlemeye geç
+              </button>
+            ) : !isEditor && editorName ? (
+              <p className="border-border/30 border-t pt-1.5 text-[11px] text-muted-foreground">
+                {editorName} düzenliyor — siz izliyorsunuz
+              </p>
+            ) : isEditor ? (
+              <p className="border-border/30 border-t pt-1.5 font-medium text-[11px] text-emerald-500">
+                Düzenliyorsunuz
+              </p>
+            ) : null}
+          </div>
+        </PopoverPrimitive.Content>
       </div>
     </PopoverPrimitive.Root>
   )

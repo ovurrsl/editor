@@ -107,7 +107,11 @@ export function ScenesTab() {
     <div className="flex h-full flex-col gap-3 p-3">
       <div className="flex items-center justify-between gap-2">
         <span className="font-medium text-muted-foreground text-xs">
-          {scenes === null ? 'Projects' : scenes.length === 1 ? '1 project' : `${scenes.length} projects`}
+          {scenes === null
+            ? 'Projects'
+            : scenes.length === 1
+              ? '1 project'
+              : `${scenes.length} projects`}
         </span>
         <button
           className="rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"

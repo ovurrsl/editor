@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 
 /**
  * Image processing utilities for algorithmic sharpness and contrast verification
@@ -72,14 +72,21 @@ export function computeSobelEdgeContrast(
 
       // Sobel X
       const gx =
-        -1 * getGray(x - 1, y - 1) + 1 * getGray(x + 1, y - 1) +
-        -2 * getGray(x - 1, y)     + 2 * getGray(x + 1, y) +
-        -1 * getGray(x - 1, y + 1) + 1 * getGray(x + 1, y + 1)
+        -1 * getGray(x - 1, y - 1) +
+        1 * getGray(x + 1, y - 1) +
+        -2 * getGray(x - 1, y) +
+        2 * getGray(x + 1, y) +
+        -1 * getGray(x - 1, y + 1) +
+        1 * getGray(x + 1, y + 1)
 
       // Sobel Y
       const gy =
-        -1 * getGray(x - 1, y - 1) - 2 * getGray(x, y - 1) - 1 * getGray(x + 1, y - 1) +
-         1 * getGray(x - 1, y + 1) + 2 * getGray(x, y + 1) + 1 * getGray(x + 1, y + 1)
+        -1 * getGray(x - 1, y - 1) -
+        2 * getGray(x, y - 1) -
+        1 * getGray(x + 1, y - 1) +
+        1 * getGray(x - 1, y + 1) +
+        2 * getGray(x, y + 1) +
+        1 * getGray(x + 1, y + 1)
 
       const magnitude = Math.sqrt(gx * gx + gy * gy)
       totalMagnitude += magnitude
@@ -93,11 +100,7 @@ export function computeSobelEdgeContrast(
 /**
  * Simulates FXAA post-processing blur on high-frequency ink lines
  */
-export function simulateFXAABlur(
-  pixels: Uint8Array,
-  width: number,
-  height: number,
-): Uint8Array {
+export function simulateFXAABlur(pixels: Uint8Array, width: number, height: number): Uint8Array {
   const output = new Uint8Array(pixels.length)
   output.set(pixels)
 
@@ -108,7 +111,11 @@ export function simulateFXAABlur(
         const getChannel = (px: number, py: number) => pixels[(py * width + px) * 4 + c]!
         const blurVal =
           0.5 * getChannel(x, y) +
-          0.125 * (getChannel(x - 1, y) + getChannel(x + 1, y) + getChannel(x, y - 1) + getChannel(x, y + 1))
+          0.125 *
+            (getChannel(x - 1, y) +
+              getChannel(x + 1, y) +
+              getChannel(x, y - 1) +
+              getChannel(x, y + 1))
         output[(y * width + x) * 4 + c] = Math.round(blurVal)
       }
       output[(y * width + x) * 4 + 3] = pixels[(y * width + x) * 4 + 3]!
@@ -121,10 +128,7 @@ export function simulateFXAABlur(
 /**
  * Generates synthetic CAD/BIM architectural canvas with inked lines
  */
-export function generateArchitecturalTestImage(
-  width: number,
-  height: number,
-): Uint8Array {
+export function generateArchitecturalTestImage(width: number, height: number): Uint8Array {
   const pixels = new Uint8Array(width * height * 4)
   // Background: white (255, 255, 255, 255)
   pixels.fill(255)

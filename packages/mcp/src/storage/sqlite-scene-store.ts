@@ -214,7 +214,6 @@ function rowToSceneEvent(row: SceneEventRow): SceneEvent {
   }
 }
 
-
 /**
  * Drop every revision of this scene older than the newest
  * {@link SCENE_REVISION_HISTORY}.
@@ -288,7 +287,9 @@ export class SqliteSceneStore implements SceneStore {
 
   constructor(opts: SqliteSceneStoreOptions = {}) {
     const env = opts.env ?? process.env
-    this.databasePath = path.resolve(/*turbopackIgnore: true*/ opts.databasePath ?? resolveDefaultDatabasePath(env))
+    this.databasePath = path.resolve(
+      /*turbopackIgnore: true*/ opts.databasePath ?? resolveDefaultDatabasePath(env),
+    )
     this.maxSceneBytes = resolveMaxSceneBytes(env, opts.maxSceneBytes)
   }
 
@@ -585,7 +586,6 @@ export class SqliteSceneStore implements SceneStore {
       }
     })
   }
-
 
   async listSceneEvents(sceneId: string, opts: SceneEventListOptions = {}): Promise<SceneEvent[]> {
     const afterEventId = Math.max(0, opts.afterEventId ?? 0)

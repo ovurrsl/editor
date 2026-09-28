@@ -1,16 +1,16 @@
-import { type NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 import { existsSync, readFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
-import { authorizeSceneMutation, authorizeSceneRead } from '@/lib/auth/guard'
-import { publishedSceneIds } from '@/lib/auth/site-scenes'
-import { countGraphNodes, isEmptyGraphOverwrite } from '@/lib/empty-graph-guard'
+import { join } from 'node:path'
 import {
   applySceneGraphPatch,
   computeSceneGraphDiff,
   type SceneGraph,
   type SceneGraphPatch,
 } from '@pascal-app/core'
+import { type NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { authorizeSceneMutation, authorizeSceneRead } from '@/lib/auth/guard'
+import { publishedSceneIds } from '@/lib/auth/site-scenes'
+import { isEmptyGraphOverwrite } from '@/lib/empty-graph-guard'
 import { apiGraphPatchSchema, apiGraphSchema } from '@/lib/graph-schema'
 import {
   guardSceneApiRequest,
@@ -154,7 +154,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
   const ifMatch = parseIfMatch(request.headers.get('If-Match'))
   const expectedVersion =
-    ifMatch ?? parsed.data.expectedVersion ?? (parsed.data.patch ? parsed.data.baseVersion : undefined)
+    ifMatch ??
+    parsed.data.expectedVersion ??
+    (parsed.data.patch ? parsed.data.baseVersion : undefined)
 
   const operations = await getSceneOperations()
   try {
@@ -194,10 +196,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const targetNodeCount = Object.keys(targetGraph.nodes ?? {}).length
-    if (
-      !parsed.data.force &&
-      isEmptyGraphOverwrite(targetNodeCount, existing.nodeCount)
-    ) {
+    if (!parsed.data.force && isEmptyGraphOverwrite(targetNodeCount, existing.nodeCount)) {
       return sceneApiJson(
         request,
         {
@@ -236,7 +235,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     return handleStoreError(request, error, { includeCurrentVersionFor: id })
   }
 }
-
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const guard = guardSceneApiRequest(request)
@@ -291,7 +289,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   const ifMatch = parseIfMatch(request.headers.get('If-Match'))
   const expectedVersion =
-    ifMatch ?? parsed.data.expectedVersion ?? (parsed.data.patch ? parsed.data.baseVersion : undefined)
+    ifMatch ??
+    parsed.data.expectedVersion ??
+    (parsed.data.patch ? parsed.data.baseVersion : undefined)
 
   const operations = await getSceneOperations()
   try {
@@ -321,10 +321,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       const targetGraph = applySceneGraphPatch(existing.graph, parsed.data.patch as SceneGraphPatch)
       const targetNodeCount = Object.keys(targetGraph.nodes ?? {}).length
 
-      if (
-        !parsed.data.force &&
-        isEmptyGraphOverwrite(targetNodeCount, existing.nodeCount)
-      ) {
+      if (!parsed.data.force && isEmptyGraphOverwrite(targetNodeCount, existing.nodeCount)) {
         return sceneApiJson(
           request,
           {
@@ -380,7 +377,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return handleStoreError(request, error, { includeCurrentVersionFor: id })
   }
 }
-
 
 /**
  * Parses an `If-Match` header value per RFC 7232. Accepts `"<version>"` or

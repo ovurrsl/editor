@@ -1813,8 +1813,12 @@ function buildOccludingRoofInterior(
   const roofEntries = collectSiblingRoofEntries(parent, nodes)
   const currentEntry = roofEntries.find(({ segment }) => segment.id === node.id)
   if (!currentEntry) return null
-  const targetRoofInverse = _prevSegmentUvMatrix.copy(composeRoofTransform(parent, _scratchM1)).invert()
-  const targetSegmentInverse = _segWorldMatrix.copy(composeSegmentTransform(node, _scratchM2)).invert()
+  const targetRoofInverse = _prevSegmentUvMatrix
+    .copy(composeRoofTransform(parent, _scratchM1))
+    .invert()
+  const targetSegmentInverse = _segWorldMatrix
+    .copy(composeSegmentTransform(node, _scratchM2))
+    .invert()
   let combinedInterior: Brush | null = null
 
   for (let siblingIndex = 0; siblingIndex < roofEntries.length; siblingIndex++) {
@@ -2629,9 +2633,7 @@ function addDutchRakeBoard(
 
   _scratchV1.subVectors(topPoly[1]!, topPoly[0]!)
   _scratchV2.subVectors(topPoly[2]!, topPoly[0]!)
-  const normal = _scratchNormal
-    .crossVectors(_scratchV1, _scratchV2)
-    .normalize()
+  const normal = _scratchNormal.crossVectors(_scratchV1, _scratchV2).normalize()
   if (normal.y < 0) {
     topPoly.reverse()
     normal.multiplyScalar(-1)

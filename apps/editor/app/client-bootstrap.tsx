@@ -22,7 +22,11 @@ export function ClientBootstrap({
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production' && enableDevDiagnostics) {
       import('react-scan')
-        .then((mod) => (mod as unknown as { scan?: (opts: { enabled: boolean }) => void }).scan?.({ enabled: true }))
+        .then((mod) =>
+          (mod as unknown as { scan?: (opts: { enabled: boolean }) => void }).scan?.({
+            enabled: true,
+          }),
+        )
         .catch(() => {})
     }
   }, [enableDevDiagnostics])

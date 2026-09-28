@@ -23,9 +23,7 @@ describe('PresencePopover Adversarial & Boundary Stress Test Suite (R1, R2, R3 U
     })
 
     it('handles 1 user: exactly 1 avatar rendered, no +N badge', () => {
-      const users: Person[] = [
-        { userId: 'u_1', email: 'alice@domain.com', isEditor: true },
-      ]
+      const users: Person[] = [{ userId: 'u_1', email: 'alice@domain.com', isEditor: true }]
       const markup = renderToStaticMarkup(
         <PresencePopover
           canEdit={true}
@@ -371,9 +369,7 @@ describe('PresencePopover Adversarial & Boundary Stress Test Suite (R1, R2, R3 U
     })
 
     it('renders "Düzenlemeye geç" takeover button only when viewer canEdit and no editor is active', () => {
-      const users: Person[] = [
-        { userId: 'viewer_1', email: 'v1@domain.com', isEditor: false },
-      ]
+      const users: Person[] = [{ userId: 'viewer_1', email: 'v1@domain.com', isEditor: false }]
 
       const markupTakeover = renderToStaticMarkup(
         <PresencePopover

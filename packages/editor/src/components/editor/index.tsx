@@ -61,8 +61,8 @@ import { SitePanel, type SitePanelProps } from '../ui/sidebar/panels/site-panel'
 import type { SidebarTab } from '../ui/sidebar/tab-bar'
 import { useHostPanels } from '../ui/sidebar/use-plugin-panels'
 import { FloorplanPreview } from '../viewer/floorplan-preview'
-import { ViewerStageSwitcher } from '../viewer/viewer-stage-switcher'
 import type { ViewerStageMode } from '../viewer/viewer-stage-modes'
+import { ViewerStageSwitcher } from '../viewer/viewer-stage-switcher'
 import { CustomCameraControls } from './custom-camera-controls'
 import { DeleteConfirmationDialog } from './delete-confirmation-dialog'
 import { EditorLayoutV2 } from './editor-layout-v2'
@@ -765,11 +765,7 @@ const ViewerSceneContent = memo(function ViewerSceneContent({
   const isCaptureMode = useEditor((s) => s.isCaptureMode)
   const isPreviewMode = useEditor((s) => s.isPreviewMode)
   const noEditing =
-    isVersionPreviewMode ||
-    isFirstPersonMode ||
-    isStudioMode ||
-    isCaptureMode ||
-    isPreviewMode
+    isVersionPreviewMode || isFirstPersonMode || isStudioMode || isCaptureMode || isPreviewMode
 
   return (
     <>
@@ -1028,16 +1024,14 @@ const ViewerCanvas = memo(function ViewerCanvas({
 
   const effectivePreviewStageMode: ViewerStageMode =
     isFirstPersonMode || !hasFloorplan ? '3d' : previewStageMode
-  const previewStageModes =
-    hasFloorplan && !isFirstPersonMode ? undefined : (['3d'] as const)
+  const previewStageModes = hasFloorplan && !isFirstPersonMode ? undefined : (['3d'] as const)
 
   const show2d = !isPreviewMode && (viewMode === '2d' || viewMode === 'split')
   const show3d = isPreviewMode
     ? effectivePreviewStageMode === '3d' || effectivePreviewStageMode === 'split'
     : viewMode === '3d' || viewMode === 'split'
   const showPreview2d =
-    isPreviewMode &&
-    (effectivePreviewStageMode === '2d' || effectivePreviewStageMode === 'split')
+    isPreviewMode && (effectivePreviewStageMode === '2d' || effectivePreviewStageMode === 'split')
   const isPreviewSplit = isPreviewMode && effectivePreviewStageMode === 'split'
 
   const [isCameraControlsHintVisible, setIsCameraControlsHintVisible] = useState<boolean | null>(
@@ -1196,9 +1190,7 @@ const ViewerCanvas = memo(function ViewerCanvas({
         {isPreviewMode && (
           <>
             {isFirstPersonMode ? (
-              <FirstPersonOverlay
-                onExit={() => useEditor.getState().setFirstPersonMode(false)}
-              />
+              <FirstPersonOverlay onExit={() => useEditor.getState().setFirstPersonMode(false)} />
             ) : (
               <ViewerOverlay
                 hideBottomBar={effectivePreviewStageMode !== '3d'}
@@ -1546,9 +1538,7 @@ export default function Editor({
                 </div>
               )}
               {isFirstPersonMode && (
-                <FirstPersonOverlay
-                  onExit={() => useEditor.getState().setFirstPersonMode(false)}
-                />
+                <FirstPersonOverlay onExit={() => useEditor.getState().setFirstPersonMode(false)} />
               )}
               {viewerBanner}
               {projectId ? <SnapshotCaptureOverlay projectId={projectId} /> : null}
@@ -1604,12 +1594,7 @@ export default function Editor({
       )}
 
       {/* Viewer area */}
-      <div
-        className={cn(
-          'relative flex-1 overflow-hidden',
-          !isPreviewMode && 'rounded-xl',
-        )}
-      >
+      <div className={cn('relative flex-1 overflow-hidden', !isPreviewMode && 'rounded-xl')}>
         {viewerCanvas}
       </div>
 

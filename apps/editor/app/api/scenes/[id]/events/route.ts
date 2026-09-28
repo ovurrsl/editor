@@ -106,7 +106,6 @@ export async function GET(request: Request, { params }: RouteParams) {
                 : event
             enqueue(`data: ${JSON.stringify(dataPayload)}\n\n`)
           }
-
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error)
           enqueue('event: error\n')

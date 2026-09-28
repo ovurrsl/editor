@@ -1,19 +1,21 @@
 'use client'
 
 import { useApp } from '@panel/components/app-providers'
+import { Interactive2DCanvas } from '@panel/components/console/interactive-2d-canvas'
+import {
+  type PalletRackNodeShape,
+  RackPropertyEditorCard,
+} from '@panel/components/console/rack-property-editor-card'
 import { Toast } from '@panel/components/ui/feedback'
+import { formatIndustrialAddress, generateBarcode } from '@panel/lib/addressing-utils'
 import type { SitesResponse } from '@panel/lib/api-contract'
 import { call } from '@panel/lib/client-api'
 import { cn } from '@panel/lib/cn'
 import { useEscapeLayer } from '@panel/lib/escape-layers'
 import type { LocationStatus, WarehouseLocation } from '@panel/lib/types'
-import { Interactive2DCanvas } from '@panel/components/console/interactive-2d-canvas'
-import {
-  RackPropertyEditorCard,
-  type PalletRackNodeShape,
-} from '@panel/components/console/rack-property-editor-card'
-import { formatIndustrialAddress, generateBarcode } from '@panel/lib/addressing-utils'
+
 type PalletRackNode = PalletRackNodeShape
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 const ROW_HEIGHT = 36
@@ -32,8 +34,20 @@ function getLevelColor(letter: string): string {
   return LEVEL_COLORS[letter?.toUpperCase()] ?? '#64748B'
 }
 
-export function exportLocationsToCsv(locations: WarehouseLocation[], filename = 'warehouse-locations.csv') {
-  const headers = ['Aisle', 'Bay', 'Level', 'Position', 'Address ID', 'Barcode', 'Max Weight (kg)', 'Status']
+export function exportLocationsToCsv(
+  locations: WarehouseLocation[],
+  filename = 'warehouse-locations.csv',
+) {
+  const headers = [
+    'Aisle',
+    'Bay',
+    'Level',
+    'Position',
+    'Address ID',
+    'Barcode',
+    'Max Weight (kg)',
+    'Status',
+  ]
   const escapeCell = (val: unknown): string => {
     if (val === null || val === undefined) return ''
     const str = String(val)
@@ -72,7 +86,10 @@ export function exportLocationsToCsv(locations: WarehouseLocation[], filename = 
   URL.revokeObjectURL(url)
 }
 
-export function parseRfc4180Csv(csvText: string): { rows: Array<Partial<WarehouseLocation>>; errors: string[] } {
+export function parseRfc4180Csv(csvText: string): {
+  rows: Array<Partial<WarehouseLocation>>
+  errors: string[]
+} {
   let text = csvText.startsWith('\uFEFF') ? csvText.slice(1) : csvText
   const records: string[][] = []
   let currentRecord: string[] = []
@@ -165,7 +182,8 @@ export function parseRfc4180Csv(csvText: string): { rows: Array<Partial<Warehous
     const rawBay = (bayIdx !== -1 ? rec[bayIdx] : '1') ?? '1'
     const bay = String(parseInt(rawBay, 10) || 1).padStart(2, '0')
     const level = ((levelIdx !== -1 ? rec[levelIdx] : 'A') || 'A') ?? 'A'
-    const position = posIdx !== -1 && rec[posIdx] ? String(parseInt(rec[posIdx] ?? '1', 10) || 1) : '1'
+    const position =
+      posIdx !== -1 && rec[posIdx] ? String(parseInt(rec[posIdx] ?? '1', 10) || 1) : '1'
 
     let addressId = addrIdx !== -1 && rec[addrIdx] ? rec[addrIdx] : ''
     if (!addressId) {
@@ -177,7 +195,8 @@ export function parseRfc4180Csv(csvText: string): { rows: Array<Partial<Warehous
       barcode = `LOC-${addressId.replace(/[^A-Za-z0-9]/g, '')}`
     }
 
-    const maxWeight = weightIdx !== -1 && rec[weightIdx] ? parseInt(rec[weightIdx] ?? '1000', 10) || 1000 : 1000
+    const maxWeight =
+      weightIdx !== -1 && rec[weightIdx] ? parseInt(rec[weightIdx] ?? '1000', 10) || 1000 : 1000
 
     let status: LocationStatus = 'Active'
     const statusVal = statusIdx !== -1 ? rec[statusIdx] : undefined
@@ -243,9 +262,9 @@ export function synthesizeSceneFromLocations(
     aisleBayMap.set(key, list)
   }
 
-  const distinctAisles = Array.from(new Set(locations.map((l) => l.aisle.trim().toUpperCase()))).sort(
-    (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }),
-  )
+  const distinctAisles = Array.from(
+    new Set(locations.map((l) => l.aisle.trim().toUpperCase())),
+  ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
   const aisleSpacing = 4.0
   const bayPitch = 2.8
 
@@ -303,7 +322,10 @@ export function AddressesTab() {
     { id: '01JM1SITE00000000000000001', name: 'Sakarya LM1', sceneId: 'sakarya_lm1' },
   ])
   const [selectedSiteId, setSelectedSiteId] = useState<string>('01JM1SITE00000000000000002')
-  const selectedSite = useMemo(() => sites.find((s) => s.id === selectedSiteId), [sites, selectedSiteId])
+  const selectedSite = useMemo(
+    () => sites.find((s) => s.id === selectedSiteId),
+    [sites, selectedSiteId],
+  )
 
   // Locations state
   const [locations, setLocations] = useState<WarehouseLocation[]>([])
@@ -402,11 +424,17 @@ export function AddressesTab() {
         const res = await call<SitesResponse>('/api/sites')
         if (active && res.ok && res.data.sites && res.data.sites.length > 0) {
           const normalizedSites = res.data.sites.map((s) => {
-            const isBursa = s.id === '01JM1SITE00000000000000002' || s.name.toUpperCase().includes('BURSA')
-            const isSakarya = s.id === '01JM1SITE00000000000000001' || s.name.toUpperCase().includes('SAKARYA')
+            const isBursa =
+              s.id === '01JM1SITE00000000000000002' || s.name.toUpperCase().includes('BURSA')
+            const isSakarya =
+              s.id === '01JM1SITE00000000000000001' || s.name.toUpperCase().includes('SAKARYA')
             return {
               ...s,
-              id: isBursa ? '01JM1SITE00000000000000002' : isSakarya ? '01JM1SITE00000000000000001' : s.id,
+              id: isBursa
+                ? '01JM1SITE00000000000000002'
+                : isSakarya
+                  ? '01JM1SITE00000000000000001'
+                  : s.id,
               sceneId: s.sceneId || (isBursa ? 'bursa_baskoy' : isSakarya ? 'sakarya_lm1' : null),
             }
           })
@@ -434,45 +462,48 @@ export function AddressesTab() {
   }, [])
 
   // Fetch locations with race-condition guards and zero-flicker state
-  const loadLocations = useCallback(async (siteTarget?: string) => {
-    const activeSite = siteTarget || selectedSiteId
-    const seq = ++loadSeqRef.current
+  const loadLocations = useCallback(
+    async (siteTarget?: string) => {
+      const activeSite = siteTarget || selectedSiteId
+      const seq = ++loadSeqRef.current
 
-    // Only unmount to spinner on very first load before we have any locations
-    if (isFirstLoad.current && locationsCountRef.current === 0) {
-      setLoading(true)
-    }
-
-    try {
-      const res = await call<{
-        locations: WarehouseLocation[]
-        total: number
-        canEdit?: boolean
-      }>(`/api/locations?siteId=${encodeURIComponent(activeSite)}`)
-
-      // If a newer request was dispatched, drop this stale response
-      if (seq !== loadSeqRef.current) return
-
-      if (res.ok) {
-        const incoming = res.data.locations || []
-        incoming.sort(compareLocationsNatural)
-        setLocations(incoming)
-        if (res.data.canEdit !== undefined) setCanEdit(res.data.canEdit)
-        isFirstLoad.current = false
-      } else {
-        notify('Failed to load locations', 'error')
+      // Only unmount to spinner on very first load before we have any locations
+      if (isFirstLoad.current && locationsCountRef.current === 0) {
+        setLoading(true)
       }
-    } catch (_e) {
-      if (seq === loadSeqRef.current) {
-        notify('Failed to load locations', 'error')
+
+      try {
+        const res = await call<{
+          locations: WarehouseLocation[]
+          total: number
+          canEdit?: boolean
+        }>(`/api/locations?siteId=${encodeURIComponent(activeSite)}`)
+
+        // If a newer request was dispatched, drop this stale response
+        if (seq !== loadSeqRef.current) return
+
+        if (res.ok) {
+          const incoming = res.data.locations || []
+          incoming.sort(compareLocationsNatural)
+          setLocations(incoming)
+          if (res.data.canEdit !== undefined) setCanEdit(res.data.canEdit)
+          isFirstLoad.current = false
+        } else {
+          notify('Failed to load locations', 'error')
+        }
+      } catch (_e) {
+        if (seq === loadSeqRef.current) {
+          notify('Failed to load locations', 'error')
+        }
+      } finally {
+        if (seq === loadSeqRef.current) {
+          setLoading(false)
+          isFirstLoad.current = false
+        }
       }
-    } finally {
-      if (seq === loadSeqRef.current) {
-        setLoading(false)
-        isFirstLoad.current = false
-      }
-    }
-  }, [selectedSiteId, notify])
+    },
+    [selectedSiteId, notify],
+  )
 
   useEffect(() => {
     void loadLocations()
@@ -561,8 +592,10 @@ export function AddressesTab() {
     const q = search.trim().toLowerCase()
     return locations.filter((loc) => {
       if (statusFilter !== 'All' && loc.status !== statusFilter) return false
-      if (aisleFilter !== 'All' && loc.aisle.toLowerCase() !== aisleFilter.toLowerCase()) return false
-      if (bayFilter && String(loc.bay).padStart(2, '0') !== String(bayFilter).padStart(2, '0')) return false
+      if (aisleFilter !== 'All' && loc.aisle.toLowerCase() !== aisleFilter.toLowerCase())
+        return false
+      if (bayFilter && String(loc.bay).padStart(2, '0') !== String(bayFilter).padStart(2, '0'))
+        return false
 
       if (!q) return true
       return (
@@ -578,7 +611,10 @@ export function AddressesTab() {
   const totalCount = filteredLocations.length
   const totalHeight = totalCount * ROW_HEIGHT
   const startIndex = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN)
-  const endIndex = Math.min(totalCount, Math.ceil((scrollTop + viewportHeight) / ROW_HEIGHT) + OVERSCAN)
+  const endIndex = Math.min(
+    totalCount,
+    Math.ceil((scrollTop + viewportHeight) / ROW_HEIGHT) + OVERSCAN,
+  )
   const visibleRows = useMemo(() => {
     return filteredLocations.slice(startIndex, endIndex)
   }, [filteredLocations, startIndex, endIndex])
@@ -653,7 +689,8 @@ export function AddressesTab() {
     setAisleFilter(aisle)
     setBayFilter(bay)
     const match = locations.find(
-      (l) => l.aisle.toUpperCase() === aisle.toUpperCase() && String(l.bay).padStart(2, '0') === bay,
+      (l) =>
+        l.aisle.toUpperCase() === aisle.toUpperCase() && String(l.bay).padStart(2, '0') === bay,
     )
     if (match) {
       setSelectedLocation(match)
@@ -673,7 +710,8 @@ export function AddressesTab() {
     (rowLabel: string) => {
       const cleanTarget = rowLabel.trim().toUpperCase()
       const matching = Object.values(effectiveSceneNodes).filter((node) => {
-        if (node.type !== 'warehouse:pallet-rack' && (node as any).rowLabel === undefined) return false
+        if (node.type !== 'warehouse:pallet-rack' && (node as any).rowLabel === undefined)
+          return false
         const row = (node.rowLabel || node.frontAisleLabel || '').trim().toUpperCase()
         return row === cleanTarget
       })
@@ -968,11 +1006,15 @@ export function AddressesTab() {
   // Matching locations for currently selected rack
   const matchingLocationsForSelectedRack = useMemo(() => {
     if (!selectedRackNode) return []
-    const rackAisle = (selectedRackNode.rowLabel || selectedRackNode.frontAisleLabel || '').trim().toUpperCase()
+    const rackAisle = (selectedRackNode.rowLabel || selectedRackNode.frontAisleLabel || '')
+      .trim()
+      .toUpperCase()
     const rackBay = String(selectedRackNode.bayIndex).padStart(2, '0')
     return locations.filter((l) => {
       if (l.nodeId && l.nodeId === selectedRackNode.id) return true
-      return l.aisle.trim().toUpperCase() === rackAisle && String(l.bay).padStart(2, '0') === rackBay
+      return (
+        l.aisle.trim().toUpperCase() === rackAisle && String(l.bay).padStart(2, '0') === rackBay
+      )
     })
   }, [locations, selectedRackNode])
 
@@ -987,7 +1029,8 @@ export function AddressesTab() {
     const oldBay = String(selectedRackNode.bayIndex).padStart(2, '0')
 
     const newAisle = (changes.rowLabel ?? oldAisle).trim()
-    const newBay = changes.bayIndex !== undefined ? String(changes.bayIndex).padStart(2, '0') : oldBay
+    const newBay =
+      changes.bayIndex !== undefined ? String(changes.bayIndex).padStart(2, '0') : oldBay
     const newLevels = changes.levels !== undefined ? changes.levels : (selectedRackNode.levels ?? 6)
 
     // 1. Optimistically update local scene graph
@@ -997,8 +1040,14 @@ export function AddressesTab() {
       rowLabel: newAisle,
       bayIndex: parseInt(newBay, 10) || 1,
       levels: newLevels,
-      palletsPerLevel: changes.palletsPerLevel !== undefined ? changes.palletsPerLevel : selectedRackNode.palletsPerLevel,
-      bayClearWidth: changes.bayClearWidth !== undefined ? changes.bayClearWidth : selectedRackNode.bayClearWidth,
+      palletsPerLevel:
+        changes.palletsPerLevel !== undefined
+          ? changes.palletsPerLevel
+          : selectedRackNode.palletsPerLevel,
+      bayClearWidth:
+        changes.bayClearWidth !== undefined
+          ? changes.bayClearWidth
+          : selectedRackNode.bayClearWidth,
     }
 
     setSceneNodes((prev) => ({
@@ -1065,7 +1114,8 @@ export function AddressesTab() {
         } else {
           // Newly added level/position
           const newLocId =
-            custom.id || `loc_${selectedSiteId}_${newAisle}_${newBay}_${custom.level}_${custom.position}`
+            custom.id ||
+            `loc_${selectedSiteId}_${newAisle}_${newBay}_${custom.level}_${custom.position}`
           const newLoc: WarehouseLocation = {
             id: newLocId,
             siteId: selectedSiteId,
@@ -1292,7 +1342,10 @@ export function AddressesTab() {
     }
     const currentSite = sites.find((s) => s.id === selectedSiteId)
     const siteSlug = (currentSite?.name || 'warehouse').replace(/\s+/g, '_').toLowerCase()
-    exportLocationsToCsv(filteredLocations.length > 0 ? filteredLocations : locations, `${siteSlug}-locations.csv`)
+    exportLocationsToCsv(
+      filteredLocations.length > 0 ? filteredLocations : locations,
+      `${siteSlug}-locations.csv`,
+    )
     notify('CSV exported successfully', 'success')
   }
 
@@ -1331,7 +1384,9 @@ export function AddressesTab() {
           const created = res.data.created || 0
           const updated = res.data.updated || 0
           const count = created + updated
-          const tmpl = t.addrImportSuccess ?? '{count} locations imported ({created} created, {updated} updated)'
+          const tmpl =
+            t.addrImportSuccess ??
+            '{count} locations imported ({created} created, {updated} updated)'
           const msg = tmpl
             .replace('{count}', String(count))
             .replace('{created}', String(created))
@@ -1363,7 +1418,10 @@ export function AddressesTab() {
   }, [locations])
 
   return (
-    <section className="flex flex-col gap-3.5 w-full select-none" style={{ animation: 'dtFade 0.2s ease' }}>
+    <section
+      className="flex flex-col gap-3.5 w-full select-none"
+      style={{ animation: 'dtFade 0.2s ease' }}
+    >
       {/* Header Bar */}
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -1371,9 +1429,9 @@ export function AddressesTab() {
             {t.addrTitle ?? 'Warehouse Addresses'}
           </h2>
           <p className="m-0 text-xs text-muted-fg font-mono mt-0.5">
-            {t.addrTotal ?? 'Total'}: {statusCounts.total} · {t.addrActive ?? 'Active'}: {statusCounts.active} ·{' '}
-            {t.addrBlocked ?? 'Blocked'}: {statusCounts.blocked} · {t.addrQuarantine ?? 'Quarantine'}:{' '}
-            {statusCounts.quarantine}
+            {t.addrTotal ?? 'Total'}: {statusCounts.total} · {t.addrActive ?? 'Active'}:{' '}
+            {statusCounts.active} · {t.addrBlocked ?? 'Blocked'}: {statusCounts.blocked} ·{' '}
+            {t.addrQuarantine ?? 'Quarantine'}: {statusCounts.quarantine}
           </p>
         </div>
 
@@ -1405,7 +1463,14 @@ export function AddressesTab() {
             className="flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-xs font-medium text-fg hover:bg-hover transition-colors disabled:opacity-50"
             title="Export CSV (UTF-8 BOM Excel Compatible)"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
@@ -1429,7 +1494,14 @@ export function AddressesTab() {
                 className="flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-xs font-medium text-fg hover:bg-hover transition-colors"
                 title="Bulk Import CSV"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                   <polyline points="17 8 12 3 7 8" />
                   <line x1="12" y1="3" x2="12" y2="15" />
@@ -1445,7 +1517,14 @@ export function AddressesTab() {
                 className="flex h-8 items-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-3 text-xs font-medium text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-40"
                 title="Mevcut projedeki tüm lokasyon adreslerini temizle"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <polyline points="3 6 5 6 21 6" />
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                   <line x1="10" y1="11" x2="10" y2="17" />
@@ -1480,10 +1559,12 @@ export function AddressesTab() {
               onClick={() => setStatusFilter(st)}
               className={cn(
                 'px-2 py-1 rounded-md text-[11px] font-medium transition-colors',
-                statusFilter === st ? 'bg-primary text-primary-fg font-semibold shadow-xs' : 'text-muted-fg hover:text-fg',
+                statusFilter === st
+                  ? 'bg-primary text-primary-fg font-semibold shadow-xs'
+                  : 'text-muted-fg hover:text-fg',
               )}
             >
-              {st === 'All' ? t.addrAllStatuses ?? 'All' : st}
+              {st === 'All' ? (t.addrAllStatuses ?? 'All') : st}
             </button>
           ))}
         </div>
@@ -1496,7 +1577,9 @@ export function AddressesTab() {
             style={{ colorScheme: 'dark' }}
             className="h-7 rounded-lg border border-input bg-zinc-900 px-2 text-xs font-medium text-zinc-100 outline-none cursor-pointer focus:border-ring [&>option]:bg-zinc-900 [&>option]:text-zinc-100"
           >
-            <option value="All" className="bg-zinc-900 text-zinc-100">{t.addrAllAisles ?? 'All aisles'}</option>
+            <option value="All" className="bg-zinc-900 text-zinc-100">
+              {t.addrAllAisles ?? 'All aisles'}
+            </option>
             {distinctAisles.map((a) => (
               <option key={a} value={a} className="bg-zinc-900 text-zinc-100">
                 Sıra {a}
@@ -1586,7 +1669,10 @@ export function AddressesTab() {
                 </span>
                 {selectedRackNode ? (
                   <p className="text-[11px] text-muted-fg max-w-md">
-                    Sağdaki panelden bu rafın kat sayısını ({selectedRackNode.levels ?? 6}) ve göz palet kapasitesini (1, 2 veya 3 palet) belirleyip <strong>Rafı ve Adresleri Güncelle</strong> butonuna basarak adresleri anında oluşturabilirsiniz.
+                    Sağdaki panelden bu rafın kat sayısını ({selectedRackNode.levels ?? 6}) ve göz
+                    palet kapasitesini (1, 2 veya 3 palet) belirleyip{' '}
+                    <strong>Rafı ve Adresleri Güncelle</strong> butonuna basarak adresleri anında
+                    oluşturabilirsiniz.
                   </p>
                 ) : (
                   (search || statusFilter !== 'All' || aisleFilter !== 'All' || bayFilter) && (
@@ -1642,7 +1728,9 @@ export function AddressesTab() {
                         <div className="text-center font-bold text-fg">{loc.aisle}</div>
 
                         {/* Bay */}
-                        <div className="text-center text-muted-fg">{String(loc.bay).padStart(2, '0')}</div>
+                        <div className="text-center text-muted-fg">
+                          {String(loc.bay).padStart(2, '0')}
+                        </div>
 
                         {/* Level */}
                         <div className="text-center">
@@ -1664,7 +1752,9 @@ export function AddressesTab() {
                               type="text"
                               value={editDraft?.addressId ?? ''}
                               onChange={(e) =>
-                                setEditDraft((d) => (d ? { ...d, addressId: e.target.value } : null))
+                                setEditDraft((d) =>
+                                  d ? { ...d, addressId: e.target.value } : null,
+                                )
                               }
                               onClick={(e) => e.stopPropagation()}
                               onKeyDown={(e) => {
@@ -1707,7 +1797,9 @@ export function AddressesTab() {
                               type="number"
                               value={editDraft?.maxWeight ?? 1000}
                               onChange={(e) =>
-                                setEditDraft((d) => (d ? { ...d, maxWeight: Number(e.target.value) } : null))
+                                setEditDraft((d) =>
+                                  d ? { ...d, maxWeight: Number(e.target.value) } : null,
+                                )
                               }
                               onClick={(e) => e.stopPropagation()}
                               onKeyDown={(e) => {
@@ -1733,9 +1825,15 @@ export function AddressesTab() {
                               style={{ colorScheme: 'dark' }}
                               className="h-6 rounded border border-primary bg-zinc-900 px-1 text-[10px] text-zinc-100 outline-none [&>option]:bg-zinc-900 [&>option]:text-zinc-100"
                             >
-                              <option value="Active" className="bg-zinc-900 text-zinc-100">Active</option>
-                              <option value="Blocked" className="bg-zinc-900 text-zinc-100">Blocked</option>
-                              <option value="Quarantine" className="bg-zinc-900 text-zinc-100">Quarantine</option>
+                              <option value="Active" className="bg-zinc-900 text-zinc-100">
+                                Active
+                              </option>
+                              <option value="Blocked" className="bg-zinc-900 text-zinc-100">
+                                Blocked
+                              </option>
+                              <option value="Quarantine" className="bg-zinc-900 text-zinc-100">
+                                Quarantine
+                              </option>
                             </select>
                           ) : (
                             <span
@@ -1814,7 +1912,8 @@ export function AddressesTab() {
             </span>
             {selectedLocation && (
               <span className="text-red-400 font-semibold">
-                Seçili: {selectedLocation.addressId} ({selectedLocation.aisle}-{selectedLocation.bay})
+                Seçili: {selectedLocation.addressId} ({selectedLocation.aisle}-
+                {selectedLocation.bay})
               </span>
             )}
           </div>
@@ -1835,7 +1934,15 @@ export function AddressesTab() {
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={() => setRowNamingModal({ isOpen: true, newAisleName: '01L', startBay: 1, levels: 6, palletsPerLevel: 3 })}
+                  onClick={() =>
+                    setRowNamingModal({
+                      isOpen: true,
+                      newAisleName: '01L',
+                      startBay: 1,
+                      levels: 6,
+                      palletsPerLevel: 3,
+                    })
+                  }
                   className="px-2.5 py-1 rounded-lg bg-amber-500 text-black font-semibold text-[11px] hover:bg-amber-400 transition-colors shadow-xs"
                 >
                   Sırayı İsimlendir & Adresle
@@ -1869,7 +1976,9 @@ export function AddressesTab() {
             onSelectRow={(row) => {
               if (row) {
                 setAisleFilter(row)
-                const firstMatch = locations.find((l) => l.aisle.toUpperCase() === row.toUpperCase())
+                const firstMatch = locations.find(
+                  (l) => l.aisle.toUpperCase() === row.toUpperCase(),
+                )
                 if (firstMatch) {
                   setSelectedLocation(firstMatch)
                   handleSelectRow(firstMatch)
@@ -1890,9 +1999,7 @@ export function AddressesTab() {
           <div className="flex items-center justify-between border-b border-border p-3.5 bg-field/60">
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
-              <h3 className="text-sm font-semibold text-fg">
-                Raf Özellikleri & Adresleme
-              </h3>
+              <h3 className="text-sm font-semibold text-fg">Raf Özellikleri & Adresleme</h3>
             </div>
             <button
               type="button"
@@ -1920,7 +2027,14 @@ export function AddressesTab() {
           <div className="w-full max-w-md rounded-2xl border border-red-500/40 bg-surface p-6 shadow-2xl">
             <div className="flex items-center gap-3 text-red-400 mb-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/20 border border-red-500/40">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <polyline points="3 6 5 6 21 6" />
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                   <line x1="10" y1="11" x2="10" y2="17" />
@@ -1934,7 +2048,9 @@ export function AddressesTab() {
             </div>
 
             <p className="text-xs text-muted-fg leading-relaxed mb-6">
-              Bu depodaki ({locations.length} adet) tüm slot lokasyon adresleri silinecek ve sahnedeki tüm rafların sıra/koridor etiketleri sıfırlanacaktır. Raflar adresi olmayan boş duruma getirilecektir.
+              Bu depodaki ({locations.length} adet) tüm slot lokasyon adresleri silinecek ve
+              sahnedeki tüm rafların sıra/koridor etiketleri sıfırlanacaktır. Raflar adresi olmayan
+              boş duruma getirilecektir.
             </p>
 
             <div className="flex items-center justify-end gap-2.5">
@@ -1967,7 +2083,8 @@ export function AddressesTab() {
               Toplu Sıra İsimlendirme & Adresleme
             </h3>
             <p className="text-xs text-muted-fg mb-4">
-              Seçili {selectedRackIds.length} adet raf için sıra adı (örn: 01L), ardışık göz numaralandırması ve slot adresleri otomatik üretilir.
+              Seçili {selectedRackIds.length} adet raf için sıra adı (örn: 01L), ardışık göz
+              numaralandırması ve slot adresleri otomatik üretilir.
             </p>
 
             <div className="space-y-3.5 text-xs">
@@ -1978,7 +2095,12 @@ export function AddressesTab() {
                 <input
                   type="text"
                   value={rowNamingModal.newAisleName}
-                  onChange={(e) => setRowNamingModal((prev) => ({ ...prev, newAisleName: e.target.value.toUpperCase() }))}
+                  onChange={(e) =>
+                    setRowNamingModal((prev) => ({
+                      ...prev,
+                      newAisleName: e.target.value.toUpperCase(),
+                    }))
+                  }
                   placeholder="örn. 01L veya 02R"
                   className="w-full h-8 rounded-lg border border-input bg-field px-2.5 font-mono text-xs font-semibold text-fg outline-none focus:border-ring"
                 />
@@ -1993,7 +2115,12 @@ export function AddressesTab() {
                     type="number"
                     min={1}
                     value={rowNamingModal.startBay}
-                    onChange={(e) => setRowNamingModal((prev) => ({ ...prev, startBay: Math.max(1, parseInt(e.target.value) || 1) }))}
+                    onChange={(e) =>
+                      setRowNamingModal((prev) => ({
+                        ...prev,
+                        startBay: Math.max(1, parseInt(e.target.value) || 1),
+                      }))
+                    }
                     className="w-full h-8 rounded-lg border border-input bg-field px-2 text-xs font-mono text-fg outline-none focus:border-ring"
                   />
                 </div>
@@ -2006,7 +2133,12 @@ export function AddressesTab() {
                     min={1}
                     max={12}
                     value={rowNamingModal.levels}
-                    onChange={(e) => setRowNamingModal((prev) => ({ ...prev, levels: Math.max(1, Math.min(12, parseInt(e.target.value) || 6)) }))}
+                    onChange={(e) =>
+                      setRowNamingModal((prev) => ({
+                        ...prev,
+                        levels: Math.max(1, Math.min(12, parseInt(e.target.value) || 6)),
+                      }))
+                    }
                     className="w-full h-8 rounded-lg border border-input bg-field px-2 text-xs font-mono text-fg outline-none focus:border-ring"
                   />
                 </div>
@@ -2016,13 +2148,24 @@ export function AddressesTab() {
                   </label>
                   <select
                     value={rowNamingModal.palletsPerLevel}
-                    onChange={(e) => setRowNamingModal((prev) => ({ ...prev, palletsPerLevel: parseInt(e.target.value) || 3 }))}
+                    onChange={(e) =>
+                      setRowNamingModal((prev) => ({
+                        ...prev,
+                        palletsPerLevel: parseInt(e.target.value) || 3,
+                      }))
+                    }
                     style={{ colorScheme: 'dark' }}
                     className="w-full h-8 rounded-lg border border-input bg-zinc-900 px-2 text-xs font-medium text-zinc-100 outline-none focus:border-ring cursor-pointer [&>option]:bg-zinc-900 [&>option]:text-zinc-100"
                   >
-                    <option value={1} className="bg-zinc-900 text-zinc-100">1 Palet</option>
-                    <option value={2} className="bg-zinc-900 text-zinc-100">2 Palet</option>
-                    <option value={3} className="bg-zinc-900 text-zinc-100">3 Palet</option>
+                    <option value={1} className="bg-zinc-900 text-zinc-100">
+                      1 Palet
+                    </option>
+                    <option value={2} className="bg-zinc-900 text-zinc-100">
+                      2 Palet
+                    </option>
+                    <option value={3} className="bg-zinc-900 text-zinc-100">
+                      3 Palet
+                    </option>
                   </select>
                 </div>
               </div>
@@ -2030,10 +2173,14 @@ export function AddressesTab() {
               <div className="rounded-xl border border-border/80 bg-field/60 p-3 text-[11px] font-mono text-muted-fg">
                 <span className="text-fg font-semibold">Örnek Üretilecek Adres:</span>{' '}
                 <span className="text-emerald-400 font-bold">
-                  {rowNamingModal.newAisleName || '01L'}-{String(rowNamingModal.startBay).padStart(2, '0')}-01-1
+                  {rowNamingModal.newAisleName || '01L'}-
+                  {String(rowNamingModal.startBay).padStart(2, '0')}-01-1
                 </span>
                 <p className="mt-1 text-[10px] text-muted-fg">
-                  Seçilen {selectedRackIds.length} raf konumsal sıraya göre ardışık (Göz {String(rowNamingModal.startBay).padStart(2, '0')}, {String(rowNamingModal.startBay + 1).padStart(2, '0')}...) olarak güncellenecektir.
+                  Seçilen {selectedRackIds.length} raf konumsal sıraya göre ardışık (Göz{' '}
+                  {String(rowNamingModal.startBay).padStart(2, '0')},{' '}
+                  {String(rowNamingModal.startBay + 1).padStart(2, '0')}...) olarak
+                  güncellenecektir.
                 </p>
               </div>
             </div>

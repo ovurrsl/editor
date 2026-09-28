@@ -161,4 +161,3 @@ describe('disposeObject3DResources', () => {
     expect(cachedUniformDisposals).toBe(0)
   })
 })
-

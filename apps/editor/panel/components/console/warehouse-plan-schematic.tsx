@@ -1,7 +1,8 @@
 'use client'
 
 import type { LocationStatus } from '@panel/lib/types'
-import React, { useMemo, useState } from 'react'
+import type React from 'react'
+import { useMemo, useState } from 'react'
 
 export interface WarehouseLocationSummary {
   aisle: string
@@ -119,7 +120,14 @@ export function WarehousePlanSchematic({
             aria-label="Zoom In"
             className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+            >
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
               <line x1="11" y1="8" x2="11" y2="14" />
@@ -133,7 +141,14 @@ export function WarehousePlanSchematic({
             aria-label="Zoom Out"
             className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+            >
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
               <line x1="8" y1="11" x2="14" y2="11" />
@@ -147,7 +162,14 @@ export function WarehousePlanSchematic({
             aria-label="Reset View"
             className="w-7 h-7 flex items-center justify-center rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+            >
               <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
               <path d="M3 3v5h5" />
             </svg>
@@ -172,18 +194,36 @@ export function WarehousePlanSchematic({
           <defs>
             {/* Blueprint Grid */}
             <pattern id="dt-floor-grid-ed" width="30" height="30" patternUnits="userSpaceOnUse">
-              <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#334155" strokeWidth="0.5" strokeOpacity="0.4" />
+              <path
+                d="M 30 0 L 0 0 0 30"
+                fill="none"
+                stroke="#334155"
+                strokeWidth="0.5"
+                strokeOpacity="0.4"
+              />
             </pattern>
 
             {/* Hazard Stripes for Truck Docks */}
-            <pattern id="dt-dock-stripes-ed" width="12" height="12" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+            <pattern
+              id="dt-dock-stripes-ed"
+              width="12"
+              height="12"
+              patternTransform="rotate(45)"
+              patternUnits="userSpaceOnUse"
+            >
               <rect width="6" height="12" fill="#F59E0B" />
               <rect x="6" width="6" height="12" fill="#1E293B" />
             </pattern>
 
             {/* Selected Bay Crimson Glow */}
             <filter id="dt-bay-glow-ed" x="-30%" y="-30%" width="160%" height="160%">
-              <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="#DC2626" floodOpacity="0.85" />
+              <feDropShadow
+                dx="0"
+                dy="0"
+                stdDeviation="5"
+                floodColor="#DC2626"
+                floodOpacity="0.85"
+              />
             </filter>
 
             {/* Callout Drop Shadow */}
@@ -201,7 +241,16 @@ export function WarehousePlanSchematic({
             }}
           >
             {/* Warehouse Floor */}
-            <rect x="24" y="24" width="912" height="592" rx="6" fill="#0B132B" stroke="#334155" strokeWidth="3" />
+            <rect
+              x="24"
+              y="24"
+              width="912"
+              height="592"
+              rx="6"
+              fill="#0B132B"
+              stroke="#334155"
+              strokeWidth="3"
+            />
             <rect x="24" y="24" width="912" height="592" rx="6" fill="url(#dt-floor-grid-ed)" />
 
             {/* Perimeter Yellow Safety Walkway */}
@@ -251,8 +300,25 @@ export function WarehousePlanSchematic({
               { id: 'DOCK 04', x: 780, w: 70 },
             ].map((dock) => (
               <g key={dock.id}>
-                <rect x={dock.x} y="14" width={dock.w} height="12" fill="url(#dt-dock-stripes-ed)" stroke="#1E293B" strokeWidth="1" />
-                <rect x={dock.x + 8} y="22" width={dock.w - 16} height="14" rx="2" fill="#0F172A" stroke="#475569" strokeWidth="1" />
+                <rect
+                  x={dock.x}
+                  y="14"
+                  width={dock.w}
+                  height="12"
+                  fill="url(#dt-dock-stripes-ed)"
+                  stroke="#1E293B"
+                  strokeWidth="1"
+                />
+                <rect
+                  x={dock.x + 8}
+                  y="22"
+                  width={dock.w - 16}
+                  height="14"
+                  rx="2"
+                  fill="#0F172A"
+                  stroke="#475569"
+                  strokeWidth="1"
+                />
                 <text
                   x={dock.x + dock.w / 2}
                   y="33"
@@ -281,7 +347,14 @@ export function WarehousePlanSchematic({
                 strokeWidth="1.5"
                 strokeDasharray="6 4"
               />
-              <text x="245" y="78" textAnchor="middle" fill="#60A5FA" fontSize="11" fontWeight="bold">
+              <text
+                x="245"
+                y="78"
+                textAnchor="middle"
+                fill="#60A5FA"
+                fontSize="11"
+                fontWeight="bold"
+              >
                 GİRİŞ MAL KABUL / INBOUND STAGING
               </text>
               <text x="245" y="96" textAnchor="middle" fill="#94A3B8" fontSize="9">
@@ -303,7 +376,14 @@ export function WarehousePlanSchematic({
                 strokeWidth="1.5"
                 strokeDasharray="6 4"
               />
-              <text x="715" y="78" textAnchor="middle" fill="#34D399" fontSize="11" fontWeight="bold">
+              <text
+                x="715"
+                y="78"
+                textAnchor="middle"
+                fill="#34D399"
+                fontSize="11"
+                fontWeight="bold"
+              >
                 SEVKİYAT / OUTBOUND STAGING
               </text>
               <text x="715" y="96" textAnchor="middle" fill="#94A3B8" fontSize="9">
@@ -313,27 +393,100 @@ export function WarehousePlanSchematic({
 
             {/* Main Forklift Highway (Between Staging and Racks) */}
             <g>
-              <rect x="55" y="128" width="850" height="52" fill="#1E293B" fillOpacity="0.4" stroke="#334155" strokeWidth="1" />
-              <line x1="55" y1="154" x2="905" y2="154" stroke="#94A3B8" strokeWidth="1.5" strokeDasharray="12 8" />
-              <text x="480" y="148" textAnchor="middle" fill="#CBD5E1" fontSize="10" fontWeight="600" letterSpacing="0.08em">
+              <rect
+                x="55"
+                y="128"
+                width="850"
+                height="52"
+                fill="#1E293B"
+                fillOpacity="0.4"
+                stroke="#334155"
+                strokeWidth="1"
+              />
+              <line
+                x1="55"
+                y1="154"
+                x2="905"
+                y2="154"
+                stroke="#94A3B8"
+                strokeWidth="1.5"
+                strokeDasharray="12 8"
+              />
+              <text
+                x="480"
+                y="148"
+                textAnchor="middle"
+                fill="#CBD5E1"
+                fontSize="10"
+                fontWeight="600"
+                letterSpacing="0.08em"
+              >
                 ◄ FORKLİFT ANA TRANSİT KORİDORU ►
               </text>
             </g>
 
             {/* Operating Forklift Corridor between Rows B and C */}
             <g>
-              <rect x="55" y="294" width="850" height="74" fill="#0F172A" fillOpacity="0.6" stroke="#1E293B" strokeWidth="1" />
-              <line x1="55" y1="331" x2="905" y2="331" stroke="#64748B" strokeWidth="1" strokeDasharray="10 6" />
-              <text x="480" y="335" textAnchor="middle" fill="#64748B" fontSize="10" fontWeight="500">
+              <rect
+                x="55"
+                y="294"
+                width="850"
+                height="74"
+                fill="#0F172A"
+                fillOpacity="0.6"
+                stroke="#1E293B"
+                strokeWidth="1"
+              />
+              <line
+                x1="55"
+                y1="331"
+                x2="905"
+                y2="331"
+                stroke="#64748B"
+                strokeWidth="1"
+                strokeDasharray="10 6"
+              />
+              <text
+                x="480"
+                y="335"
+                textAnchor="middle"
+                fill="#64748B"
+                fontSize="10"
+                fontWeight="500"
+              >
                 FORKLİFT KORİDORU (KORİDOR 1)
               </text>
             </g>
 
             {/* Operating Forklift Corridor below Row D */}
             <g>
-              <rect x="55" y="466" width="850" height="74" fill="#0F172A" fillOpacity="0.6" stroke="#1E293B" strokeWidth="1" />
-              <line x1="55" y1="503" x2="905" y2="503" stroke="#64748B" strokeWidth="1" strokeDasharray="10 6" />
-              <text x="480" y="507" textAnchor="middle" fill="#64748B" fontSize="10" fontWeight="500">
+              <rect
+                x="55"
+                y="466"
+                width="850"
+                height="74"
+                fill="#0F172A"
+                fillOpacity="0.6"
+                stroke="#1E293B"
+                strokeWidth="1"
+              />
+              <line
+                x1="55"
+                y1="503"
+                x2="905"
+                y2="503"
+                stroke="#64748B"
+                strokeWidth="1"
+                strokeDasharray="10 6"
+              />
+              <text
+                x="480"
+                y="507"
+                textAnchor="middle"
+                fill="#64748B"
+                fontSize="10"
+                fontWeight="500"
+              >
                 FORKLİFT KORİDORU (KORİDOR 2)
               </text>
             </g>
@@ -444,7 +597,12 @@ export function WarehousePlanSchematic({
                         </text>
 
                         {/* Bay Status Dot */}
-                        <circle cx={bx + bw - 10} cy={by + 10} r="3.5" fill={isSelected ? '#FFFFFF' : dotColor} />
+                        <circle
+                          cx={bx + bw - 10}
+                          cy={by + 10}
+                          r="3.5"
+                          fill={isSelected ? '#FFFFFF' : dotColor}
+                        />
 
                         {/* Highlight Floating Callout Badge */}
                         {isSelected && (
@@ -509,7 +667,9 @@ export function WarehousePlanSchematic({
             <span className="font-semibold text-red-300">Seçili Göz</span>
           </div>
         </div>
-        <span className="text-[10px] text-slate-500">Saf 2B Vektör SVG · 0% WebGL / Canvas Yükü</span>
+        <span className="text-[10px] text-slate-500">
+          Saf 2B Vektör SVG · 0% WebGL / Canvas Yükü
+        </span>
       </div>
     </div>
   )

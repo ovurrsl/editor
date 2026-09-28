@@ -51,7 +51,12 @@ describe('Viewer Stage Layout & Center-Alignment Stress Suite (R1)', () => {
 
     it('asserts that with default switcherClassName, it contains center positioning classes', () => {
       const markup = renderToStaticMarkup(
-        <ViewerStage mode="3d" modes={['3d', '2d', 'split']} scene={testScene} showLevelSelector={false}>
+        <ViewerStage
+          mode="3d"
+          modes={['3d', '2d', 'split']}
+          scene={testScene}
+          showLevelSelector={false}
+        >
           <div data-canvas="" />
         </ViewerStage>,
       )

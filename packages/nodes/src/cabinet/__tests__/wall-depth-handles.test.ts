@@ -877,223 +877,236 @@ describe('wall cabinet depth handles', () => {
   test.each([
     ['left', 'max', -1],
     ['right', 'min', 1],
-  ] as const)('resizes the first connected %s cabinet inversely in preview and commit', (side, anchor, direction) => {
-    const { baseA, nodes, root, sceneApi, wallA } = wallDepthFixture()
-    const neighbor = CabinetModuleNode.parse({
-      id: `cabinet-module_inverse-${side}-neighbor`,
-      parentId: root.id,
-      children: [`cabinet-module_inverse-${side}-wall`],
-      position: [direction * baseA.width, baseA.position[1], baseA.position[2]],
-    })
-    const neighborWall = CabinetModuleNode.parse({
-      id: `cabinet-module_inverse-${side}-wall`,
-      name: 'Wall Cabinet',
-      parentId: neighbor.id,
-      position: [0, 1.35, -0.13],
-      depth: 0.32,
-    })
-    const fartherCabinet = CabinetModuleNode.parse({
-      id: `cabinet-module_inverse-${side}-farther`,
-      parentId: root.id,
-      position: [direction * baseA.width * 2, baseA.position[1], baseA.position[2]],
-    })
-    nodes[neighbor.id as AnyNodeId] = neighbor as AnyNode
-    nodes[neighborWall.id as AnyNodeId] = neighborWall as AnyNode
-    nodes[fartherCabinet.id as AnyNodeId] = fartherCabinet as AnyNode
-    nodes[root.id as AnyNodeId] = {
-      ...root,
-      children: [baseA.id, neighbor.id, fartherCabinet.id],
-    } as AnyNode
-    const buildModuleHandles = cabinetModuleDefinition.handles as (
-      node: CabinetModuleNodeType,
-      sceneApi: SceneApi,
-    ) => HandleDescriptor<CabinetModuleNodeType>[]
-    const widthHandle = buildModuleHandles(baseA, sceneApi).find(
-      (handle): handle is LinearResizeHandle<CabinetModuleNodeType> =>
-        handle.kind === 'linear-resize' && handle.axis === 'x' && handle.anchor === anchor,
-    )!
-    const delta = 0.1
-    const nextWidth = baseA.width + delta
-    const neighborWidth = neighbor.width - delta
-    const neighborPositionX = neighbor.position[0] + (direction * delta) / 2
-    const selectedPatch = widthHandle.apply(baseA, nextWidth, sceneApi)
-    const previewOverrides = new Map(
-      widthHandle.previewOverrides?.(baseA, nextWidth, sceneApi) ?? [],
-    )
+  ] as const)(
+    'resizes the first connected %s cabinet inversely in preview and commit',
+    (side, anchor, direction) => {
+      const { baseA, nodes, root, sceneApi, wallA } = wallDepthFixture()
+      const neighbor = CabinetModuleNode.parse({
+        id: `cabinet-module_inverse-${side}-neighbor`,
+        parentId: root.id,
+        children: [`cabinet-module_inverse-${side}-wall`],
+        position: [direction * baseA.width, baseA.position[1], baseA.position[2]],
+      })
+      const neighborWall = CabinetModuleNode.parse({
+        id: `cabinet-module_inverse-${side}-wall`,
+        name: 'Wall Cabinet',
+        parentId: neighbor.id,
+        position: [0, 1.35, -0.13],
+        depth: 0.32,
+      })
+      const fartherCabinet = CabinetModuleNode.parse({
+        id: `cabinet-module_inverse-${side}-farther`,
+        parentId: root.id,
+        position: [direction * baseA.width * 2, baseA.position[1], baseA.position[2]],
+      })
+      nodes[neighbor.id as AnyNodeId] = neighbor as AnyNode
+      nodes[neighborWall.id as AnyNodeId] = neighborWall as AnyNode
+      nodes[fartherCabinet.id as AnyNodeId] = fartherCabinet as AnyNode
+      nodes[root.id as AnyNodeId] = {
+        ...root,
+        children: [baseA.id, neighbor.id, fartherCabinet.id],
+      } as AnyNode
+      const buildModuleHandles = cabinetModuleDefinition.handles as (
+        node: CabinetModuleNodeType,
+        sceneApi: SceneApi,
+      ) => HandleDescriptor<CabinetModuleNodeType>[]
+      const widthHandle = buildModuleHandles(baseA, sceneApi).find(
+        (handle): handle is LinearResizeHandle<CabinetModuleNodeType> =>
+          handle.kind === 'linear-resize' && handle.axis === 'x' && handle.anchor === anchor,
+      )!
+      const delta = 0.1
+      const nextWidth = baseA.width + delta
+      const neighborWidth = neighbor.width - delta
+      const neighborPositionX = neighbor.position[0] + (direction * delta) / 2
+      const selectedPatch = widthHandle.apply(baseA, nextWidth, sceneApi)
+      const previewOverrides = new Map(
+        widthHandle.previewOverrides?.(baseA, nextWidth, sceneApi) ?? [],
+      )
 
-    expect(previewOverrides.get(wallA.id as AnyNodeId)?.width).toBeCloseTo(nextWidth)
-    expect(previewOverrides.get(neighbor.id as AnyNodeId)?.width).toBeCloseTo(neighborWidth)
-    expect(previewOverrides.get(neighbor.id as AnyNodeId)?.position?.[0]).toBeCloseTo(
-      neighborPositionX,
-    )
-    expect(previewOverrides.get(neighborWall.id as AnyNodeId)?.width).toBeCloseTo(neighborWidth)
-    expect(previewOverrides.has(fartherCabinet.id as AnyNodeId)).toBe(false)
-    expect(sceneApi.get<CabinetModuleNodeType>(neighbor.id as AnyNodeId)?.width).toBe(
-      neighbor.width,
-    )
+      expect(previewOverrides.get(wallA.id as AnyNodeId)?.width).toBeCloseTo(nextWidth)
+      expect(previewOverrides.get(neighbor.id as AnyNodeId)?.width).toBeCloseTo(neighborWidth)
+      expect(previewOverrides.get(neighbor.id as AnyNodeId)?.position?.[0]).toBeCloseTo(
+        neighborPositionX,
+      )
+      expect(previewOverrides.get(neighborWall.id as AnyNodeId)?.width).toBeCloseTo(neighborWidth)
+      expect(previewOverrides.has(fartherCabinet.id as AnyNodeId)).toBe(false)
+      expect(sceneApi.get<CabinetModuleNodeType>(neighbor.id as AnyNodeId)?.width).toBe(
+        neighbor.width,
+      )
 
-    widthHandle.commit?.(baseA, selectedPatch, sceneApi)
+      widthHandle.commit?.(baseA, selectedPatch, sceneApi)
 
-    expect(sceneApi.get<CabinetModuleNodeType>(baseA.id as AnyNodeId)?.width).toBeCloseTo(nextWidth)
-    expect(sceneApi.get<CabinetModuleNodeType>(neighbor.id as AnyNodeId)?.width).toBeCloseTo(
-      neighborWidth,
-    )
-    expect(sceneApi.get<CabinetModuleNodeType>(neighbor.id as AnyNodeId)?.position[0]).toBeCloseTo(
-      neighborPositionX,
-    )
-    expect(sceneApi.get<CabinetModuleNodeType>(neighborWall.id as AnyNodeId)?.width).toBeCloseTo(
-      neighborWidth,
-    )
-    expect(sceneApi.get<CabinetModuleNodeType>(fartherCabinet.id as AnyNodeId)?.width).toBe(
-      fartherCabinet.width,
-    )
-  })
-
-  test.each([
-    ['left', 'max', -1],
-    ['right', 'min', 1],
-  ] as const)('resizes the first connected %s wall cabinet inversely in preview and commit', (side, anchor, direction) => {
-    const { baseA, nodes, root, sceneApi, wallA } = wallDepthFixture()
-    const neighborBase = CabinetModuleNode.parse({
-      id: `cabinet-module_wall-inverse-${side}-base`,
-      parentId: root.id,
-      children: [`cabinet-module_wall-inverse-${side}-wall`],
-      position: [direction * baseA.width, baseA.position[1], baseA.position[2]],
-    })
-    const neighborWall = CabinetModuleNode.parse({
-      id: `cabinet-module_wall-inverse-${side}-wall`,
-      name: 'Wall Cabinet',
-      parentId: neighborBase.id,
-      position: [0, wallA.position[1], wallA.position[2]],
-      depth: wallA.depth,
-    })
-    const fartherBase = CabinetModuleNode.parse({
-      id: `cabinet-module_wall-inverse-${side}-farther-base`,
-      parentId: root.id,
-      children: [`cabinet-module_wall-inverse-${side}-farther-wall`],
-      position: [direction * baseA.width * 2, baseA.position[1], baseA.position[2]],
-    })
-    const fartherWall = CabinetModuleNode.parse({
-      id: `cabinet-module_wall-inverse-${side}-farther-wall`,
-      name: 'Wall Cabinet',
-      parentId: fartherBase.id,
-      position: [0, wallA.position[1], wallA.position[2]],
-      depth: wallA.depth,
-    })
-    for (const node of [neighborBase, neighborWall, fartherBase, fartherWall]) {
-      nodes[node.id as AnyNodeId] = node as AnyNode
-    }
-    nodes[root.id as AnyNodeId] = {
-      ...root,
-      children: [baseA.id, neighborBase.id, fartherBase.id],
-    } as AnyNode
-    const buildModuleHandles = cabinetModuleDefinition.handles as (
-      node: CabinetModuleNodeType,
-      sceneApi: SceneApi,
-    ) => HandleDescriptor<CabinetModuleNodeType>[]
-    const widthHandle = buildModuleHandles(wallA, sceneApi).find(
-      (handle): handle is LinearResizeHandle<CabinetModuleNodeType> =>
-        handle.kind === 'linear-resize' && handle.axis === 'x' && handle.anchor === anchor,
-    )!
-    const delta = 0.1
-    const nextWidth = wallA.width + delta
-    const neighborWidth = neighborWall.width - delta
-    const neighborPositionX = neighborWall.position[0] + (direction * delta) / 2
-    const selectedPatch = widthHandle.apply(wallA, nextWidth, sceneApi)
-    const previewOverrides = new Map(
-      widthHandle.previewOverrides?.(wallA, nextWidth, sceneApi) ?? [],
-    )
-
-    expect(previewOverrides.get(neighborWall.id as AnyNodeId)?.width).toBeCloseTo(neighborWidth)
-    expect(previewOverrides.get(neighborWall.id as AnyNodeId)?.position?.[0]).toBeCloseTo(
-      neighborPositionX,
-    )
-    expect(previewOverrides.has(neighborBase.id as AnyNodeId)).toBe(false)
-    expect(previewOverrides.has(fartherWall.id as AnyNodeId)).toBe(false)
-
-    widthHandle.commit?.(wallA, selectedPatch, sceneApi)
-
-    expect(sceneApi.get<CabinetModuleNodeType>(wallA.id as AnyNodeId)?.width).toBeCloseTo(nextWidth)
-    expect(sceneApi.get<CabinetModuleNodeType>(neighborWall.id as AnyNodeId)?.width).toBeCloseTo(
-      neighborWidth,
-    )
-    expect(
-      sceneApi.get<CabinetModuleNodeType>(neighborWall.id as AnyNodeId)?.position[0],
-    ).toBeCloseTo(neighborPositionX)
-    expect(sceneApi.get<CabinetModuleNodeType>(neighborBase.id as AnyNodeId)?.width).toBe(
-      neighborBase.width,
-    )
-    expect(sceneApi.get<CabinetModuleNodeType>(fartherWall.id as AnyNodeId)?.width).toBe(
-      fartherWall.width,
-    )
-  })
+      expect(sceneApi.get<CabinetModuleNodeType>(baseA.id as AnyNodeId)?.width).toBeCloseTo(
+        nextWidth,
+      )
+      expect(sceneApi.get<CabinetModuleNodeType>(neighbor.id as AnyNodeId)?.width).toBeCloseTo(
+        neighborWidth,
+      )
+      expect(
+        sceneApi.get<CabinetModuleNodeType>(neighbor.id as AnyNodeId)?.position[0],
+      ).toBeCloseTo(neighborPositionX)
+      expect(sceneApi.get<CabinetModuleNodeType>(neighborWall.id as AnyNodeId)?.width).toBeCloseTo(
+        neighborWidth,
+      )
+      expect(sceneApi.get<CabinetModuleNodeType>(fartherCabinet.id as AnyNodeId)?.width).toBe(
+        fartherCabinet.width,
+      )
+    },
+  )
 
   test.each([
     ['left', 'max', -1],
     ['right', 'min', 1],
-  ] as const)('closes an existing %s wall cabinet gap before exchanging width', (side, anchor, direction) => {
-    const { baseA, nodes, root, sceneApi, wallA } = wallDepthFixture()
-    const gap = 0.2
-    const shortenedWall = {
-      ...wallA,
-      width: wallA.width - gap,
-      position: [(-direction * gap) / 2, wallA.position[1], wallA.position[2]] as [
-        number,
-        number,
-        number,
-      ],
-    }
-    const neighborBase = CabinetModuleNode.parse({
-      id: `cabinet-module_wall-gap-${side}-base`,
-      parentId: root.id,
-      children: [`cabinet-module_wall-gap-${side}-wall`],
-      position: [direction * baseA.width, baseA.position[1], baseA.position[2]],
-    })
-    const neighborWall = CabinetModuleNode.parse({
-      id: `cabinet-module_wall-gap-${side}-wall`,
-      name: 'Wall Cabinet',
-      parentId: neighborBase.id,
-      position: [0, wallA.position[1], wallA.position[2]],
-      depth: wallA.depth,
-    })
-    nodes[shortenedWall.id as AnyNodeId] = shortenedWall as AnyNode
-    nodes[neighborBase.id as AnyNodeId] = neighborBase as AnyNode
-    nodes[neighborWall.id as AnyNodeId] = neighborWall as AnyNode
-    nodes[root.id as AnyNodeId] = {
-      ...root,
-      children: side === 'left' ? [neighborBase.id, baseA.id] : [baseA.id, neighborBase.id],
-    } as AnyNode
-    const buildModuleHandles = cabinetModuleDefinition.handles as (
-      node: CabinetModuleNodeType,
-      sceneApi: SceneApi,
-    ) => HandleDescriptor<CabinetModuleNodeType>[]
-    const widthHandle = buildModuleHandles(shortenedWall, sceneApi).find(
-      (handle): handle is LinearResizeHandle<CabinetModuleNodeType> =>
-        handle.kind === 'linear-resize' && handle.axis === 'x' && handle.anchor === anchor,
-    )!
-    const dragDelta = 0.05
-    const requestedWidth = shortenedWall.width + dragDelta
-    const selectedPatch = widthHandle.apply(shortenedWall, requestedWidth, sceneApi)
-    const previewOverrides = new Map(
-      widthHandle.previewOverrides?.(shortenedWall, requestedWidth, sceneApi) ?? [],
-    )
+  ] as const)(
+    'resizes the first connected %s wall cabinet inversely in preview and commit',
+    (side, anchor, direction) => {
+      const { baseA, nodes, root, sceneApi, wallA } = wallDepthFixture()
+      const neighborBase = CabinetModuleNode.parse({
+        id: `cabinet-module_wall-inverse-${side}-base`,
+        parentId: root.id,
+        children: [`cabinet-module_wall-inverse-${side}-wall`],
+        position: [direction * baseA.width, baseA.position[1], baseA.position[2]],
+      })
+      const neighborWall = CabinetModuleNode.parse({
+        id: `cabinet-module_wall-inverse-${side}-wall`,
+        name: 'Wall Cabinet',
+        parentId: neighborBase.id,
+        position: [0, wallA.position[1], wallA.position[2]],
+        depth: wallA.depth,
+      })
+      const fartherBase = CabinetModuleNode.parse({
+        id: `cabinet-module_wall-inverse-${side}-farther-base`,
+        parentId: root.id,
+        children: [`cabinet-module_wall-inverse-${side}-farther-wall`],
+        position: [direction * baseA.width * 2, baseA.position[1], baseA.position[2]],
+      })
+      const fartherWall = CabinetModuleNode.parse({
+        id: `cabinet-module_wall-inverse-${side}-farther-wall`,
+        name: 'Wall Cabinet',
+        parentId: fartherBase.id,
+        position: [0, wallA.position[1], wallA.position[2]],
+        depth: wallA.depth,
+      })
+      for (const node of [neighborBase, neighborWall, fartherBase, fartherWall]) {
+        nodes[node.id as AnyNodeId] = node as AnyNode
+      }
+      nodes[root.id as AnyNodeId] = {
+        ...root,
+        children: [baseA.id, neighborBase.id, fartherBase.id],
+      } as AnyNode
+      const buildModuleHandles = cabinetModuleDefinition.handles as (
+        node: CabinetModuleNodeType,
+        sceneApi: SceneApi,
+      ) => HandleDescriptor<CabinetModuleNodeType>[]
+      const widthHandle = buildModuleHandles(wallA, sceneApi).find(
+        (handle): handle is LinearResizeHandle<CabinetModuleNodeType> =>
+          handle.kind === 'linear-resize' && handle.axis === 'x' && handle.anchor === anchor,
+      )!
+      const delta = 0.1
+      const nextWidth = wallA.width + delta
+      const neighborWidth = neighborWall.width - delta
+      const neighborPositionX = neighborWall.position[0] + (direction * delta) / 2
+      const selectedPatch = widthHandle.apply(wallA, nextWidth, sceneApi)
+      const previewOverrides = new Map(
+        widthHandle.previewOverrides?.(wallA, nextWidth, sceneApi) ?? [],
+      )
 
-    expect(selectedPatch.width).toBeCloseTo(requestedWidth + gap)
-    expect(previewOverrides.get(neighborWall.id as AnyNodeId)?.width).toBeCloseTo(
-      neighborWall.width - dragDelta,
-    )
+      expect(previewOverrides.get(neighborWall.id as AnyNodeId)?.width).toBeCloseTo(neighborWidth)
+      expect(previewOverrides.get(neighborWall.id as AnyNodeId)?.position?.[0]).toBeCloseTo(
+        neighborPositionX,
+      )
+      expect(previewOverrides.has(neighborBase.id as AnyNodeId)).toBe(false)
+      expect(previewOverrides.has(fartherWall.id as AnyNodeId)).toBe(false)
 
-    widthHandle.commit?.(shortenedWall, selectedPatch, sceneApi)
+      widthHandle.commit?.(wallA, selectedPatch, sceneApi)
 
-    const selected = sceneApi.get<CabinetModuleNodeType>(shortenedWall.id as AnyNodeId)!
-    const neighbor = sceneApi.get<CabinetModuleNodeType>(neighborWall.id as AnyNodeId)!
-    const selectedCenterX = baseA.position[0] + selected.position[0]
-    const neighborCenterX = neighborBase.position[0] + neighbor.position[0]
-    const selectedEdge = selectedCenterX + (direction * selected.width) / 2
-    const neighborEdge = neighborCenterX - (direction * neighbor.width) / 2
+      expect(sceneApi.get<CabinetModuleNodeType>(wallA.id as AnyNodeId)?.width).toBeCloseTo(
+        nextWidth,
+      )
+      expect(sceneApi.get<CabinetModuleNodeType>(neighborWall.id as AnyNodeId)?.width).toBeCloseTo(
+        neighborWidth,
+      )
+      expect(
+        sceneApi.get<CabinetModuleNodeType>(neighborWall.id as AnyNodeId)?.position[0],
+      ).toBeCloseTo(neighborPositionX)
+      expect(sceneApi.get<CabinetModuleNodeType>(neighborBase.id as AnyNodeId)?.width).toBe(
+        neighborBase.width,
+      )
+      expect(sceneApi.get<CabinetModuleNodeType>(fartherWall.id as AnyNodeId)?.width).toBe(
+        fartherWall.width,
+      )
+    },
+  )
 
-    expect(selectedEdge).toBeCloseTo(neighborEdge)
-  })
+  test.each([
+    ['left', 'max', -1],
+    ['right', 'min', 1],
+  ] as const)(
+    'closes an existing %s wall cabinet gap before exchanging width',
+    (side, anchor, direction) => {
+      const { baseA, nodes, root, sceneApi, wallA } = wallDepthFixture()
+      const gap = 0.2
+      const shortenedWall = {
+        ...wallA,
+        width: wallA.width - gap,
+        position: [(-direction * gap) / 2, wallA.position[1], wallA.position[2]] as [
+          number,
+          number,
+          number,
+        ],
+      }
+      const neighborBase = CabinetModuleNode.parse({
+        id: `cabinet-module_wall-gap-${side}-base`,
+        parentId: root.id,
+        children: [`cabinet-module_wall-gap-${side}-wall`],
+        position: [direction * baseA.width, baseA.position[1], baseA.position[2]],
+      })
+      const neighborWall = CabinetModuleNode.parse({
+        id: `cabinet-module_wall-gap-${side}-wall`,
+        name: 'Wall Cabinet',
+        parentId: neighborBase.id,
+        position: [0, wallA.position[1], wallA.position[2]],
+        depth: wallA.depth,
+      })
+      nodes[shortenedWall.id as AnyNodeId] = shortenedWall as AnyNode
+      nodes[neighborBase.id as AnyNodeId] = neighborBase as AnyNode
+      nodes[neighborWall.id as AnyNodeId] = neighborWall as AnyNode
+      nodes[root.id as AnyNodeId] = {
+        ...root,
+        children: side === 'left' ? [neighborBase.id, baseA.id] : [baseA.id, neighborBase.id],
+      } as AnyNode
+      const buildModuleHandles = cabinetModuleDefinition.handles as (
+        node: CabinetModuleNodeType,
+        sceneApi: SceneApi,
+      ) => HandleDescriptor<CabinetModuleNodeType>[]
+      const widthHandle = buildModuleHandles(shortenedWall, sceneApi).find(
+        (handle): handle is LinearResizeHandle<CabinetModuleNodeType> =>
+          handle.kind === 'linear-resize' && handle.axis === 'x' && handle.anchor === anchor,
+      )!
+      const dragDelta = 0.05
+      const requestedWidth = shortenedWall.width + dragDelta
+      const selectedPatch = widthHandle.apply(shortenedWall, requestedWidth, sceneApi)
+      const previewOverrides = new Map(
+        widthHandle.previewOverrides?.(shortenedWall, requestedWidth, sceneApi) ?? [],
+      )
+
+      expect(selectedPatch.width).toBeCloseTo(requestedWidth + gap)
+      expect(previewOverrides.get(neighborWall.id as AnyNodeId)?.width).toBeCloseTo(
+        neighborWall.width - dragDelta,
+      )
+
+      widthHandle.commit?.(shortenedWall, selectedPatch, sceneApi)
+
+      const selected = sceneApi.get<CabinetModuleNodeType>(shortenedWall.id as AnyNodeId)!
+      const neighbor = sceneApi.get<CabinetModuleNodeType>(neighborWall.id as AnyNodeId)!
+      const selectedCenterX = baseA.position[0] + selected.position[0]
+      const neighborCenterX = neighborBase.position[0] + neighbor.position[0]
+      const selectedEdge = selectedCenterX + (direction * selected.width) / 2
+      const neighborEdge = neighborCenterX - (direction * neighbor.width) / 2
+
+      expect(selectedEdge).toBeCloseTo(neighborEdge)
+    },
+  )
 
   test('shows wall depth arrows on group selection alongside the base arrows', () => {
     const { bridge, bridgeModule, root, sceneApi, wallA, wallB, wallC } = wallDepthFixture()

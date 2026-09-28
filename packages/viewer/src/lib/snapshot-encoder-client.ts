@@ -6,9 +6,9 @@
  */
 
 import {
+  processSnapshotRequest,
   type SnapshotEncodeRequest,
   type SnapshotEncodeResponse,
-  processSnapshotRequest,
 } from './snapshot-encoder.worker'
 
 export type { SnapshotEncodeRequest, SnapshotEncodeResponse }

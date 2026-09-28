@@ -3,7 +3,6 @@ import type { SceneGraph } from '@pascal-app/editor'
 import { redirect } from 'next/navigation'
 import { SceneLoader, type SceneMeta } from '@/components/scene-loader'
 import { canEdit, getSessionUser } from '@/lib/auth/session'
-import { createViewerLaunchToken } from '@/lib/auth/viewer-token'
 import { getSceneOperations } from '@/lib/scene-store-server'
 import { loadOrCreateWorkspaceScene } from '@/lib/workspace-scene'
 

@@ -141,8 +141,7 @@ describe('Tier 2: Boundary & Corner Cases for Projects', () => {
   })
 
   it('T2.BP4: pluralization in project counters displays exact counts (0, 1, many)', () => {
-    const countLabel = (count: number) =>
-      count === 1 ? '1 project' : `${count} projects`
+    const countLabel = (count: number) => (count === 1 ? '1 project' : `${count} projects`)
 
     expect(countLabel(0)).toBe('0 projects')
     expect(countLabel(1)).toBe('1 project')

@@ -1,10 +1,10 @@
-import { fail, handler, ok, parseBody } from '@panel/lib/api'
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { fail, handler, ok } from '@panel/lib/api'
 import { requireSession } from '@panel/lib/auth/guard'
 import { exec, query, queryOne, type RowDataPacket } from '@panel/lib/db'
 import type { LocationStatus, WarehouseLocation } from '@panel/lib/types'
 import { ulid } from 'ulid'
-import { existsSync, readFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -114,7 +114,9 @@ export function setMemoryStore(locations: WarehouseLocation[]): void {
 }
 
 export const GET = handler(async (request: Request) => {
-  const isTest = process.env.NODE_ENV === 'test' || typeof (globalThis as unknown as { Bun?: unknown }).Bun !== 'undefined'
+  const isTest =
+    process.env.NODE_ENV === 'test' ||
+    typeof (globalThis as unknown as { Bun?: unknown }).Bun !== 'undefined'
   const guard = isTest ? { ok: true as const, session: {} as any } : await requireSession()
   if (!guard.ok) {
     const reason = 'reason' in guard ? guard.reason : 'unauthenticated'
@@ -125,7 +127,8 @@ export const GET = handler(async (request: Request) => {
 
   const url = new URL(request.url)
   const siteId = url.searchParams.get('siteId')?.trim() || ''
-  const search = (url.searchParams.get('q') || url.searchParams.get('search'))?.trim().toLowerCase() || ''
+  const search =
+    (url.searchParams.get('q') || url.searchParams.get('search'))?.trim().toLowerCase() || ''
   const aisle = url.searchParams.get('aisle')?.trim() || ''
   const status = url.searchParams.get('status')?.trim() || ''
   const sort = url.searchParams.get('sort')?.trim() || 'addressId'
@@ -160,7 +163,8 @@ export const GET = handler(async (request: Request) => {
     }
 
     const isSiteBursa = isBursa || (siteRow ? siteRow.name.toUpperCase().includes('BURSA') : false)
-    const isSiteSakarya = isSakarya || (siteRow ? siteRow.name.toUpperCase().includes('SAKARYA') : false)
+    const isSiteSakarya =
+      isSakarya || (siteRow ? siteRow.name.toUpperCase().includes('SAKARYA') : false)
 
     // If siteId was requested and MySQL didn't find the site, AND it's Bursa/Sakarya, fallback directly to memory
     if (siteId && !siteRow && (isSiteBursa || isSiteSakarya)) {
@@ -213,9 +217,9 @@ export const GET = handler(async (request: Request) => {
       `SELECT DISTINCT aisle FROM warehouse_locations ${siteRow ? 'WHERE site_id = ?' : ''} ORDER BY aisle ASC`,
       siteRow ? [siteRow.id] : [],
     )
-    const distinctAisles = aisleRows.map((r) => r.aisle).sort((a, b) =>
-      a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
-    )
+    const distinctAisles = aisleRows
+      .map((r) => r.aisle)
+      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
 
     let limitClause = ''
     const queryParams = [...params]
@@ -286,7 +290,8 @@ export const GET = handler(async (request: Request) => {
     // Fallback to in-memory store
     const store = getMemoryStore()
     const isSiteBursa = isBursa || (siteRow ? siteRow.name.toUpperCase().includes('BURSA') : false)
-    const isSiteSakarya = isSakarya || (siteRow ? siteRow.name.toUpperCase().includes('SAKARYA') : false)
+    const isSiteSakarya =
+      isSakarya || (siteRow ? siteRow.name.toUpperCase().includes('SAKARYA') : false)
 
     let filtered = [...store]
 
@@ -310,7 +315,7 @@ export const GET = handler(async (request: Request) => {
           (l) =>
             l.siteId === siteId ||
             l.siteId.toLowerCase() === siteId.toLowerCase() ||
-            (l.siteName?.toLowerCase() === siteId.toLowerCase()) ||
+            l.siteName?.toLowerCase() === siteId.toLowerCase() ||
             (siteRow && l.siteName?.toLowerCase() === siteRow.name.toLowerCase()),
         )
       }
@@ -320,7 +325,7 @@ export const GET = handler(async (request: Request) => {
     const totalUnfiltered = filtered.length
 
     const distinctAisles = Array.from(new Set(siteStore.map((l) => l.aisle))).sort((a, b) =>
-      a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+      a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }),
     )
 
     if (search) {
@@ -345,7 +350,10 @@ export const GET = handler(async (request: Request) => {
     filtered.sort((a, b) => {
       if (sort === 'aisle' || sort === 'addressId') {
         if (a.aisle !== b.aisle) {
-          const cmp = a.aisle.localeCompare(b.aisle, undefined, { numeric: true, sensitivity: 'base' })
+          const cmp = a.aisle.localeCompare(b.aisle, undefined, {
+            numeric: true,
+            sensitivity: 'base',
+          })
           if (cmp !== 0) return direction === 'desc' ? -cmp : cmp
         }
         const bayA = parseInt(String(a.bay), 10) || 0
@@ -374,7 +382,10 @@ export const GET = handler(async (request: Request) => {
 
     const total = filtered.length
     if (pageSize > 0) {
-      const start = offsetParam !== null && offsetParam !== undefined ? Number(offsetParam) : (page - 1) * pageSize
+      const start =
+        offsetParam !== null && offsetParam !== undefined
+          ? Number(offsetParam)
+          : (page - 1) * pageSize
       filtered = filtered.slice(start, start + pageSize)
     }
 
@@ -404,7 +415,9 @@ export const GET = handler(async (request: Request) => {
 })
 
 export const POST = handler(async (request: Request) => {
-  const isTest = process.env.NODE_ENV === 'test' || typeof (globalThis as unknown as { Bun?: unknown }).Bun !== 'undefined'
+  const isTest =
+    process.env.NODE_ENV === 'test' ||
+    typeof (globalThis as unknown as { Bun?: unknown }).Bun !== 'undefined'
   const guard = isTest ? { ok: true, session: {} as any } : await requireSession()
   if (!guard.ok) {
     return fail('unauthenticated', 'err.sessionExpired')
@@ -416,7 +429,8 @@ export const POST = handler(async (request: Request) => {
   }
 
   const padBay = String(body.bay).padStart(2, '0')
-  const addressId = body.addressId?.trim() || `${body.aisle}-${padBay}-${body.level}${body.position}`
+  const addressId =
+    body.addressId?.trim() || `${body.aisle}-${padBay}-${body.level}${body.position}`
   const barcode = body.barcode?.trim() || `LOC-${addressId.replace(/[^A-Za-z0-9]/g, '')}`
   const maxWeight = Number(body.maxWeight) || 1000
   const status: LocationStatus = (body.status as LocationStatus) || 'Active'
@@ -492,7 +506,9 @@ export const POST = handler(async (request: Request) => {
 })
 
 export const DELETE = handler(async (request: Request) => {
-  const isTest = process.env.NODE_ENV === 'test' || typeof (globalThis as unknown as { Bun?: unknown }).Bun !== 'undefined'
+  const isTest =
+    process.env.NODE_ENV === 'test' ||
+    typeof (globalThis as unknown as { Bun?: unknown }).Bun !== 'undefined'
   const guard = isTest ? { ok: true, session: {} as any } : await requireSession()
   if (!guard.ok) {
     return fail('unauthenticated', 'err.sessionExpired')
@@ -525,7 +541,9 @@ export const DELETE = handler(async (request: Request) => {
     const initialLen = store.length
     const remaining = store.filter((l) => {
       const matchExact = l.siteId === siteId
-      const matchCanonical = (isBursa && l.siteId === '01JM1SITE00000000000000002') || (isSakarya && l.siteId === '01JM1SITE00000000000000001')
+      const matchCanonical =
+        (isBursa && l.siteId === '01JM1SITE00000000000000002') ||
+        (isSakarya && l.siteId === '01JM1SITE00000000000000001')
       const matchName = l.siteName && l.siteName.toLowerCase() === siteIdLower
       return !matchExact && !matchCanonical && !matchName
     })
@@ -553,4 +571,3 @@ export const DELETE = handler(async (request: Request) => {
 
   return ok({ ok: true, cleared: true, deletedCount })
 })
-

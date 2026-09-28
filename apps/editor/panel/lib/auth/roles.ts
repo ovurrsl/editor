@@ -29,11 +29,7 @@ const SYSTEM: Record<string, Permission[]> = {
     'view_warehouse_addresses',
   ],
   Viewer: ['view_projects'],
-  AddressManager: [
-    'view_warehouse_addresses',
-    'manage_warehouse_addresses',
-    'view_projects',
-  ],
+  AddressManager: ['view_warehouse_addresses', 'manage_warehouse_addresses', 'view_projects'],
 }
 
 let cache: { value: Map<string, RoleDefinition>; at: number } | null = null

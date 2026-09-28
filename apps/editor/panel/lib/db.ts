@@ -1,7 +1,7 @@
-import type { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise'
-import mysql from 'mysql2/promise'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import type { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise'
+import mysql from 'mysql2/promise'
 
 let mysqlPool: Pool | undefined
 let sqliteInstance: any = null
@@ -53,7 +53,7 @@ export function isMysqlConfigured(): boolean {
   }
   return Boolean(
     env('DIGITALTWIN_MYSQL_URL', 'PASCAL_MYSQL_URL', 'DATABASE_URL') ||
-    env('DIGITALTWIN_MYSQL_HOST', 'PASCAL_MYSQL_HOST', 'DATABASE_HOST')
+      env('DIGITALTWIN_MYSQL_HOST', 'PASCAL_MYSQL_HOST', 'DATABASE_HOST'),
   )
 }
 
@@ -61,7 +61,7 @@ function normalizeSql(sql: string): string {
   let s = sql
     .replace(/\bNOW\(\)/gi, 'CURRENT_TIMESTAMP')
     .replace(/\bUNHEX\s*\(\s*\?\s*\)/gi, '?')
-    .replace(/\bHEX\s*\(\s*([^\)]+)\s*\)/gi, '$1')
+    .replace(/\bHEX\s*\(\s*([^)]+)\s*\)/gi, '$1')
     .replace(/CAST\(\s*\?\s*AS\s+JSON\)/gi, '?')
 
   if (/ON\s+DUPLICATE\s+KEY\s+UPDATE/i.test(s)) {

@@ -9,13 +9,7 @@ import {
   useScene,
 } from '@pascal-app/core'
 import type { MeasurementAxis, MeasurementAxisGuide, MeasurementPoint } from '@pascal-app/editor'
-import {
-  getMeshWorldInverseMatrix,
-  getTriangleNormalDirect,
-  intersectTriangleDirect,
-  setSurfaceRaycastLayers,
-  ZONE_LAYER,
-} from '@pascal-app/viewer'
+import { getTriangleNormalDirect, setSurfaceRaycastLayers, ZONE_LAYER } from '@pascal-app/viewer'
 import {
   type Camera,
   type InstancedMesh,
@@ -23,7 +17,7 @@ import {
   type Material,
   Matrix3,
   Matrix4,
-  Mesh,
+  type Mesh,
   type Object3D,
   Quaternion,
   Raycaster,
@@ -600,7 +594,9 @@ function verifyProjectedSurfacePoint(
 ): WorldSurfaceHit | null {
   for (const sign of [-1, 1] as const) {
     _verifyDir.copy(surfaceNormalWorld).multiplyScalar(-sign)
-    _verifyOrig.copy(candidateWorld).addScaledVector(surfaceNormalWorld, SURFACE_VERIFY_HALF_SPAN * sign)
+    _verifyOrig
+      .copy(candidateWorld)
+      .addScaledVector(surfaceNormalWorld, SURFACE_VERIFY_HALF_SPAN * sign)
     raycaster.set(_verifyOrig, _verifyDir)
     raycaster.near = 0
     raycaster.far = SURFACE_VERIFY_HALF_SPAN * 2
@@ -784,11 +780,7 @@ function collectMeasurementAxisSurfaceIntersections(
   for (const axis of ['x', 'y', 'z'] as const) {
     const localDirection = axis === 'x' ? _AXIS_X : axis === 'y' ? _AXIS_Y : _AXIS_Z
     for (const sign of [-1, 1] as const) {
-      _axisDir
-        .copy(localDirection)
-        .multiplyScalar(sign)
-        .applyQuaternion(_rotQuat)
-        .normalize()
+      _axisDir.copy(localDirection).multiplyScalar(sign).applyQuaternion(_rotQuat).normalize()
       _axisRayOrig.copy(_axisOrigin).addScaledVector(_axisDir, AXIS_INTERSECTION_MIN_DISTANCE)
       raycaster.set(_axisRayOrig, _axisDir)
       const hits = collectVisibleMeasurementSurfaceHits(raycaster, context)

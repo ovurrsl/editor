@@ -1,5 +1,4 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
-import type { SessionUser } from './session'
 
 export interface ViewerTokenPayload {
   userId: string

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { EditorLayoutV2 } from '../components/editor/editor-layout-v2'
 import { EditorLayoutMobile } from '../components/editor/editor-layout-mobile'
+import { EditorLayoutV2 } from '../components/editor/editor-layout-v2'
 
 describe('R4: Toolbar Layout & ViewModeControl Centering', () => {
   it('RightColumn renders toolbarCenter with absolute left-1/2 -translate-x-1/2 true centering container', () => {
@@ -20,8 +20,12 @@ describe('R4: Toolbar Layout & ViewModeControl Centering', () => {
     expect(markup).toContain('id="left-slot"')
     expect(markup).toContain('id="right-slot"')
     // Verify true centering class container
-    expect(markup).toContain('absolute left-1/2 -translate-x-1/2 flex items-center justify-center gap-2')
-    expect(markup).toContain('pointer-events-none absolute top-3 right-3 left-3 z-20 flex items-center justify-between gap-2')
+    expect(markup).toContain(
+      'absolute left-1/2 -translate-x-1/2 flex items-center justify-center gap-2',
+    )
+    expect(markup).toContain(
+      'pointer-events-none absolute top-3 right-3 left-3 z-20 flex items-center justify-between gap-2',
+    )
   })
 
   it('preserves viewer toolbars when isPreviewMode is true (does not suppress toolbar for viewers)', () => {
@@ -58,7 +62,9 @@ describe('R4: Toolbar Layout & ViewModeControl Centering', () => {
     expect(markup).toContain('id="mobile-center-slot"')
     expect(markup).toContain('id="mobile-left-slot"')
     expect(markup).toContain('id="mobile-right-slot"')
-    expect(markup).toContain('pointer-events-auto absolute left-1/2 -translate-x-1/2 flex items-center justify-center gap-2')
+    expect(markup).toContain(
+      'pointer-events-auto absolute left-1/2 -translate-x-1/2 flex items-center justify-center gap-2',
+    )
   })
 
   it('Cleanly omits toolbar container when all toolbar slots are undefined', () => {

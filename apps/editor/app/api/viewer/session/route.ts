@@ -1,8 +1,8 @@
+import { query, type RowDataPacket } from '@panel/lib/db'
 import { type NextRequest, NextResponse } from 'next/server'
 import { authAvailable } from '@/lib/auth/db'
 import { getSessionUser } from '@/lib/auth/session'
 import { verifyViewerLaunchToken } from '@/lib/auth/viewer-token'
-import { query, type RowDataPacket } from '@panel/lib/db'
 import { getSceneOperations } from '@/lib/scene-store-server'
 
 export const dynamic = 'force-dynamic'
@@ -66,16 +66,14 @@ async function resolveUserAllowedSites(
       const scenes = await operations.listScenes(isAdmin ? {} : { viewerId: userId })
       for (const sc of scenes) {
         if (!sc.nodeCount || sc.nodeCount === 0) continue
-        const isBursa = sc.name.toLowerCase().includes('bursa') || sc.id.toLowerCase().includes('bursa')
-        const isSakarya = sc.name.toLowerCase().includes('sakarya') || sc.id.toLowerCase().includes('sakarya')
+        const isBursa =
+          sc.name.toLowerCase().includes('bursa') || sc.id.toLowerCase().includes('bursa')
+        const isSakarya =
+          sc.name.toLowerCase().includes('sakarya') || sc.id.toLowerCase().includes('sakarya')
         sites.push({
           id: sc.id,
           name: sc.name,
-          location: isBursa
-            ? 'Bursa, Nilüfer'
-            : isSakarya
-              ? 'Sakarya, Arifiye'
-              : 'Türkiye',
+          location: isBursa ? 'Bursa, Nilüfer' : isSakarya ? 'Sakarya, Arifiye' : 'Türkiye',
           areaM2: Math.max(5000, sc.nodeCount * 35),
           palletSlots: Math.max(1200, sc.nodeCount * 25),
           docks: Math.max(8, Math.min(40, Math.floor(sc.nodeCount / 20))),
@@ -134,7 +132,10 @@ async function resolveUserAllowedSites(
     }
 
     // Only ensure Bursa default site for admins if not already present
-    if (isAdmin && !sites.some((s) => s.id === BURSA_DEFAULT_SITE.id || s.name.toLowerCase().includes('bursa'))) {
+    if (
+      isAdmin &&
+      !sites.some((s) => s.id === BURSA_DEFAULT_SITE.id || s.name.toLowerCase().includes('bursa'))
+    ) {
       sites.unshift(BURSA_DEFAULT_SITE)
     }
 
@@ -153,7 +154,12 @@ export async function POST(request: NextRequest) {
     // Body optional if session cookie is sent
   }
 
-  let user: { id: string; email: string; name?: string; role: 'admin' | 'editor' | 'viewer' } | null = null
+  let user: {
+    id: string
+    email: string
+    name?: string
+    role: 'admin' | 'editor' | 'viewer'
+  } | null = null
 
   // 1. Verify via signed launch token
   if (token) {

@@ -29,27 +29,26 @@ type RafFn = (callback: (time: number) => void) => number
 ;(globalThis as { cancelAnimationFrame?: (id: number) => void }).cancelAnimationFrame ??= () => {}
 
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test'
-import React, { Profiler, type ProfilerOnRenderCallback } from 'react'
-import { renderToString } from 'react-dom/server'
 import {
   type AnyNodeId,
   BuildingNode,
-  LevelNode,
-  WallNode,
-  SlabNode,
   ItemNode,
-  ZoneNode,
-  useScene,
-  useLiveTransforms,
-  useLiveNodeOverrides,
-  spatialGridManager,
   initSpatialGridSync,
-  acquireSceneReadOnlyLease,
+  LevelNode,
   MultiplayerAwarenessService,
+  SlabNode,
+  spatialGridManager,
+  useLiveNodeOverrides,
+  useLiveTransforms,
+  useScene,
+  WallNode,
+  ZoneNode,
 } from '@pascal-app/core'
 import { useViewer } from '@pascal-app/viewer'
-import * as Y from 'yjs'
+import { Profiler, type ProfilerOnRenderCallback } from 'react'
+import { renderToString } from 'react-dom/server'
 import * as awarenessProtocol from 'y-protocols/awareness'
+import * as Y from 'yjs'
 import useEditor from '../store/use-editor'
 
 const MAX_BLOCKING_THRESHOLD_MS = 50
@@ -78,7 +77,13 @@ function buildMassiveScene(targetNodes: number) {
 
   const buildingsNeeded = Math.max(1, Math.floor(targetNodes / 100))
   const levelsPerBuilding = 2
-  const nodesPerLevel = Math.max(1, Math.floor((targetNodes - buildingsNeeded * (1 + levelsPerBuilding)) / (buildingsNeeded * levelsPerBuilding)))
+  const nodesPerLevel = Math.max(
+    1,
+    Math.floor(
+      (targetNodes - buildingsNeeded * (1 + levelsPerBuilding)) /
+        (buildingsNeeded * levelsPerBuilding),
+    ),
+  )
 
   for (let b = 0; b < buildingsNeeded; b++) {
     const bId = `building_stress_${b}`
@@ -275,7 +280,9 @@ describe('Empirical Challenger: Multiplayer Role Handoff Stress & Long Task SLA 
         useEditor.getState().setPreviewMode(false)
       })
 
-      console.log(`[Scale ${totalCount} nodes] V->E: ${m1.durationMs.toFixed(2)}ms, E->V: ${m2.durationMs.toFixed(2)}ms, V->E(selected): ${m3.durationMs.toFixed(2)}ms`)
+      console.log(
+        `[Scale ${totalCount} nodes] V->E: ${m1.durationMs.toFixed(2)}ms, E->V: ${m2.durationMs.toFixed(2)}ms, V->E(selected): ${m3.durationMs.toFixed(2)}ms`,
+      )
 
       expect(m1.durationMs).toBeLessThan(MAX_BLOCKING_THRESHOLD_MS)
       expect(m2.durationMs).toBeLessThan(MAX_BLOCKING_THRESHOLD_MS)
@@ -306,12 +313,14 @@ describe('Empirical Challenger: Multiplayer Role Handoff Stress & Long Task SLA 
     }
 
     durations.sort((a, b) => a - b)
-    const p50 = durations[Math.floor(FLIPS * 0.50)]
+    const p50 = durations[Math.floor(FLIPS * 0.5)]
     const p95 = durations[Math.floor(FLIPS * 0.95)]
     const p99 = durations[Math.floor(FLIPS * 0.99)]
     const avg = durations.reduce((a, b) => a + b, 0) / FLIPS
 
-    console.log(`[500 Flips Stats] Avg: ${avg.toFixed(3)}ms, p50: ${p50!.toFixed(3)}ms, p95: ${p95!.toFixed(3)}ms, p99: ${p99!.toFixed(3)}ms, Max: ${maxDuration.toFixed(3)}ms`)
+    console.log(
+      `[500 Flips Stats] Avg: ${avg.toFixed(3)}ms, p50: ${p50!.toFixed(3)}ms, p95: ${p95!.toFixed(3)}ms, p99: ${p99!.toFixed(3)}ms, Max: ${maxDuration.toFixed(3)}ms`,
+    )
 
     expect(maxDuration).toBeLessThan(MAX_BLOCKING_THRESHOLD_MS)
     expect(p99).toBeLessThan(25)
@@ -416,12 +425,7 @@ describe('Empirical Challenger: Multiplayer Role Handoff Stress & Long Task SLA 
     let commitDuration = 0
     let renderDuration = 0
 
-    const onRender: ProfilerOnRenderCallback = (
-      id,
-      phase,
-      actualDuration,
-      baseDuration
-    ) => {
+    const onRender: ProfilerOnRenderCallback = (id, phase, actualDuration, baseDuration) => {
       commitDuration = actualDuration
       renderDuration = baseDuration
     }
@@ -436,7 +440,9 @@ describe('Empirical Challenger: Multiplayer Role Handoff Stress & Long Task SLA 
                 <nav>
                   <ul>
                     {Array.from({ length: 20 }).map((_, i) => (
-                      <li key={i} className="py-1">Menu Item {i}</li>
+                      <li key={i} className="py-1">
+                        Menu Item {i}
+                      </li>
                     ))}
                   </ul>
                 </nav>
@@ -474,7 +480,9 @@ describe('Empirical Challenger: Multiplayer Role Handoff Stress & Long Task SLA 
       renderToString(<MockEditorChrome isPreview={false} />)
     })
 
-    console.log(`[React Layout Commit Duration] Total: ${m.durationMs.toFixed(2)}ms, Profiler commit: ${commitDuration.toFixed(2)}ms`)
+    console.log(
+      `[React Layout Commit Duration] Total: ${m.durationMs.toFixed(2)}ms, Profiler commit: ${commitDuration.toFixed(2)}ms`,
+    )
 
     expect(m.durationMs).toBeLessThan(MAX_BLOCKING_THRESHOLD_MS)
     expect(commitDuration).toBeLessThan(MAX_BLOCKING_THRESHOLD_MS)

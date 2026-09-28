@@ -1,7 +1,7 @@
-import { type NextRequest, NextResponse } from 'next/server'
 import fs from 'node:fs'
 import path from 'node:path'
 import { query, type RowDataPacket } from '@panel/lib/db'
+import { type NextRequest, NextResponse } from 'next/server'
 import { getSceneOperations } from '@/lib/scene-store-server'
 
 export const dynamic = 'force-dynamic'
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const protoHeader = request.headers.get('x-forwarded-proto') || 'http'
   const origin = hostHeader
     ? `${protoHeader}://${hostHeader}`
-    : (request.nextUrl?.origin || new URL(request.url).origin)
+    : request.nextUrl?.origin || new URL(request.url).origin
 
   // Bursa Default Manifest
   const BURSA_MANIFEST = {
@@ -46,7 +46,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     site: {
       id: 'site_bursa',
       name: 'Nestlé & Netlog Bursa Başköy',
-      description: '24.500 m² kapalı alan, 12,50 m serbest yükseklik, 36 hidrolik rampa ve 32.000 palet kapasiteli A Sınıfı Lojistik Depo 3D Dijital İkizi.',
+      description:
+        '24.500 m² kapalı alan, 12,50 m serbest yükseklik, 36 hidrolik rampa ve 32.000 palet kapasiteli A Sınıfı Lojistik Depo 3D Dijital İkizi.',
       city: 'Bursa',
       country: 'TR',
     },
@@ -154,7 +155,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       totalRacks: 2321,
       totalPalletSlots: 56937,
       totalAreaM2: 24500,
-      clearHeightM: 12.50,
+      clearHeightM: 12.5,
       docksCount: 36,
     },
   }
@@ -172,52 +173,53 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return withViewerCors(request, res)
   }
 
-function resolveStaticLayoutFile(id: string): string | null {
-  const searchBases = [
-    process.cwd(),
-    path.join(process.cwd(), 'apps/editor'),
-    path.join(process.cwd(), 'public'),
-    path.join(process.cwd(), 'apps/editor/public'),
-  ]
+  function resolveStaticLayoutFile(id: string): string | null {
+    const searchBases = [
+      process.cwd(),
+      path.join(process.cwd(), 'apps/editor'),
+      path.join(process.cwd(), 'public'),
+      path.join(process.cwd(), 'apps/editor/public'),
+    ]
 
-  for (const base of searchBases) {
-    const specific = path.join(base, 'public/assets/data', `layout_${id}.json`)
-    if (fs.existsSync(specific)) return specific
-    const specificAlt = path.join(base, 'assets/data', `layout_${id}.json`)
-    if (fs.existsSync(specificAlt)) return specificAlt
+    for (const base of searchBases) {
+      const specific = path.join(base, 'public/assets/data', `layout_${id}.json`)
+      if (fs.existsSync(specific)) return specific
+      const specificAlt = path.join(base, 'assets/data', `layout_${id}.json`)
+      if (fs.existsSync(specificAlt)) return specificAlt
+    }
+
+    return null
   }
 
-  return null
-}
-
-function calculatePolygonArea(poly: [number, number][]): number {
-  if (!Array.isArray(poly) || poly.length < 3) return 0
-  let area = 0
-  for (let i = 0; i < poly.length; i++) {
-    const curr = poly[i]
-    const next = poly[(i + 1) % poly.length]
-    if (!curr || !next) continue
-    const [x1, y1] = curr
-    const [x2, y2] = next
-    area += x1 * y2 - x2 * y1
+  function calculatePolygonArea(poly: [number, number][]): number {
+    if (!Array.isArray(poly) || poly.length < 3) return 0
+    let area = 0
+    for (let i = 0; i < poly.length; i++) {
+      const curr = poly[i]
+      const next = poly[(i + 1) % poly.length]
+      if (!curr || !next) continue
+      const [x1, y1] = curr
+      const [x2, y2] = next
+      area += x1 * y2 - x2 * y1
+    }
+    return Math.round(Math.abs(area) / 2)
   }
-  return Math.round(Math.abs(area) / 2)
-}
 
-function isPointInPolygon(pt: [number, number], vs: [number, number][]): boolean {
-  const x = pt[0], y = pt[1]
-  let inside = false
-  for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
-    const vi = vs[i]
-    const vj = vs[j]
-    if (!vi || !vj) continue
-    const [xi, yi] = vi
-    const [xj, yj] = vj
-    const intersect = ((yi > y) !== (yj > y)) && (x < ((xj - xi) * (y - yi)) / (yj - yi) + xi)
-    if (intersect) inside = !inside
+  function isPointInPolygon(pt: [number, number], vs: [number, number][]): boolean {
+    const x = pt[0],
+      y = pt[1]
+    let inside = false
+    for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+      const vi = vs[i]
+      const vj = vs[j]
+      if (!vi || !vj) continue
+      const [xi, yi] = vi
+      const [xj, yj] = vj
+      const intersect = yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi
+      if (intersect) inside = !inside
+    }
+    return inside
   }
-  return inside
-}
 
   // Otherwise, load from scene store, sites table, or static layout file
   try {
@@ -292,7 +294,12 @@ function isPointInPolygon(pt: [number, number], vs: [number, number][]): boolean
 
     if (stored?.graph?.nodes) {
       const allNodes = Object.values(stored.graph.nodes) as any[]
-      const zoneNodes = allNodes.filter((n) => (n.type === 'zone' || n.kind === 'zone') && Array.isArray(n.polygon) && n.polygon.length >= 3)
+      const zoneNodes = allNodes.filter(
+        (n) =>
+          (n.type === 'zone' || n.kind === 'zone') &&
+          Array.isArray(n.polygon) &&
+          n.polygon.length >= 3,
+      )
       if (zoneNodes.length > 0) {
         dynamicZones = zoneNodes.map((z, idx) => {
           const poly = z.polygon as [number, number][]
@@ -301,9 +308,10 @@ function isPointInPolygon(pt: [number, number], vs: [number, number][]): boolean
           if (!zonePallets) {
             const racksInZone = allNodes.filter(
               (n) =>
-                ((n.kind || n.type || '').toLowerCase().includes('rack') || (n.name || '').toLowerCase().includes('rack')) &&
+                ((n.kind || n.type || '').toLowerCase().includes('rack') ||
+                  (n.name || '').toLowerCase().includes('rack')) &&
                 Array.isArray(n.position) &&
-                isPointInPolygon([n.position[0], n.position[2]], poly)
+                isPointInPolygon([n.position[0], n.position[2]], poly),
             ).length
             zonePallets = racksInZone > 0 ? racksInZone * 15 : 0
           }
@@ -322,8 +330,12 @@ function isPointInPolygon(pt: [number, number], vs: [number, number][]): boolean
       }
 
       // Compute rough bounds and node metrics
-      let minX = Infinity, minY = Infinity, minZ = Infinity
-      let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity
+      let minX = Infinity,
+        minY = Infinity,
+        minZ = Infinity
+      let maxX = -Infinity,
+        maxY = -Infinity,
+        maxZ = -Infinity
       let rackCount = 0
       let palletSlots = 0
       let doorCount = 0
@@ -363,8 +375,9 @@ function isPointInPolygon(pt: [number, number], vs: [number, number][]): boolean
           totalRacks: rackCount,
           totalPalletSlots: palletSlots,
           totalAreaM2: Math.max(2500, Math.round((maxX - minX) * (maxZ - minZ))),
-          clearHeightM: 12.50,
-          docksCount: doorCount > 0 ? doorCount : Math.max(4, Math.min(40, Math.floor(allNodes.length / 40))),
+          clearHeightM: 12.5,
+          docksCount:
+            doorCount > 0 ? doorCount : Math.max(4, Math.min(40, Math.floor(allNodes.length / 40))),
         }
       }
 
@@ -390,18 +403,22 @@ function isPointInPolygon(pt: [number, number], vs: [number, number][]): boolean
       }
     }
 
-    const resolvedSiteName = siteName || stored?.name || 'Lojistik Depo';
-    const isGuzeller = resolvedSiteName.toLowerCase().includes('güzeller') || resolvedSiteName.toLowerCase().includes('guzeller') || id === '6c5728d1aed7';
-    const isBursa = resolvedSiteName.toLowerCase().includes('bursa') || id === '01JM1SITE00000000000000002';
-    
-    let baseModelUrl = `${origin}/api/scenes/${id}/model`;
-    
+    const resolvedSiteName = siteName || stored?.name || 'Lojistik Depo'
+    const isGuzeller =
+      resolvedSiteName.toLowerCase().includes('güzeller') ||
+      resolvedSiteName.toLowerCase().includes('guzeller') ||
+      id === '6c5728d1aed7'
+    const isBursa =
+      resolvedSiteName.toLowerCase().includes('bursa') || id === '01JM1SITE00000000000000002'
+
+    let baseModelUrl = `${origin}/api/scenes/${id}/model`
+
     if (isGuzeller && id !== '6c5728d1aed7' && id !== '3d142606072b' && id !== '79d99be52799') {
-      baseModelUrl = `${origin}/api/scenes/6c5728d1aed7/model`;
+      baseModelUrl = `${origin}/api/scenes/6c5728d1aed7/model`
     } else if (isBursa && id !== '01JM1SITE00000000000000002') {
-      baseModelUrl = `${origin}/api/scenes/01JM1SITE00000000000000002/model`;
+      baseModelUrl = `${origin}/api/scenes/01JM1SITE00000000000000002/model`
     }
-    
+
     const manifest = {
       version: '1.0',
       site: {
@@ -429,4 +446,3 @@ function isPointInPolygon(pt: [number, number], vs: [number, number][]): boolean
     return withViewerCors(request, res)
   }
 }
-

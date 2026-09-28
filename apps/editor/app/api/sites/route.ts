@@ -12,7 +12,9 @@ export const dynamic = 'force-dynamic'
 
 /** GET /api/sites — every site, archived ones included, newest name order. */
 export const GET = handler(async () => {
-  const isTest = process.env.NODE_ENV === 'test' || typeof (globalThis as unknown as { Bun?: unknown }).Bun !== 'undefined'
+  const isTest =
+    process.env.NODE_ENV === 'test' ||
+    typeof (globalThis as unknown as { Bun?: unknown }).Bun !== 'undefined'
   let canEdit = true
   if (!isTest) {
     const sessionGuard = await requireSession()
@@ -83,10 +85,16 @@ export const GET = handler(async () => {
     )
 
     sites = rows.map((r) => {
-      const isBursa = r.public_id === '01JM1SITE00000000000000002' || r.name.toUpperCase().includes('BURSA')
-      const isSakarya = r.public_id === '01JM1SITE00000000000000001' || r.name.toUpperCase().includes('SAKARYA')
+      const isBursa =
+        r.public_id === '01JM1SITE00000000000000002' || r.name.toUpperCase().includes('BURSA')
+      const isSakarya =
+        r.public_id === '01JM1SITE00000000000000001' || r.name.toUpperCase().includes('SAKARYA')
       return {
-        id: isBursa ? '01JM1SITE00000000000000002' : isSakarya ? '01JM1SITE00000000000000001' : r.public_id,
+        id: isBursa
+          ? '01JM1SITE00000000000000002'
+          : isSakarya
+            ? '01JM1SITE00000000000000001'
+            : r.public_id,
         name: r.name,
         status: r.status,
         storageSlots: r.storage_slots ?? (isBursa ? 56742 : isSakarya ? 1200 : undefined),
@@ -100,7 +108,12 @@ export const GET = handler(async () => {
     })
 
     // Ensure Bursa Baskoy is present even if DB is partially initialized
-    if (fallbackSites[0] && !sites.some((s) => s.id === '01JM1SITE00000000000000002' || s.name.toUpperCase().includes('BURSA'))) {
+    if (
+      fallbackSites[0] &&
+      !sites.some(
+        (s) => s.id === '01JM1SITE00000000000000002' || s.name.toUpperCase().includes('BURSA'),
+      )
+    ) {
       sites.unshift(fallbackSites[0])
     }
   } catch (_err) {

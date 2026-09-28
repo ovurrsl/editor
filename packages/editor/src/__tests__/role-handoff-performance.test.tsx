@@ -22,29 +22,27 @@ if (typeof globalThis.window === 'undefined') {
 ;(globalThis.window as any).localStorage = mockStorage
 
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test'
-import React, { Profiler, type ProfilerOnRenderCallback } from 'react'
-import { renderToString } from 'react-dom/server'
 import {
   type AnyNodeId,
-  BuildingNode,
-  LevelNode,
-  WallNode,
-  SlabNode,
-  ItemNode,
-  ZoneNode,
-  useScene,
-  useLiveTransforms,
-  useLiveNodeOverrides,
-  spatialGridManager,
-  initSpatialGridSync,
   acquireSceneReadOnlyLease,
+  BuildingNode,
+  ItemNode,
+  initSpatialGridSync,
+  LevelNode,
   MultiplayerAwarenessService,
-  type UserPresence,
+  SlabNode,
+  spatialGridManager,
+  useLiveNodeOverrides,
+  useLiveTransforms,
+  useScene,
+  WallNode,
+  ZoneNode,
 } from '@pascal-app/core'
 import { useViewer } from '@pascal-app/viewer'
-import * as Y from 'yjs'
+import { Profiler, type ProfilerOnRenderCallback } from 'react'
+import { renderToString } from 'react-dom/server'
 import * as awarenessProtocol from 'y-protocols/awareness'
-import { createJSONStorage } from 'zustand/middleware'
+import * as Y from 'yjs'
 import useEditor from '../store/use-editor'
 
 // ── Environment Mocks & Polyfills ───────────────────────────────────────────
@@ -335,7 +333,9 @@ describe('Multiplayer Role Handoff Performance & Profiling Suite (Viewer -> Edit
       })
       useScene.setState({ nodes, rootNodeIds } as never)
 
-      const targetLevelId = rootNodeIds[0] ? ((nodes[rootNodeIds[0]] as BuildingNode).children[0] as any) : null
+      const targetLevelId = rootNodeIds[0]
+        ? ((nodes[rootNodeIds[0]] as BuildingNode).children[0] as any)
+        : null
       useViewer.setState({
         cameraMode: 'orthographic',
         wallMode: 'cutaway',
@@ -684,9 +684,9 @@ describe('Multiplayer Role Handoff Performance & Profiling Suite (Viewer -> Edit
         buildingCount: 2,
         levelsPerBuilding: 2,
         wallsPerLevel: 20, // 2 * 2 * 20 = 80 walls
-        slabsPerLevel: 4,  // 2 * 2 * 4 = 16 slabs
+        slabsPerLevel: 4, // 2 * 2 * 4 = 16 slabs
         itemsPerLevel: 10, // 2 * 2 * 10 = 40 items
-        zonesPerLevel: 2,  // 2 * 2 * 2 = 8 zones
+        zonesPerLevel: 2, // 2 * 2 * 2 = 8 zones
       })
 
       expect(totalNodeCount).toBeGreaterThanOrEqual(100)

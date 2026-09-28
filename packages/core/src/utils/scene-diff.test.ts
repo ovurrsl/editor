@@ -1,13 +1,13 @@
-import { describe, expect, test, beforeEach } from 'bun:test'
-import { WallNode, SiteNode, BuildingNode, LevelNode } from '../schema'
+import { describe, expect, test } from 'bun:test'
+import { BuildingNode, LevelNode, SiteNode, WallNode } from '../schema'
+import useScene from '../store/use-scene'
 import type { SceneGraph } from './clone-scene-graph'
 import {
-  computeSceneGraphDiff,
   applySceneGraphPatch,
   applySceneGraphPatchToStore,
+  computeSceneGraphDiff,
   type SceneGraphPatch,
 } from './scene-diff'
-import useScene from '../store/use-scene'
 
 describe('R1: Scene Graph Diffing, Patching, and Granular Store Application', () => {
   const site = SiteNode.parse({ id: 'site_1' })
@@ -106,7 +106,6 @@ describe('R1: Scene Graph Diffing, Patching, and Granular Store Application', ()
     expect(patchSizeBytes).toBeLessThan(fullSizeBytes * 0.05)
     expect(patchSizeBytes).toBeLessThan(500) // Under 500 bytes (~250 bytes)
     expect(fullSizeBytes).toBeGreaterThan(15000) // Full graph is ~20KB
-
   })
 
   test('computeSceneGraphDiff detects node creation and deletion', () => {
@@ -274,7 +273,9 @@ describe('R1: Scene Graph Diffing, Patching, and Granular Store Application', ()
       rootNodeIds: [site.id, site2.id],
     }
 
-    useScene.getState().setScene(graphWithTwoRoots.nodes as any, graphWithTwoRoots.rootNodeIds as any)
+    useScene
+      .getState()
+      .setScene(graphWithTwoRoots.nodes as any, graphWithTwoRoots.rootNodeIds as any)
     expect(useScene.getState().rootNodeIds).toEqual([site.id, site2.id])
 
     // Patch deletes site_2 without specifying rootNodeIds
@@ -334,14 +335,23 @@ describe('R1: Scene Graph Diffing, Patching, and Granular Store Application', ()
     const graphWithCollections: SceneGraph = {
       ...baseGraph,
       collections: {
-        col_1: { id: 'col_1' as any, name: 'Walls Group', nodeIds: ['wall_1' as any, 'wall_2' as any] },
+        col_1: {
+          id: 'col_1' as any,
+          name: 'Walls Group',
+          nodeIds: ['wall_1' as any, 'wall_2' as any],
+        },
       },
     }
 
-    useScene.getState().setScene(graphWithCollections.nodes as any, graphWithCollections.rootNodeIds as any, {
-      collections: graphWithCollections.collections as any,
-    })
-    expect(useScene.getState().collections?.col_1?.nodeIds).toEqual(['wall_1' as any, 'wall_2' as any])
+    useScene
+      .getState()
+      .setScene(graphWithCollections.nodes as any, graphWithCollections.rootNodeIds as any, {
+        collections: graphWithCollections.collections as any,
+      })
+    expect(useScene.getState().collections?.col_1?.nodeIds).toEqual([
+      'wall_1' as any,
+      'wall_2' as any,
+    ])
 
     // Patch deletes wall_2 without explicitly sending collections
     const patchDeleteNode: SceneGraphPatch = {
@@ -396,7 +406,9 @@ describe('R1: Scene Graph Diffing, Patching, and Granular Store Application', ()
       deletedNodeIds: [site2.id],
     }
 
-    useScene.getState().setScene(graphWithTwoRoots.nodes as any, graphWithTwoRoots.rootNodeIds as any)
+    useScene
+      .getState()
+      .setScene(graphWithTwoRoots.nodes as any, graphWithTwoRoots.rootNodeIds as any)
 
     const reconstructed = applySceneGraphPatch(graphWithTwoRoots, patchConflicting)
     expect(reconstructed.rootNodeIds).toEqual([site.id])

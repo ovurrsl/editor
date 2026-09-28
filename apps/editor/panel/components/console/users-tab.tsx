@@ -224,7 +224,9 @@ export function UsersTab() {
         prev
           ? {
               ...prev,
-              users: prev.users.map((u) => (u.id === user.id ? { ...u, role: nextRole as any } : u)),
+              users: prev.users.map((u) =>
+                u.id === user.id ? { ...u, role: nextRole as any } : u,
+              ),
             }
           : null,
       )

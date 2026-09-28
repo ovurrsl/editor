@@ -3,7 +3,21 @@
  * Safe for both React client components and Node.js server environments.
  */
 
-export const LEVEL_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M'] as const
+export const LEVEL_LETTERS = [
+  'A',
+  'B',
+  'C',
+  'D',
+  'E',
+  'F',
+  'G',
+  'H',
+  'I',
+  'J',
+  'K',
+  'L',
+  'M',
+] as const
 
 export function levelToLetter(levelIndex: number): string {
   return LEVEL_LETTERS[levelIndex] ?? String.fromCharCode(65 + Math.max(0, levelIndex))
@@ -36,7 +50,7 @@ export function formatIndustrialAddress(
   bayArg?: number | string,
   levelArg?: number | string,
   positionArg?: number | string,
-  depthArg?: number
+  depthArg?: number,
 ): string {
   let aisle: string
   let bay: number | string

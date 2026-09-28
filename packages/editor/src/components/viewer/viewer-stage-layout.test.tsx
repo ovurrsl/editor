@@ -98,12 +98,7 @@ describe('Viewer Stage Layout & Right-Aligned Controls (R1)', () => {
   // ── Tier 2: Boundary & Responsive Behavior (R1 Layout) ─────────────────────
   it('hides switcher when only a single mode is available', () => {
     const markup = renderToStaticMarkup(
-      <ViewerStage
-        mode="3d"
-        modes={['3d']}
-        scene={testScene}
-        showLevelSelector={false}
-      >
+      <ViewerStage mode="3d" modes={['3d']} scene={testScene} showLevelSelector={false}>
         <div data-test-content="" />
       </ViewerStage>,
     )
@@ -139,11 +134,7 @@ describe('Viewer Stage Layout & Right-Aligned Controls (R1)', () => {
 
   it('renders custom modes subset (e.g. 2D and 3D only without Split)', () => {
     const markup = renderToStaticMarkup(
-      <ViewerStageSwitcher
-        mode="2d"
-        modes={['2d', '3d']}
-        onChange={() => {}}
-      />,
+      <ViewerStageSwitcher mode="2d" modes={['2d', '3d']} onChange={() => {}} />,
     )
 
     expect(markup).toContain('2D')
@@ -242,17 +233,32 @@ describe('Viewer Stage Layout & Right-Aligned Controls (R1)', () => {
 
   it('scenario: mode switching updates stage data attributes consistently', () => {
     const step1 = renderToStaticMarkup(
-      <ViewerStage mode="3d" scene={testScene} showLevelSelector={false} switcherClassName="top-4 right-4" />,
+      <ViewerStage
+        mode="3d"
+        scene={testScene}
+        showLevelSelector={false}
+        switcherClassName="top-4 right-4"
+      />,
     )
     expect(step1).toContain('data-pascal-viewer-stage="3d"')
 
     const step2 = renderToStaticMarkup(
-      <ViewerStage mode="2d" scene={testScene} showLevelSelector={false} switcherClassName="top-4 right-4" />,
+      <ViewerStage
+        mode="2d"
+        scene={testScene}
+        showLevelSelector={false}
+        switcherClassName="top-4 right-4"
+      />,
     )
     expect(step2).toContain('data-pascal-viewer-stage="2d"')
 
     const step3 = renderToStaticMarkup(
-      <ViewerStage mode="split" scene={testScene} showLevelSelector={false} switcherClassName="top-4 right-4" />,
+      <ViewerStage
+        mode="split"
+        scene={testScene}
+        showLevelSelector={false}
+        switcherClassName="top-4 right-4"
+      />,
     )
     expect(step3).toContain('data-pascal-viewer-stage="split"')
   })

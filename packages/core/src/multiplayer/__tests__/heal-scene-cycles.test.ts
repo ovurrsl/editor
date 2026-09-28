@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'bun:test'
-import { healSceneCycles } from '../heal-scene-cycles'
+import { describe, expect, it } from 'bun:test'
 import type { AnyNode, AnyNodeId } from '../../schema/types'
+import { healSceneCycles } from '../heal-scene-cycles'
 
 describe('Deterministic Hierarchy Cycle & Orphan Healer', () => {
   it('should detect and break 2-node cycle (A -> B -> A) at lexicographically smallest ID', () => {

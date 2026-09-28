@@ -1,7 +1,7 @@
 import { fail, handler, ok } from '@panel/lib/api'
 import { requireSession } from '@panel/lib/auth/guard'
 import { exec, queryOne, type RowDataPacket } from '@panel/lib/db'
-import type { LocationStatus, WarehouseLocation } from '@panel/lib/types'
+import type { WarehouseLocation } from '@panel/lib/types'
 import { getMemoryStore } from '../route'
 
 export const runtime = 'nodejs'
@@ -14,7 +14,9 @@ type RouteParams = { params: Promise<{ id: string }> }
  * Updates coordinates, address ID, barcode, status, or maxWeight of a location.
  */
 export const PATCH = handler(async (request: Request, context: unknown) => {
-  const isTest = process.env.NODE_ENV === 'test' || typeof (globalThis as unknown as { Bun?: unknown }).Bun !== 'undefined'
+  const isTest =
+    process.env.NODE_ENV === 'test' ||
+    typeof (globalThis as unknown as { Bun?: unknown }).Bun !== 'undefined'
   const guard = isTest ? { ok: true as const, session: {} as any } : await requireSession()
   if (!guard.ok) {
     return fail('unauthenticated', 'err.sessionExpired')
@@ -99,7 +101,9 @@ export const PATCH = handler(async (request: Request, context: unknown) => {
  * GET /api/locations/:id
  */
 export const GET = handler(async (_request: Request, context: unknown) => {
-  const isTest = process.env.NODE_ENV === 'test' || typeof (globalThis as unknown as { Bun?: unknown }).Bun !== 'undefined'
+  const isTest =
+    process.env.NODE_ENV === 'test' ||
+    typeof (globalThis as unknown as { Bun?: unknown }).Bun !== 'undefined'
   const guard = isTest ? { ok: true as const, session: {} as any } : await requireSession()
   if (!guard.ok) {
     return fail('unauthenticated', 'err.sessionExpired')
@@ -128,7 +132,9 @@ export const GET = handler(async (_request: Request, context: unknown) => {
  * DELETE /api/locations/:id
  */
 export const DELETE = handler(async (_request: Request, context: unknown) => {
-  const isTest = process.env.NODE_ENV === 'test' || typeof (globalThis as unknown as { Bun?: unknown }).Bun !== 'undefined'
+  const isTest =
+    process.env.NODE_ENV === 'test' ||
+    typeof (globalThis as unknown as { Bun?: unknown }).Bun !== 'undefined'
   const guard = isTest ? { ok: true as const, session: {} as any } : await requireSession()
   if (!guard.ok) {
     return fail('unauthenticated', 'err.sessionExpired')

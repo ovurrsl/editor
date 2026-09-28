@@ -1804,7 +1804,8 @@ function sceneOperationPatchNextState(
   for (const change of changes.nodeDeletes) {
     const id = change.node.id
     const current = beforeState.nodes[id]
-    const parentId = ((current?.parentId ?? change.node.parentId) as AnyNodeId | null | undefined) ?? null
+    const parentId =
+      ((current?.parentId ?? change.node.parentId) as AnyNodeId | null | undefined) ?? null
     if (parentId && !deleteIds.has(parentId)) changedParentIds.add(parentId)
     delete nextNodes[id]
   }

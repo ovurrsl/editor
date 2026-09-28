@@ -44,7 +44,8 @@ describe('KTX2 Loader & Alignment Transcoding', () => {
       const mockRenderer = { id: 'mock-webgpu-renderer' }
       // Mock detectSupport on the internal loader if necessary
       const detectSupportSpy = mock(() => undefined)
-      ;(ktx2Loader as unknown as { detectSupport: (r: unknown) => void }).detectSupport = detectSupportSpy
+      ;(ktx2Loader as unknown as { detectSupport: (r: unknown) => void }).detectSupport =
+        detectSupportSpy
 
       const firstCall = ensureKtx2Support(mockRenderer)
       expect(firstCall).toBe(true)
@@ -74,7 +75,8 @@ describe('KTX2 Loader & Alignment Transcoding', () => {
         setKTX2Loader: mock((loader: unknown) => loader),
       }
       const mockRenderer = { id: 'test-renderer-config' }
-      ;(ktx2Loader as unknown as { detectSupport: (r: unknown) => void }).detectSupport = () => undefined
+      ;(ktx2Loader as unknown as { detectSupport: (r: unknown) => void }).detectSupport = () =>
+        undefined
 
       const result = configureKtx2Support(targetLoader, mockRenderer)
       expect(result).toBe(true)
@@ -98,8 +100,8 @@ describe('KTX2 Loader & Alignment Transcoding', () => {
       if (byteLength >= 28) {
         const view = new DataView(buffer)
         view.setUint32(12, vkFormat, true) // vkFormat at byte 12
-        view.setUint32(20, width, true)    // pixelWidth at byte 20
-        view.setUint32(24, height, true)   // pixelHeight at byte 24
+        view.setUint32(20, width, true) // pixelWidth at byte 20
+        view.setUint32(24, height, true) // pixelHeight at byte 24
       }
       return buffer
     }
@@ -153,7 +155,7 @@ describe('KTX2 Loader & Alignment Transcoding', () => {
       // Mock fallback transcode returning CompressedTexture with decoded RGBA mipmap
       const misalignedBuffer = new ArrayBuffer(32)
       const view = new DataView(misalignedBuffer)
-      view.setUint32(12, 0, true)   // vkFormat = 0
+      view.setUint32(12, 0, true) // vkFormat = 0
       view.setUint32(20, 513, true) // pixelWidth = 513 (odd width!)
       view.setUint32(24, 257, true) // pixelHeight = 257 (odd height!)
 
@@ -169,7 +171,8 @@ describe('KTX2 Loader & Alignment Transcoding', () => {
       const mockFallbackLoader = {
         _createTexture: mock(async () => mockTranscodedCompressedTexture),
       }
-      ;(ktx2Loader as unknown as { fallbackLoader: () => unknown }).fallbackLoader = () => mockFallbackLoader
+      ;(ktx2Loader as unknown as { fallbackLoader: () => unknown }).fallbackLoader = () =>
+        mockFallbackLoader
 
       const resultTexture = (await ktx2Loader._createTexture(misalignedBuffer)) as DataTexture
 

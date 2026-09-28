@@ -1,7 +1,7 @@
 import * as Y from 'yjs'
-import type { AnyNode, AnyNodeId } from '../schema/types'
 import type { Collection, CollectionId } from '../schema/collections'
 import type { SceneMaterial, SceneMaterialId } from '../schema/scene-material'
+import type { AnyNode, AnyNodeId } from '../schema/types'
 import type { SceneSnapshot } from '../store/history-control'
 
 export interface SceneCRDTSchema {
@@ -54,7 +54,7 @@ export function isDeepEqualFast(a: unknown, b: unknown): boolean {
   const bKeys = Object.keys(bObj)
   if (aKeys.length !== bKeys.length) return false
   for (const k of aKeys) {
-    if (!Object.prototype.hasOwnProperty.call(bObj, k) || !isDeepEqualFast(aObj[k], bObj[k])) {
+    if (!Object.hasOwn(bObj, k) || !isDeepEqualFast(aObj[k], bObj[k])) {
       return false
     }
   }

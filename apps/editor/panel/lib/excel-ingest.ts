@@ -1,20 +1,20 @@
-import type { LocationStatus, WarehouseLocation } from './types'
 import {
-  LEVEL_LETTERS,
-  levelToLetter,
-  letterToLevel,
   type FormatAddressOptions,
   formatIndustrialAddress,
   generateBarcode,
+  LEVEL_LETTERS,
+  letterToLevel,
+  levelToLetter,
 } from './addressing-utils'
+import type { WarehouseLocation } from './types'
 
 export {
-  LEVEL_LETTERS,
-  levelToLetter,
-  letterToLevel,
   type FormatAddressOptions,
   formatIndustrialAddress,
   generateBarcode,
+  LEVEL_LETTERS,
+  letterToLevel,
+  levelToLetter,
 }
 
 // Lazy-load XLSX only when parsing Excel files to keep client components light
@@ -161,7 +161,11 @@ function getMergedZoneMap(sheet: any): Map<number, string> {
 /**
  * Resolves warehouse zone considering merged cells and physical layout boundaries.
  */
-function resolveZone(col1Based: number, directZoneVal?: string, mergedMap?: Map<number, string>): string {
+function resolveZone(
+  col1Based: number,
+  directZoneVal?: string,
+  mergedMap?: Map<number, string>,
+): string {
   if (directZoneVal && directZoneVal.trim()) return directZoneVal.trim()
   if (mergedMap && mergedMap.has(col1Based)) return mergedMap.get(col1Based)!
 
@@ -179,7 +183,7 @@ function resolveZone(col1Based: number, directZoneVal?: string, mergedMap?: Map<
  */
 export function parseWarehouseWorksheet(
   worksheet: any,
-  options: ParseOptions = {}
+  options: ParseOptions = {},
 ): WarehouseLayoutResult {
   const XLSX = getXlsx()
   const siteId = options.siteId ?? '01JM1SITE00000000000000001'
@@ -301,7 +305,7 @@ export function parseWarehouseWorksheet(
     const zone = resolveZone(
       colIndex,
       r6 !== null && r6 !== undefined ? String(r6).trim() : undefined,
-      mergedZoneMap
+      mergedZoneMap,
     )
     const rackType = r8 !== null && r8 !== undefined && String(r8).trim() ? String(r8).trim() : 'A'
 
@@ -364,7 +368,10 @@ export function parseWarehouseWorksheet(
 /**
  * Parses warehouse layout from a local file path.
  */
-export function parseWarehouseExcel(filePath: string, options: ParseOptions = {}): WarehouseLayoutResult {
+export function parseWarehouseExcel(
+  filePath: string,
+  options: ParseOptions = {},
+): WarehouseLayoutResult {
   const XLSX = getXlsx()
   const fs = require('node:fs')
   if (!fs.existsSync(filePath)) {
@@ -392,7 +399,7 @@ export function parseWarehouseExcel(filePath: string, options: ParseOptions = {}
  */
 export function parseWarehouseExcelBuffer(
   buffer: Buffer | ArrayBuffer | Uint8Array,
-  options: ParseOptions = {}
+  options: ParseOptions = {},
 ): WarehouseLayoutResult {
   const XLSX = getXlsx()
   const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer as any)
@@ -435,7 +442,7 @@ export const parseWarehouseExcelFromBuffer = parseWarehouseExcelBuffer
  */
 export function generateLocationsFromLayout(
   layout: WarehouseLayoutResult,
-  options: { siteId?: string; siteName?: string } = {}
+  options: { siteId?: string; siteName?: string } = {},
 ): ParsedLocation[] {
   const siteId = options.siteId ?? layout.siteId
   const siteName = options.siteName ?? layout.siteName
@@ -485,7 +492,7 @@ export function generateLocationsFromLayout(
 export function applyExcelLayoutToScene(
   sceneGraphOrNodes: any,
   layout: WarehouseLayoutResult,
-  options: ApplyLayoutOptions = {}
+  options: ApplyLayoutOptions = {},
 ): ApplyLayoutResult {
   const {
     clusterTolerance = 0.5,
@@ -512,7 +519,7 @@ export function applyExcelLayoutToScene(
   }
 
   const rackNodes = allNodes.filter(
-    (n) => n && (n.type === 'warehouse:pallet-rack' || n.kind === 'warehouse:pallet-rack')
+    (n) => n && (n.type === 'warehouse:pallet-rack' || n.kind === 'warehouse:pallet-rack'),
   )
 
   // 1. Separate transverse PL racks (rotation ~ 0 or 2*PI rad, vs ~ 4.71 rad for parallel racks)
@@ -544,7 +551,9 @@ export function applyExcelLayoutToScene(
   }
 
   // 4. Cluster parallel racks along X axis
-  const sortedByX = [...parallelRacks].sort((a, b) => (a.position?.[0] || 0) - (b.position?.[0] || 0))
+  const sortedByX = [...parallelRacks].sort(
+    (a, b) => (a.position?.[0] || 0) - (b.position?.[0] || 0),
+  )
   const clusters: Array<{ meanX: number; racks: any[] }> = []
 
   for (const rack of sortedByX) {
@@ -559,7 +568,9 @@ export function applyExcelLayoutToScene(
     }
   }
 
-  const activeParallelRuns = layout.runs.filter((r) => r.aisleCode !== 'PL' && r.legacyCode !== 'PL')
+  const activeParallelRuns = layout.runs.filter(
+    (r) => r.aisleCode !== 'PL' && r.legacyCode !== 'PL',
+  )
   const lineCount = Math.min(clusters.length, activeParallelRuns.length)
 
   for (let i = 0; i < lineCount; i++) {
@@ -606,7 +617,7 @@ export function applyExcelLayoutToScene(
 export async function seedLocationsFromExcel(
   layoutOrLocations: WarehouseLayoutResult | any[],
   siteId: string = '01JM1SITE00000000000000001',
-  bulkPostFnOrOptions?: any
+  bulkPostFnOrOptions?: any,
 ): Promise<SeedResult> {
   let locations: any[] = []
 
@@ -627,7 +638,9 @@ export async function seedLocationsFromExcel(
   const allErrors: Array<{ row?: number; reason: string }> = []
 
   const bulkPostFn =
-    typeof bulkPostFnOrOptions === 'function' ? bulkPostFnOrOptions : bulkPostFnOrOptions?.bulkPostFn
+    typeof bulkPostFnOrOptions === 'function'
+      ? bulkPostFnOrOptions
+      : bulkPostFnOrOptions?.bulkPostFn
 
   for (let i = 0; i < locations.length; i += BATCH_SIZE) {
     const chunk = locations.slice(i, i + BATCH_SIZE)

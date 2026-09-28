@@ -1,9 +1,9 @@
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
+import type { AnyNode } from '../../schema/types'
 import {
   createMultiplayerTestHarness,
   type MultiplayerTestHarness,
 } from './multiplayer-test-harness'
-import type { AnyNode } from '../../schema/types'
 
 describe('Tier 3: Cross-Feature Combinations E2E Suite', () => {
   let harness: MultiplayerTestHarness
@@ -108,7 +108,13 @@ describe('Tier 3: Cross-Feature Combinations E2E Suite', () => {
     await harness.syncAll()
 
     // 1. Initial base node
-    harness.editor.addNode({ id: 'base-item', type: 'item', object: 'item', position: [0, 0, 0], parentId: null } as any)
+    harness.editor.addNode({
+      id: 'base-item',
+      type: 'item',
+      object: 'item',
+      position: [0, 0, 0],
+      parentId: null,
+    } as any)
     harness.editor.stopCapturing()
     await harness.syncAll()
 
@@ -118,7 +124,14 @@ describe('Tier 3: Cross-Feature Combinations E2E Suite', () => {
     await harness.syncAll()
 
     // 3. Editor 2 creates a new wall
-    editor2.addNode({ id: 'e2-wall', type: 'wall', object: 'wall', start: [0, 0], end: [5, 0], parentId: null } as any)
+    editor2.addNode({
+      id: 'e2-wall',
+      type: 'wall',
+      object: 'wall',
+      start: [0, 0],
+      end: [5, 0],
+      parentId: null,
+    } as any)
     await harness.syncAll()
 
     expect((harness.viewer.getNode('base-item') as any).position).toEqual([10, 0, 0])
@@ -137,11 +150,45 @@ describe('Tier 3: Cross-Feature Combinations E2E Suite', () => {
   test('C5: Compound atomic room operation undoes in a single step', async () => {
     // Editor creates 4 walls and 1 slab in a single compound transaction
     harness.editor.doc.transact(() => {
-      harness.editor.addNode({ id: 'wall-n', type: 'wall', object: 'wall', start: [0, 0], end: [10, 0], parentId: null } as any)
-      harness.editor.addNode({ id: 'wall-e', type: 'wall', object: 'wall', start: [10, 0], end: [10, 8], parentId: null } as any)
-      harness.editor.addNode({ id: 'wall-s', type: 'wall', object: 'wall', start: [10, 8], end: [0, 8], parentId: null } as any)
-      harness.editor.addNode({ id: 'wall-w', type: 'wall', object: 'wall', start: [0, 8], end: [0, 0], parentId: null } as any)
-      harness.editor.addNode({ id: 'slab-room', type: 'slab', object: 'slab', thickness: 0.2, parentId: null } as any)
+      harness.editor.addNode({
+        id: 'wall-n',
+        type: 'wall',
+        object: 'wall',
+        start: [0, 0],
+        end: [10, 0],
+        parentId: null,
+      } as any)
+      harness.editor.addNode({
+        id: 'wall-e',
+        type: 'wall',
+        object: 'wall',
+        start: [10, 0],
+        end: [10, 8],
+        parentId: null,
+      } as any)
+      harness.editor.addNode({
+        id: 'wall-s',
+        type: 'wall',
+        object: 'wall',
+        start: [10, 8],
+        end: [0, 8],
+        parentId: null,
+      } as any)
+      harness.editor.addNode({
+        id: 'wall-w',
+        type: 'wall',
+        object: 'wall',
+        start: [0, 8],
+        end: [0, 0],
+        parentId: null,
+      } as any)
+      harness.editor.addNode({
+        id: 'slab-room',
+        type: 'slab',
+        object: 'slab',
+        thickness: 0.2,
+        parentId: null,
+      } as any)
     }, 'local')
 
     await harness.assertConvergence()

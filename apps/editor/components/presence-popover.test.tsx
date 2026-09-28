@@ -242,9 +242,7 @@ describe('PresencePopover Component (R1, R2, R3 UI)', () => {
   })
 
   it('renders single user (self-only) without role handoff buttons', () => {
-    const singleUser: Person[] = [
-      { userId: 'user_bob', email: 'bob@example.com', isEditor: false },
-    ]
+    const singleUser: Person[] = [{ userId: 'user_bob', email: 'bob@example.com', isEditor: false }]
     const markup = renderToStaticMarkup(
       <PresencePopover
         canEdit={true}
@@ -269,12 +267,7 @@ describe('PresencePopover Component (R1, R2, R3 UI)', () => {
       { userId: 'u5', email: 'user5@x.com', isEditor: false },
     ]
     const markup = renderToStaticMarkup(
-      <PresencePopover
-        canEdit={true}
-        currentUserId="u1"
-        isEditor={true}
-        present={fiveUsers}
-      />,
+      <PresencePopover canEdit={true} currentUserId="u1" isEditor={true} present={fiveUsers} />,
     )
 
     // Should show +2 overflow badge

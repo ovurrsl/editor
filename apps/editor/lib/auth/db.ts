@@ -1,4 +1,3 @@
-import { resolveMysqlUrl } from '@pascal-app/mcp/storage'
 import { db } from '@panel/lib/db'
 
 /**
@@ -41,4 +40,3 @@ async function migrate(p: MysqlPool): Promise<void> {
     )
   }
 }
-

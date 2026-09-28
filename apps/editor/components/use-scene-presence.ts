@@ -127,7 +127,6 @@ export function useScenePresence(sceneId: string, enabled: boolean): ScenePresen
     [sceneId],
   )
 
-
   useEffect(() => {
     if (!active) return
 

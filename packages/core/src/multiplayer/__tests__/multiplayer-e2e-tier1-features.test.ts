@@ -1,10 +1,10 @@
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import * as Y from 'yjs'
+import type { AnyNode } from '../../schema/types'
 import {
   createMultiplayerTestHarness,
   type MultiplayerTestHarness,
 } from './multiplayer-test-harness'
-import type { AnyNode } from '../../schema/types'
 
 describe('Tier 1: Feature Coverage E2E Suite (F1 - F8)', () => {
   let harness: MultiplayerTestHarness
@@ -150,12 +150,33 @@ describe('Tier 1: Feature Coverage E2E Suite (F1 - F8)', () => {
     })
 
     test('F1.5: should preserve exact sibling insertion order across concurrent additions', async () => {
-      const site: AnyNode = { id: 'site-order', type: 'site', object: 'site', children: [], parentId: null } as any
+      const site: AnyNode = {
+        id: 'site-order',
+        type: 'site',
+        object: 'site',
+        children: [],
+        parentId: null,
+      } as any
       harness.editor.addNode(site)
 
-      const childA: AnyNode = { id: 'child-a', type: 'building', object: 'building', parentId: 'site-order' } as any
-      const childB: AnyNode = { id: 'child-b', type: 'building', object: 'building', parentId: 'site-order' } as any
-      const childC: AnyNode = { id: 'child-c', type: 'building', object: 'building', parentId: 'site-order' } as any
+      const childA: AnyNode = {
+        id: 'child-a',
+        type: 'building',
+        object: 'building',
+        parentId: 'site-order',
+      } as any
+      const childB: AnyNode = {
+        id: 'child-b',
+        type: 'building',
+        object: 'building',
+        parentId: 'site-order',
+      } as any
+      const childC: AnyNode = {
+        id: 'child-c',
+        type: 'building',
+        object: 'building',
+        parentId: 'site-order',
+      } as any
 
       harness.editor.addNode(childA, { parentId: 'site-order', position: 0 })
       harness.editor.addNode(childB, { parentId: 'site-order', position: 1 })
@@ -335,8 +356,19 @@ describe('Tier 1: Feature Coverage E2E Suite (F1 - F8)', () => {
     })
 
     test('F3.2: should delete a child node and update the parent children array', async () => {
-      const site: AnyNode = { id: 'site-parent', type: 'site', object: 'site', children: [], parentId: null } as any
-      const bldg: AnyNode = { id: 'bldg-child', type: 'building', object: 'building', parentId: 'site-parent' } as any
+      const site: AnyNode = {
+        id: 'site-parent',
+        type: 'site',
+        object: 'site',
+        children: [],
+        parentId: null,
+      } as any
+      const bldg: AnyNode = {
+        id: 'bldg-child',
+        type: 'building',
+        object: 'building',
+        parentId: 'site-parent',
+      } as any
 
       harness.editor.addNode(site)
       harness.editor.addNode(bldg, { parentId: 'site-parent' })
@@ -352,8 +384,19 @@ describe('Tier 1: Feature Coverage E2E Suite (F1 - F8)', () => {
     })
 
     test('F3.3: should delete a parent building and clean up its references', async () => {
-      const site: AnyNode = { id: 'site-root', type: 'site', object: 'site', children: [], parentId: null } as any
-      const bldg: AnyNode = { id: 'bldg-target', type: 'building', object: 'building', parentId: 'site-root' } as any
+      const site: AnyNode = {
+        id: 'site-root',
+        type: 'site',
+        object: 'site',
+        children: [],
+        parentId: null,
+      } as any
+      const bldg: AnyNode = {
+        id: 'bldg-target',
+        type: 'building',
+        object: 'building',
+        parentId: 'site-root',
+      } as any
 
       harness.editor.addNode(site)
       harness.editor.addNode(bldg, { parentId: 'site-root' })
@@ -414,7 +457,13 @@ describe('Tier 1: Feature Coverage E2E Suite (F1 - F8)', () => {
   // ==========================================
   describe('F4: Object Translation', () => {
     test('F4.1: should translate node along the X axis', async () => {
-      const node: AnyNode = { id: 'trans-1', type: 'item', object: 'item', position: [0, 0, 0], parentId: null } as any
+      const node: AnyNode = {
+        id: 'trans-1',
+        type: 'item',
+        object: 'item',
+        position: [0, 0, 0],
+        parentId: null,
+      } as any
       harness.editor.addNode(node)
       await harness.assertConvergence()
 
@@ -426,7 +475,13 @@ describe('Tier 1: Feature Coverage E2E Suite (F1 - F8)', () => {
     })
 
     test('F4.2: should translate node along the Y elevation axis', async () => {
-      const node: AnyNode = { id: 'trans-2', type: 'item', object: 'item', position: [0, 0, 0], parentId: null } as any
+      const node: AnyNode = {
+        id: 'trans-2',
+        type: 'item',
+        object: 'item',
+        position: [0, 0, 0],
+        parentId: null,
+      } as any
       harness.editor.addNode(node)
       await harness.assertConvergence()
 
@@ -438,7 +493,13 @@ describe('Tier 1: Feature Coverage E2E Suite (F1 - F8)', () => {
     })
 
     test('F4.3: should translate node along the Z axis', async () => {
-      const node: AnyNode = { id: 'trans-3', type: 'item', object: 'item', position: [0, 0, 0], parentId: null } as any
+      const node: AnyNode = {
+        id: 'trans-3',
+        type: 'item',
+        object: 'item',
+        position: [0, 0, 0],
+        parentId: null,
+      } as any
       harness.editor.addNode(node)
       await harness.assertConvergence()
 
@@ -450,7 +511,13 @@ describe('Tier 1: Feature Coverage E2E Suite (F1 - F8)', () => {
     })
 
     test('F4.4: should translate node across arbitrary 3D coordinates [x, y, z]', async () => {
-      const node: AnyNode = { id: 'trans-4', type: 'item', object: 'item', position: [1, 2, 3], parentId: null } as any
+      const node: AnyNode = {
+        id: 'trans-4',
+        type: 'item',
+        object: 'item',
+        position: [1, 2, 3],
+        parentId: null,
+      } as any
       harness.editor.addNode(node)
       await harness.assertConvergence()
 
@@ -462,7 +529,13 @@ describe('Tier 1: Feature Coverage E2E Suite (F1 - F8)', () => {
     })
 
     test('F4.5: should converge accurately across consecutive rapid translations', async () => {
-      const node: AnyNode = { id: 'trans-5', type: 'item', object: 'item', position: [0, 0, 0], parentId: null } as any
+      const node: AnyNode = {
+        id: 'trans-5',
+        type: 'item',
+        object: 'item',
+        position: [0, 0, 0],
+        parentId: null,
+      } as any
       harness.editor.addNode(node)
       await harness.assertConvergence()
 
@@ -482,7 +555,13 @@ describe('Tier 1: Feature Coverage E2E Suite (F1 - F8)', () => {
   // ==========================================
   describe('F5: Object Rotation', () => {
     test('F5.1: should rotate node by 90 degrees (Math.PI / 2)', async () => {
-      const node: AnyNode = { id: 'rot-1', type: 'item', object: 'item', rotation: 0, parentId: null } as any
+      const node: AnyNode = {
+        id: 'rot-1',
+        type: 'item',
+        object: 'item',
+        rotation: 0,
+        parentId: null,
+      } as any
       harness.editor.addNode(node)
       await harness.assertConvergence()
 
@@ -494,7 +573,13 @@ describe('Tier 1: Feature Coverage E2E Suite (F1 - F8)', () => {
     })
 
     test('F5.2: should rotate node by 180 degrees (Math.PI)', async () => {
-      const node: AnyNode = { id: 'rot-2', type: 'item', object: 'item', rotation: 0, parentId: null } as any
+      const node: AnyNode = {
+        id: 'rot-2',
+        type: 'item',
+        object: 'item',
+        rotation: 0,
+        parentId: null,
+      } as any
       harness.editor.addNode(node)
       await harness.assertConvergence()
 
@@ -506,7 +591,13 @@ describe('Tier 1: Feature Coverage E2E Suite (F1 - F8)', () => {
     })
 
     test('F5.3: should rotate node with negative angle (-Math.PI / 4)', async () => {
-      const node: AnyNode = { id: 'rot-3', type: 'item', object: 'item', rotation: 0, parentId: null } as any
+      const node: AnyNode = {
+        id: 'rot-3',
+        type: 'item',
+        object: 'item',
+        rotation: 0,
+        parentId: null,
+      } as any
       harness.editor.addNode(node)
       await harness.assertConvergence()
 
@@ -518,7 +609,13 @@ describe('Tier 1: Feature Coverage E2E Suite (F1 - F8)', () => {
     })
 
     test('F5.4: should synchronize 3D Euler angles [yaw, pitch, roll]', async () => {
-      const node: AnyNode = { id: 'rot-4', type: 'item', object: 'item', rotation: [0, 0, 0], parentId: null } as any
+      const node: AnyNode = {
+        id: 'rot-4',
+        type: 'item',
+        object: 'item',
+        rotation: [0, 0, 0],
+        parentId: null,
+      } as any
       harness.editor.addNode(node)
       await harness.assertConvergence()
 
@@ -530,7 +627,13 @@ describe('Tier 1: Feature Coverage E2E Suite (F1 - F8)', () => {
     })
 
     test('F5.5: should converge over cumulative incremental rotations', async () => {
-      const node: AnyNode = { id: 'rot-5', type: 'item', object: 'item', rotation: 0, parentId: null } as any
+      const node: AnyNode = {
+        id: 'rot-5',
+        type: 'item',
+        object: 'item',
+        rotation: 0,
+        parentId: null,
+      } as any
       harness.editor.addNode(node)
       await harness.assertConvergence()
 
@@ -726,7 +829,9 @@ describe('Tier 1: Feature Coverage E2E Suite (F1 - F8)', () => {
 
       harness.editor.setSelection([])
       await harness.viewer.waitForAwareness((states) => {
-        return Array.from(states.values()).every((s) => !s.selection || s.selection.selectedNodeIds.length === 0)
+        return Array.from(states.values()).every(
+          (s) => !s.selection || s.selection.selectedNodeIds.length === 0,
+        )
       })
 
       const states = Array.from(harness.viewer.awareness.getStates().values())
@@ -751,7 +856,13 @@ describe('Tier 1: Feature Coverage E2E Suite (F1 - F8)', () => {
     })
 
     test('F7.5: should broadcast active drag live transforms without polluting CRDT undo history', async () => {
-      const node: AnyNode = { id: 'drag-node', type: 'item', object: 'item', position: [0, 0, 0], parentId: null } as any
+      const node: AnyNode = {
+        id: 'drag-node',
+        type: 'item',
+        object: 'item',
+        position: [0, 0, 0],
+        parentId: null,
+      } as any
       harness.editor.addNode(node)
       await harness.assertConvergence()
 
@@ -789,7 +900,12 @@ describe('Tier 1: Feature Coverage E2E Suite (F1 - F8)', () => {
   // ==========================================
   describe('F8: ReadOnly RBAC Enforcement', () => {
     test('F8.1: should allow Editor to perform mutations and broadcast them', async () => {
-      const node: AnyNode = { id: 'rbac-editor-node', type: 'site', object: 'site', parentId: null } as any
+      const node: AnyNode = {
+        id: 'rbac-editor-node',
+        type: 'site',
+        object: 'site',
+        parentId: null,
+      } as any
       harness.editor.addNode(node)
       await harness.assertConvergence()
 
@@ -800,7 +916,12 @@ describe('Tier 1: Feature Coverage E2E Suite (F1 - F8)', () => {
       const initialDroppedCount = harness.server.droppedViewerPacketsCount
 
       // Viewer attempts to write a node directly
-      const illegalNode: AnyNode = { id: 'viewer-illegal-node', type: 'item', object: 'item', parentId: null } as any
+      const illegalNode: AnyNode = {
+        id: 'viewer-illegal-node',
+        type: 'item',
+        object: 'item',
+        parentId: null,
+      } as any
       harness.viewer.addNode(illegalNode)
 
       // Wait a short duration
@@ -810,12 +931,19 @@ describe('Tier 1: Feature Coverage E2E Suite (F1 - F8)', () => {
       const room = harness.server.rooms.get(harness.editor.sceneId)
       expect(room?.doc.getMap('nodes').get('viewer-illegal-node')).toBeUndefined()
       expect(harness.editor.getNode('viewer-illegal-node')).toBeUndefined()
-      expect(harness.server.droppedViewerPacketsCount).toBeGreaterThanOrEqual(initialDroppedCount + 1)
+      expect(harness.server.droppedViewerPacketsCount).toBeGreaterThanOrEqual(
+        initialDroppedCount + 1,
+      )
     })
 
     test('F8.3: should ensure Viewer continuously mirrors incoming Editor mutations', async () => {
       for (let i = 1; i <= 5; i++) {
-        harness.editor.addNode({ id: `stream-node-${i}`, type: 'item', object: 'item', parentId: null } as any)
+        harness.editor.addNode({
+          id: `stream-node-${i}`,
+          type: 'item',
+          object: 'item',
+          parentId: null,
+        } as any)
       }
 
       await harness.assertConvergence()
@@ -845,7 +973,12 @@ describe('Tier 1: Feature Coverage E2E Suite (F1 - F8)', () => {
       const editor2 = await harness.createClient('editor', 'editor-secondary')
       await harness.syncAll()
 
-      editor2.addNode({ id: 'editor2-node', type: 'building', object: 'building', parentId: null } as any)
+      editor2.addNode({
+        id: 'editor2-node',
+        type: 'building',
+        object: 'building',
+        parentId: null,
+      } as any)
       await harness.syncAll()
 
       expect(harness.editor.getNode('editor2-node')).toBeDefined()

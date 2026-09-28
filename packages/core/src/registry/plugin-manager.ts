@@ -1,5 +1,5 @@
-import type { IconRef, Plugin } from './types'
 import { loadPlugin } from './registry'
+import type { IconRef, Plugin } from './types'
 
 export type PluginStatus = 'unloaded' | 'loading' | 'installed' | 'error'
 
@@ -214,7 +214,9 @@ export class PluginManager {
       try {
         const loaded = await descriptor.loadPlugin()
         const plugin =
-          loaded && typeof loaded === 'object' && 'plugin' in loaded ? loaded.plugin : (loaded as Plugin)
+          loaded && typeof loaded === 'object' && 'plugin' in loaded
+            ? loaded.plugin
+            : (loaded as Plugin)
         const panel =
           loaded && typeof loaded === 'object' && 'panel' in loaded ? loaded.panel : undefined
 
@@ -231,7 +233,10 @@ export class PluginManager {
             try {
               registrar(panel)
             } catch (panelErr) {
-              console.warn(`[plugin-manager] Failed to register panel for plugin "${id}":`, panelErr)
+              console.warn(
+                `[plugin-manager] Failed to register panel for plugin "${id}":`,
+                panelErr,
+              )
             }
           }
         }

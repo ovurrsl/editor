@@ -1,3 +1,4 @@
+import { query, type RowDataPacket } from '@panel/lib/db'
 import type { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { authAvailable } from '@/lib/auth/db'
@@ -5,7 +6,6 @@ import { canEdit, getSessionUser } from '@/lib/auth/session'
 import { apiGraphSchema } from '@/lib/graph-schema'
 import { guardSceneApiRequest, sceneApiJson, sceneApiPreflight } from '@/lib/scene-api-security'
 import { getSceneOperations } from '@/lib/scene-store-server'
-import { query, type RowDataPacket } from '@panel/lib/db'
 
 export const dynamic = 'force-dynamic'
 
@@ -68,7 +68,9 @@ export async function GET(request: NextRequest) {
   // If non-admin, also merge scenes linked via site assignments
   if (authAvailable() && !isAdmin && viewerId) {
     try {
-      const assignedRows = await query<RowDataPacket & { scene_id: string | null; public_id: string; name: string }>(
+      const assignedRows = await query<
+        RowDataPacket & { scene_id: string | null; public_id: string; name: string }
+      >(
         `SELECT s.public_id, s.name, s.scene_id
            FROM assignments a
            JOIN sites s ON s.id = a.site_id

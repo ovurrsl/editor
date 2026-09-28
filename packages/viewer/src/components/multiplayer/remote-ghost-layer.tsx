@@ -1,9 +1,9 @@
 'use client'
 
-import React, { useRef } from 'react'
+import { type UserPresence, useLiveTransforms } from '@pascal-app/core'
 import { useFrame } from '@react-three/fiber'
+import { useRef } from 'react'
 import * as THREE from 'three'
-import { useLiveTransforms, type UserPresence } from '@pascal-app/core'
 
 interface RemoteGhostMeshProps {
   nodeId: string
@@ -41,12 +41,7 @@ export function RemoteGhostMesh({ nodeId, color }: RemoteGhostMeshProps) {
   return (
     <mesh ref={meshRef} visible={false}>
       <boxGeometry args={[1, 1, 1]} />
-      <meshBasicMaterial
-        color={color}
-        wireframe
-        transparent
-        opacity={0.6}
-      />
+      <meshBasicMaterial color={color} wireframe transparent opacity={0.6} />
     </mesh>
   )
 }
@@ -59,9 +54,7 @@ interface RemoteGhostLayerProps {
 export function RemoteGhostLayer({ presences, localClientId }: RemoteGhostLayerProps) {
   const ghostItems = Array.from(presences.entries()).filter(
     ([clientId, presence]) =>
-      clientId !== localClientId &&
-      presence.activeDrag &&
-      presence.activeDrag.nodeId,
+      clientId !== localClientId && presence.activeDrag && presence.activeDrag.nodeId,
   )
 
   return (

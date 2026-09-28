@@ -1,27 +1,23 @@
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import * as http from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { WebSocketServer, WebSocket } from 'ws'
-import * as Y from 'yjs'
-import * as syncProtocol from 'y-protocols/sync'
-import * as awarenessProtocol from 'y-protocols/awareness'
 import * as encoding from 'lib0/encoding'
-import * as decoding from 'lib0/decoding'
+import { WebSocket } from 'ws'
+import * as awarenessProtocol from 'y-protocols/awareness'
+import * as syncProtocol from 'y-protocols/sync'
+import * as Y from 'yjs'
+import { createCollabToken } from '../../../../../server/multiplayer/auth-guard'
+import { CollabWebSocketServer } from '../../../../../server/multiplayer/ws-server'
+import type { AnyNode } from '../../schema/types'
+import useLiveTransforms from '../../store/use-live-transforms'
+import { MultiplayerAwarenessService } from '../awareness-service'
 import {
   createMultiplayerTestHarness,
-  type MultiplayerTestHarness,
-  SimulatedMultiplayerClient,
-  CollabServer,
-  MESSAGE_SYNC,
   MESSAGE_AWARENESS,
+  MESSAGE_SYNC,
+  type MultiplayerTestHarness,
   writeNodeToYMap,
-  yDocToSnapshot,
 } from './multiplayer-test-harness'
-import { CollabWebSocketServer } from '../../../../../server/multiplayer/ws-server'
-import { createCollabToken } from '../../../../../server/multiplayer/auth-guard'
-import { MultiplayerAwarenessService } from '../awareness-service'
-import useLiveTransforms from '../../store/use-live-transforms'
-import type { AnyNode, AnyNodeId } from '../../schema/types'
 
 describe('Adversarial Stress & Security Test Suite (Challenger 2)', () => {
   let harness: MultiplayerTestHarness | null = null
@@ -259,12 +255,16 @@ describe('Adversarial Stress & Security Test Suite (Challenger 2)', () => {
       const sceneId = 'prod-security-room-1'
 
       // Connect rogue viewer client (unauthenticated or rogue role attempt)
-      const viewerWs = new WebSocket(`ws://127.0.0.1:${port}/collab/v1/scene:${sceneId}?role=viewer&userId=rogue-attacker`)
+      const viewerWs = new WebSocket(
+        `ws://127.0.0.1:${port}/collab/v1/scene:${sceneId}?role=viewer&userId=rogue-attacker`,
+      )
       await new Promise((resolve) => viewerWs.on('open', resolve))
 
       // Connect legitimate editor client with cryptographically signed token
       const editorToken = createCollabToken({ userId: 'auth-editor', role: 'editor', sceneId })
-      const editorWs = new WebSocket(`ws://127.0.0.1:${port}/collab/v1/scene:${sceneId}?token=${editorToken}`)
+      const editorWs = new WebSocket(
+        `ws://127.0.0.1:${port}/collab/v1/scene:${sceneId}?token=${editorToken}`,
+      )
       await new Promise((resolve) => editorWs.on('open', resolve))
 
       // 1. Rogue viewer transmits malicious Yjs update
@@ -312,8 +312,12 @@ describe('Adversarial Stress & Security Test Suite (Challenger 2)', () => {
       expect(room.doc.getMap('nodes').has('valid-editor-node')).toBe(true)
 
       // Cleanup
-      try { viewerWs.terminate() } catch {}
-      try { editorWs.terminate() } catch {}
+      try {
+        viewerWs.terminate()
+      } catch {}
+      try {
+        editorWs.terminate()
+      } catch {}
       rogueDoc.destroy()
       editorDoc.destroy()
       await collabServer.close()
@@ -428,7 +432,9 @@ describe('Adversarial Stress & Security Test Suite (Challenger 2)', () => {
       await harness.syncAll(1000)
       const elapsed = performance.now() - start
 
-      console.log(`[High-Throughput Burst] 50 nodes created and synchronized in ${elapsed.toFixed(2)}ms`)
+      console.log(
+        `[High-Throughput Burst] 50 nodes created and synchronized in ${elapsed.toFixed(2)}ms`,
+      )
       expect(elapsed).toBeLessThan(1000)
 
       const viewerSnap = viewer.getSnapshot()
@@ -516,10 +522,7 @@ describe('Adversarial Stress & Security Test Suite (Challenger 2)', () => {
       // Wait for Viewers to observe the final state
       await viewer.waitForAwareness((states) => {
         for (const s of states.values()) {
-          if (
-            s.cursor?.worldPosition &&
-            Math.abs(s.cursor.worldPosition[0] - finalX) < 1e-3
-          ) {
+          if (s.cursor?.worldPosition && Math.abs(s.cursor.worldPosition[0] - finalX) < 1e-3) {
             return true
           }
         }
@@ -762,7 +765,10 @@ describe('Adversarial Stress & Security Test Suite (Challenger 2)', () => {
       })
       editorAwarenessService.flushLocalState()
 
-      await viewer.waitForCondition(() => useLiveTransforms.getState().transforms.has(targetId), 2000)
+      await viewer.waitForCondition(
+        () => useLiveTransforms.getState().transforms.has(targetId),
+        2000,
+      )
 
       // Release drag: clear activeDrag and commit discrete CRDT delta
       editorAwarenessService.clearLocalActiveDrag()

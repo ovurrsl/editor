@@ -561,7 +561,8 @@ export const en = {
   addrColStatus: 'Status',
   addrColActions: 'Actions',
   addrSchematicTitle: '2D Plan Schematic',
-  addrSchematicLead: 'Select a bay in the plan to filter the grid, or click a row to locate its rack.',
+  addrSchematicLead:
+    'Select a bay in the plan to filter the grid, or click a row to locate its rack.',
   addrZoomIn: 'Zoom in',
   addrZoomOut: 'Zoom out',
   addrZoomReset: 'Reset view',

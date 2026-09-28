@@ -883,8 +883,10 @@ export function CommunityViewerToolbarLeft({
           <div
             aria-label="Editor"
             className={cn(
-              "inline-flex h-8 items-center gap-2 rounded-xl border px-2 py-1 shadow-2xl backdrop-blur-md",
-              presence.connected ? "border-green-500/50 bg-green-500/20 text-green-700" : "border-red-500/50 bg-red-500/20 text-red-700"
+              'inline-flex h-8 items-center gap-2 rounded-xl border px-2 py-1 shadow-2xl backdrop-blur-md',
+              presence.connected
+                ? 'border-green-500/50 bg-green-500/20 text-green-700'
+                : 'border-red-500/50 bg-red-500/20 text-red-700',
             )}
             data-testid="active-editor-badge"
           >
@@ -894,9 +896,7 @@ export function CommunityViewerToolbarLeft({
             >
               {editorInitials || 'ME'}
             </span>
-            <span className="font-medium text-xs pr-1">
-              Editor
-            </span>
+            <span className="font-medium text-xs pr-1">Editor</span>
           </div>
           {presence.present.length > 0 && (
             <PresencePopover

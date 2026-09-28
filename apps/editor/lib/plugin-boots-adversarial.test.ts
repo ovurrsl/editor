@@ -1,32 +1,32 @@
-import { describe, expect, test, beforeEach, afterEach } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
+import { existsSync } from 'node:fs'
+import path from 'node:path'
 import {
-  bootsPlugin,
-  bootsHostPanel,
-  jobDefinition,
-  JobNode,
-  JobKind,
-  JobStatus,
-} from '@pascal-app/plugin-boots'
-import {
-  nodeRegistry,
-  loadPlugin,
   categoryOf,
-  isPresettableKind,
   getNodePluginId,
+  isPresettableKind,
+  loadPlugin,
+  nodeRegistry,
 } from '@pascal-app/core'
 import {
-  BufferGeometry,
+  bootsHostPanel,
+  bootsPlugin,
+  JobKind,
+  JobNode,
+  JobStatus,
+  jobDefinition,
+} from '@pascal-app/plugin-boots'
+import {
+  Box3,
   BoxGeometry,
+  BufferGeometry,
   ConeGeometry,
   CylinderGeometry,
+  Matrix4,
   Mesh,
   Ray,
   Vector3,
-  Box3,
-  Matrix4,
 } from 'three'
-import { existsSync } from 'node:fs'
-import path from 'node:path'
 import { MeshBVH } from 'three-mesh-bvh'
 
 const appRoot = path.join(import.meta.dir, '..')
@@ -35,8 +35,24 @@ const monorepoRoot = path.join(appRoot, '..', '..')
 async function getBvhFor(): Promise<(mesh: Mesh) => MeshBVH> {
   const candidates = [
     path.join(appRoot, 'node_modules', '@pascal-app', 'plugin-boots', 'src', 'game', 'world.ts'),
-    path.join(monorepoRoot, 'node_modules', '@pascal-app', 'plugin-boots', 'src', 'game', 'world.ts'),
-    path.resolve(process.cwd(), 'node_modules', '@pascal-app', 'plugin-boots', 'src', 'game', 'world.ts'),
+    path.join(
+      monorepoRoot,
+      'node_modules',
+      '@pascal-app',
+      'plugin-boots',
+      'src',
+      'game',
+      'world.ts',
+    ),
+    path.resolve(
+      process.cwd(),
+      'node_modules',
+      '@pascal-app',
+      'plugin-boots',
+      'src',
+      'game',
+      'world.ts',
+    ),
   ]
   for (const candidate of candidates) {
     if (existsSync(candidate)) {
@@ -60,7 +76,6 @@ async function getBvhFor(): Promise<(mesh: Mesh) => MeshBVH> {
 }
 
 describe('Milestone 1 Adversarial Challenge: @pascal-app/plugin-boots', () => {
-
   describe('1. Runtime Module Surface & Core Exports', () => {
     test('all public symbols are defined and match expected types', () => {
       expect(bootsPlugin).toBeDefined()
@@ -166,15 +181,7 @@ describe('Milestone 1 Adversarial Challenge: @pascal-app/plugin-boots', () => {
     })
 
     test('strictly enforces nodeType literal (boots:job)', () => {
-      const invalidTypes = [
-        'item',
-        'wall',
-        'boots:item',
-        'boots:punchlist',
-        'job',
-        '',
-        null,
-      ]
+      const invalidTypes = ['item', 'wall', 'boots:item', 'boots:punchlist', 'job', '', null]
       for (const invalidType of invalidTypes) {
         expect(() => JobNode.parse({ ...validBase, type: invalidType })).toThrow()
       }
@@ -196,12 +203,7 @@ describe('Milestone 1 Adversarial Challenge: @pascal-app/plugin-boots', () => {
         expect(() => JobNode.parse({ ...validBase, position: invalidPos })).toThrow()
       }
 
-      const invalidRotations = [
-        [0, 0],
-        [0, 0, 0, 0],
-        [NaN, 0, 0],
-        null,
-      ]
+      const invalidRotations = [[0, 0], [0, 0, 0, 0], [NaN, 0, 0], null]
       for (const invalidRot of invalidRotations) {
         expect(() => JobNode.parse({ ...validBase, rotation: invalidRot })).toThrow()
       }

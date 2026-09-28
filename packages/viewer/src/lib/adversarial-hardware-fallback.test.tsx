@@ -8,21 +8,15 @@ import {
   RGBAFormat,
   UnsignedByteType,
 } from 'three'
+import { UnsupportedGpuViewerFallback } from '../components/viewer/unsupported-gpu-fallback'
+import { hasDrawableGeometry } from './drawable-geometry'
+import { ensureKtx2Support, isKtx2Url, ktx2Loader, whenKtx2Ready } from './ktx2-loader'
 import {
   detectRendererCapability,
   initializeGpuRenderer,
   type RendererBackendParameters,
   type RendererCapabilityCanvas,
 } from './renderer-capability'
-import {
-  configureKtx2Support,
-  ensureKtx2Support,
-  isKtx2Url,
-  ktx2Loader,
-  whenKtx2Ready,
-} from './ktx2-loader'
-import { hasDrawableGeometry } from './drawable-geometry'
-import { UnsupportedGpuViewerFallback } from '../components/viewer/unsupported-gpu-fallback'
 
 function createMockCanvas(contexts: Partial<Record<'webgl2', unknown>>) {
   return {
@@ -62,7 +56,10 @@ describe('EMPIRICAL ADVERSARIAL CHALLENGE: Tier 2 Hardware Fallbacks & Error Res
 
       const hostileGpu = {
         requestAdapter: async () => {
-          throw new DOMException('GPU adapter access denied by security policy', 'NotSupportedError')
+          throw new DOMException(
+            'GPU adapter access denied by security policy',
+            'NotSupportedError',
+          )
         },
       }
 

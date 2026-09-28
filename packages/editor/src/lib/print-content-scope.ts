@@ -18,8 +18,7 @@ function structureIds(nodes: Record<string, AnyNode>): Set<string> {
   return new Set(
     Object.values(nodes)
       .filter(
-        (node) =>
-          nodeRegistry.get(node.type)?.category === 'structure' && node.type !== 'ceiling',
+        (node) => nodeRegistry.get(node.type)?.category === 'structure' && node.type !== 'ceiling',
       )
       .map((node) => node.id),
   )

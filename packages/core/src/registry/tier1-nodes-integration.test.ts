@@ -1,13 +1,9 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { z } from 'zod'
-import {
-  BlockNode,
-  BlockTopology,
-  createBoxBlockTopology,
-} from '../schema/nodes/block'
-import { WallNode } from '../schema/nodes/wall'
-import { SlabNode } from '../schema/nodes/slab'
+import { BlockNode, BlockTopology, createBoxBlockTopology } from '../schema/nodes/block'
 import { RoofNode } from '../schema/nodes/roof'
+import { SlabNode } from '../schema/nodes/slab'
+import { WallNode } from '../schema/nodes/wall'
 import {
   getInspectorExtensions,
   getNodePluginId,

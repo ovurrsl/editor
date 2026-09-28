@@ -61,7 +61,8 @@ export function InviteForm({
   }
 
   const submit = async () => {
-    const domain = org === 'internal' ? internalDomain : `@${externalDomain.replace(/^@/, '').trim()}`
+    const domain =
+      org === 'internal' ? internalDomain : `@${externalDomain.replace(/^@/, '').trim()}`
     const cleanUsername = username.trim().toLowerCase().replace(/@.*$/, '')
 
     if (!fullName.trim() || !cleanUsername || (org === 'external' && !externalDomain.trim())) {

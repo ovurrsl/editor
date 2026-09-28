@@ -1,9 +1,8 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 import { emitter } from '@pascal-app/core'
-import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { SnapshotCaptureOverlay } from '../components/editor/snapshot-capture-overlay'
-import useEditor, { type SnapshotCropMode, type SnapshotStandardAspect } from '../store/use-editor'
+import useEditor, { type SnapshotStandardAspect } from '../store/use-editor'
 
 // Resolution presets specification contract
 const RESOLUTION_SCALES = [

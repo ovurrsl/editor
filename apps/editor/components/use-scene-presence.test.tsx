@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 import type { Person } from './use-scene-presence'
 
 // Mock session provider
-let mockUser: { id: string; email: string } | null = { id: 'user_alice', email: 'alice@example.com' }
+let mockUser: { id: string; email: string } | null = {
+  id: 'user_alice',
+  email: 'alice@example.com',
+}
 
 mock.module('@/components/auth/session-provider', () => ({
   useSession: () => ({
@@ -208,7 +211,8 @@ describe('useScenePresence Hook & passControl Action (Milestone 2 - R3 Frontend)
         JSON.stringify({
           isEditor: body?.claim === true,
           canEdit: true,
-          editor: body?.claim === true ? { userId: 'user_alice', email: 'alice@example.com' } : null,
+          editor:
+            body?.claim === true ? { userId: 'user_alice', email: 'alice@example.com' } : null,
           present: [],
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },

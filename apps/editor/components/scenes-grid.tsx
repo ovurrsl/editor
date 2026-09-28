@@ -60,13 +60,18 @@ export function SceneGrid({
     if (editableSceneIds !== undefined) {
       return editableSet.has(scene.id)
     }
-    return userRole !== 'viewer' && currentUserId != null && (scene.ownerId === currentUserId || isAdmin)
+    return (
+      userRole !== 'viewer' && currentUserId != null && (scene.ownerId === currentUserId || isAdmin)
+    )
   }
 
-  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  const effectiveViewerUrl = isLocal && (!process.env.NEXT_PUBLIC_VIEWER_URL || viewerUrl.includes('opex.help'))
-    ? 'http://localhost:3001'
-    : viewerUrl
+  const isLocal =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  const effectiveViewerUrl =
+    isLocal && (!process.env.NEXT_PUBLIC_VIEWER_URL || viewerUrl.includes('opex.help'))
+      ? 'http://localhost:3001'
+      : viewerUrl
 
   const handleCardClick = (scene: SceneMeta) => {
     if (!canManage(scene)) {

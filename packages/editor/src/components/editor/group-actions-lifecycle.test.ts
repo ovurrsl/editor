@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { cancelActiveGroupPickUp, startGroupPickUp } from './group-actions'
+import { cancelActiveGroupPickUp } from './group-actions'
 import { cancelActiveGroupMove3D } from './group-move-3d'
 
 describe('Group actions gesture lifecycle and cleanup', () => {

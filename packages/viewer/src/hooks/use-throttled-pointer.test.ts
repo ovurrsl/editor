@@ -1,12 +1,11 @@
 import { describe, expect, test } from 'bun:test'
-import { Ray, Vector3 } from 'three'
+import { BoxGeometry, Mesh, MeshBasicMaterial, Ray, Vector3 } from 'three'
 import {
   createThrottledPointerMoveHandler,
   getMeshWorldInverseMatrix,
   getTriangleNormalDirect,
   intersectTriangleDirect,
 } from '../index'
-import { Mesh, BoxGeometry, MeshBasicMaterial } from 'three'
 
 describe('useThrottledPointer & Throttled Pointer Helpers', () => {
   test('createThrottledPointerMoveHandler coalesces multiple rapid pointer moves into a single frame tick', async () => {

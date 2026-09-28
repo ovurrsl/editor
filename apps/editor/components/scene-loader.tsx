@@ -1,5 +1,11 @@
 'use client'
 
+import {
+  applySceneGraphPatch,
+  applySceneGraphPatchToStore,
+  computeSceneGraphDiff,
+  type SceneGraphPatch,
+} from '@pascal-app/core'
 // Node registry bootstrap is loaded once at the root via
 // `<ClientBootstrap>` in `app/layout.tsx` — no per-page side-effect
 // import here.
@@ -12,12 +18,6 @@ import {
   useScene,
   useViewer,
 } from '@pascal-app/editor'
-import {
-  applySceneGraphPatch,
-  applySceneGraphPatchToStore,
-  computeSceneGraphDiff,
-  type SceneGraphPatch,
-} from '@pascal-app/core'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -173,7 +173,6 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
     useViewer.getState().setSceneLocked(false)
   }, [forcedReadOnly])
 
-
   const lightPreview = isLightPreviewQuery(searchParams)
 
   const handleLoad = useCallback(async () => initialScene, [initialScene])
@@ -295,7 +294,11 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Save failed'
-        if (message !== 'version_conflict' && message !== 'empty_graph_rejected' && message !== 'unauthorized') {
+        if (
+          message !== 'version_conflict' &&
+          message !== 'empty_graph_rejected' &&
+          message !== 'unauthorized'
+        ) {
           setSaveError(message)
         }
         throw error
@@ -385,7 +388,6 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
     return () => source.close()
   }, [meta.id])
 
-
   const handleThumb = useCallback(
     async (blob: Blob) => {
       // A non-lease holder never owns the scene write; the server would refuse it.
@@ -460,22 +462,13 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
         settingsPanelProps={{ accountSection: <AccountSettingsSection /> }}
         sidebarTabs={EDITOR_SIDEBAR_TABS}
         viewerToolbarCenter={
-          <CommunityViewerToolbarCenter
-            currentUserId={user?.id}
-            presence={presence}
-          />
+          <CommunityViewerToolbarCenter currentUserId={user?.id} presence={presence} />
         }
         viewerToolbarLeft={
-          <CommunityViewerToolbarLeft
-            currentUserId={user?.id}
-            presence={presence}
-          />
+          <CommunityViewerToolbarLeft currentUserId={user?.id} presence={presence} />
         }
         viewerToolbarRight={
-          <CommunityViewerToolbarRight
-            currentUserId={user?.id}
-            presence={presence}
-          />
+          <CommunityViewerToolbarRight currentUserId={user?.id} presence={presence} />
         }
       />
     </div>

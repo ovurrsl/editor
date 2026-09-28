@@ -676,7 +676,12 @@ describe('SqliteSceneStore presence + edit lease', () => {
     expect(present.length).toBe(3)
     expect(present[0]!.userId).toBe('bob')
     expect(present[0]!.isEditor).toBe(true)
-    expect(present.filter((p) => !p.isEditor).map((p) => p.userId).sort()).toEqual(['ann', 'cy'])
+    expect(
+      present
+        .filter((p) => !p.isEditor)
+        .map((p) => p.userId)
+        .sort(),
+    ).toEqual(['ann', 'cy'])
   })
 
   test('new editor retains lease on subsequent heartbeat with claimEditor: true', async () => {
@@ -854,12 +859,18 @@ describe('SqliteSceneStore presence + edit lease', () => {
     await store.save({ id: 'team-scene', name: 'Team Scene', ownerId: 'alice', graph: makeGraph() })
 
     // Phase 1: Alice joins and becomes editor
-    const p1 = await store.touchPresence('team-scene', 'alice', 'alice@test.com', { claimEditor: true })
+    const p1 = await store.touchPresence('team-scene', 'alice', 'alice@test.com', {
+      claimEditor: true,
+    })
     expect(p1.isEditor).toBe(true)
 
     // Phase 2: Bob and Charlie join as viewers
-    const p2Bob = await store.touchPresence('team-scene', 'bob', 'bob@test.com', { claimEditor: false })
-    const p2Charlie = await store.touchPresence('team-scene', 'charlie', 'charlie@test.com', { claimEditor: false })
+    const p2Bob = await store.touchPresence('team-scene', 'bob', 'bob@test.com', {
+      claimEditor: false,
+    })
+    const p2Charlie = await store.touchPresence('team-scene', 'charlie', 'charlie@test.com', {
+      claimEditor: false,
+    })
     expect(p2Bob.isEditor).toBe(false)
     expect(p2Charlie.isEditor).toBe(false)
 
@@ -868,20 +879,29 @@ describe('SqliteSceneStore presence + edit lease', () => {
     expect(handoff.editorUserId).toBe('bob')
 
     // Phase 4: Bob heartbeats and edits
-    const bobActive = await store.touchPresence('team-scene', 'bob', 'bob@test.com', { claimEditor: true })
+    const bobActive = await store.touchPresence('team-scene', 'bob', 'bob@test.com', {
+      claimEditor: true,
+    })
     expect(bobActive.isEditor).toBe(true)
 
     // Phase 5: Bob departs cleanly
     await store.releaseScenePresence('team-scene', 'bob')
 
     // Phase 6: Alice reclaims editor role
-    const aliceRecover = await store.touchPresence('team-scene', 'alice', 'alice@test.com', { claimEditor: true })
+    const aliceRecover = await store.touchPresence('team-scene', 'alice', 'alice@test.com', {
+      claimEditor: true,
+    })
     expect(aliceRecover.isEditor).toBe(true)
     expect(aliceRecover.editorUserId).toBe('alice')
   })
 
   test('interleaved sequential heartbeats and transfer attempts maintain strict consistency', async () => {
-    await store.save({ id: 'stress-scene', name: 'Stress Scene', ownerId: 'user1', graph: makeGraph() })
+    await store.save({
+      id: 'stress-scene',
+      name: 'Stress Scene',
+      ownerId: 'user1',
+      graph: makeGraph(),
+    })
     await store.touchPresence('stress-scene', 'user1', 'u1@x', { claimEditor: true })
     await store.touchPresence('stress-scene', 'user2', 'u2@x', { claimEditor: false })
 

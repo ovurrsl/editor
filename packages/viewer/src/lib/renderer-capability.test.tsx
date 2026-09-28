@@ -1,13 +1,13 @@
 // @ts-expect-error — bun:test is provided by the Bun runtime; viewer does not
 // include Bun ambient types in its production declaration build.
 import { describe, expect, mock, test } from 'bun:test'
+import { UnsupportedGpuViewerFallback } from '../components/viewer/unsupported-gpu-fallback'
 import {
   detectRendererCapability,
   initializeGpuRenderer,
   type RendererBackendParameters,
   type RendererCapabilityCanvas,
 } from './renderer-capability'
-import { UnsupportedGpuViewerFallback } from '../components/viewer/unsupported-gpu-fallback'
 
 function canvasWithContexts(contexts: Partial<Record<'webgl2', unknown>>) {
   return {

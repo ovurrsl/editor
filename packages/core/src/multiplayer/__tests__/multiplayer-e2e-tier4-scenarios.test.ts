@@ -1,9 +1,9 @@
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
+import type { AnyNode } from '../../schema/types'
 import {
   createMultiplayerTestHarness,
   type MultiplayerTestHarness,
 } from './multiplayer-test-harness'
-import type { AnyNode } from '../../schema/types'
 
 describe('Tier 4: Real-World Application Scenarios E2E Suite (<1.0s Live SLA)', () => {
   let harness: MultiplayerTestHarness
@@ -192,7 +192,9 @@ describe('Tier 4: Real-World Application Scenarios E2E Suite (<1.0s Live SLA)', 
     await harness.assertConvergence(1000)
 
     const syncDurationMs = performance.now() - startTime
-    console.log(`[Tier 4] Full room layout sync completed in ${syncDurationMs.toFixed(2)}ms (SLA: < 1000ms)`)
+    console.log(
+      `[Tier 4] Full room layout sync completed in ${syncDurationMs.toFixed(2)}ms (SLA: < 1000ms)`,
+    )
 
     // Assert SLA: entire multi-step workflow mirrored within < 1.0s
     expect(syncDurationMs).toBeLessThan(1000)
@@ -222,44 +224,70 @@ describe('Tier 4: Real-World Application Scenarios E2E Suite (<1.0s Live SLA)', 
     const startTime = performance.now()
 
     // Site & Building
-    harness.editor.addNode({ id: 'site-bim', type: 'site', object: 'site', children: [], parentId: null } as any)
-    harness.editor.addNode({ id: 'bldg-bim', type: 'building', object: 'building', children: [], parentId: 'site-bim' } as any)
+    harness.editor.addNode({
+      id: 'site-bim',
+      type: 'site',
+      object: 'site',
+      children: [],
+      parentId: null,
+    } as any)
+    harness.editor.addNode({
+      id: 'bldg-bim',
+      type: 'building',
+      object: 'building',
+      children: [],
+      parentId: 'site-bim',
+    } as any)
 
     // 3 Levels with slabs & columns
     for (let lvl = 1; lvl <= 3; lvl++) {
       const levelId = `level-bim-${lvl}`
-      harness.editor.addNode({
-        id: levelId,
-        type: 'level',
-        object: 'level',
-        levelNumber: lvl,
-        elevation: (lvl - 1) * 3.5,
-        height: 3.5,
-        children: [],
-        parentId: 'bldg-bim',
-      } as any, { parentId: 'bldg-bim' })
+      harness.editor.addNode(
+        {
+          id: levelId,
+          type: 'level',
+          object: 'level',
+          levelNumber: lvl,
+          elevation: (lvl - 1) * 3.5,
+          height: 3.5,
+          children: [],
+          parentId: 'bldg-bim',
+        } as any,
+        { parentId: 'bldg-bim' },
+      )
 
       // Add Slab
-      harness.editor.addNode({
-        id: `slab-lvl-${lvl}`,
-        type: 'slab',
-        object: 'slab',
-        polygon: [[0, 0], [20, 0], [20, 15], [0, 15]],
-        thickness: 0.3,
-        parentId: levelId,
-      } as any, { parentId: levelId })
+      harness.editor.addNode(
+        {
+          id: `slab-lvl-${lvl}`,
+          type: 'slab',
+          object: 'slab',
+          polygon: [
+            [0, 0],
+            [20, 0],
+            [20, 15],
+            [0, 15],
+          ],
+          thickness: 0.3,
+          parentId: levelId,
+        } as any,
+        { parentId: levelId },
+      )
 
       // Add 4 structural columns
       for (let c = 1; c <= 4; c++) {
-        harness.editor.addNode({
-          id: `col-lvl-${lvl}-${c}`,
-          type: 'column',
-          object: 'column',
-          position: [c * 4, (lvl - 1) * 3.5, 5],
-          height: 3.5,
-          radius: 0.25,
-          parentId: levelId,
-        } as any, { parentId: levelId })
+        harness.editor.addNode(
+          {
+            id: `col-lvl-${lvl}-${c}`,
+            type: 'column',
+            object: 'column',
+            position: [c * 4, (lvl - 1) * 3.5, 5],
+            height: 3.5,
+            radius: 0.25,
+            parentId: levelId,
+          } as any,
+          { parentId: levelId },
+        )
       }
     }
 

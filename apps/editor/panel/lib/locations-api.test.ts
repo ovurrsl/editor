@@ -1,7 +1,13 @@
-import { describe, expect, test, beforeEach } from 'bun:test'
-import { GET, POST, DELETE as DELETE_ALL, getMemoryStore, setMemoryStore } from '../../app/api/locations/route'
-import { PATCH, DELETE } from '../../app/api/locations/[id]/route'
+import { beforeEach, describe, expect, test } from 'bun:test'
+import { DELETE, PATCH } from '../../app/api/locations/[id]/route'
 import { POST as POST_BULK } from '../../app/api/locations/bulk/route'
+import {
+  DELETE as DELETE_ALL,
+  GET,
+  getMemoryStore,
+  POST,
+  setMemoryStore,
+} from '../../app/api/locations/route'
 
 describe('Warehouse Locations API Endpoints (Milestone M3)', () => {
   beforeEach(() => {
@@ -221,9 +227,12 @@ describe('Warehouse Locations API Endpoints (Milestone M3)', () => {
       expect(initialStore.length).toBeGreaterThan(0)
       const targetSiteId = initialStore[0]?.siteId || '01JM1SITE00000000000000001'
 
-      const req = new Request(`http://localhost/api/locations?siteId=${encodeURIComponent(targetSiteId)}`, {
-        method: 'DELETE',
-      })
+      const req = new Request(
+        `http://localhost/api/locations?siteId=${encodeURIComponent(targetSiteId)}`,
+        {
+          method: 'DELETE',
+        },
+      )
 
       const res = await DELETE_ALL(req)
       expect(res.status).toBe(200)
@@ -238,4 +247,3 @@ describe('Warehouse Locations API Endpoints (Milestone M3)', () => {
     })
   })
 })
-

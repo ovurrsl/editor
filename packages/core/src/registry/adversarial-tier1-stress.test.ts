@@ -1,52 +1,37 @@
 ﻿import { beforeEach, describe, expect, test } from 'bun:test'
 import { z } from 'zod'
 import {
-  BlockEdge,
-  BlockFace,
   BlockNode,
   BlockTopology,
-  BlockVertex,
   createBoxBlockTopology,
   getBlockFaceCentroid,
   getBlockFaceFrame,
   getBlockFaceNormal,
   inspectBlockTopology,
 } from '../schema/nodes/block'
-import { WallNode } from '../schema/nodes/wall'
-import { SlabNode } from '../schema/nodes/slab'
-import { RoofNode } from '../schema/nodes/roof'
 import {
   bakePolicyOf,
   categoryOf,
-  categoryOfDef,
-  discoverPlugins,
-  extendPluginDiscovery,
   getHostRefFields,
   getInspectorExtensions,
-  getNodePluginId,
   getRegistryVersion,
   getSelectableKinds,
   getZoneTakeoffExtensions,
   hasRegistry3DMoveTool,
   isDrawnViaTool,
-  isDrawnViaToolKind,
   isNodeKindEnabled,
   isPluginContributedKind,
   isPresettable,
-  isPresettableKind,
   isRegistryMovable,
   isRegistrySelectable,
   kindsWithBakePolicy,
-  kindsWithFloorplanScope,
   loadPlugin,
   nodeRegistry,
   onRegistryChange,
   registerNode,
   registerZoneTakeoffExtension,
-  resolveFacingIndicator,
-  setPluginDiscovery,
 } from './registry'
-import type { AnyNodeDefinition, Plugin, ZoneTakeoffExtension } from './types'
+import type { AnyNodeDefinition, ZoneTakeoffExtension } from './types'
 
 // ============================================================================
 // Bones schemas matching plugin-bones specification
@@ -362,21 +347,27 @@ describe('Empirical Adversarial Challenger Suite — NodeRegistry & Tier 1 Schem
           ...blockDef,
           schemaVersion: 0,
         }),
-      ).toThrow('[registry] NodeDefinition.schemaVersion must be a positive integer (kind: "block")')
+      ).toThrow(
+        '[registry] NodeDefinition.schemaVersion must be a positive integer (kind: "block")',
+      )
 
       expect(() =>
         registerNode({
           ...blockDef,
           schemaVersion: -2,
         }),
-      ).toThrow('[registry] NodeDefinition.schemaVersion must be a positive integer (kind: "block")')
+      ).toThrow(
+        '[registry] NodeDefinition.schemaVersion must be a positive integer (kind: "block")',
+      )
 
       expect(() =>
         registerNode({
           ...blockDef,
           schemaVersion: 'v1' as any,
         }),
-      ).toThrow('[registry] NodeDefinition.schemaVersion must be a positive integer (kind: "block")')
+      ).toThrow(
+        '[registry] NodeDefinition.schemaVersion must be a positive integer (kind: "block")',
+      )
     })
 
     test('throws on duplicate node registration in production environment', () => {

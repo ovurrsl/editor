@@ -248,7 +248,6 @@ function rowToSceneEvent(row: SceneEventRow): SceneEvent {
   }
 }
 
-
 /**
  * MySQL-backed implementation of `SceneStore`, for deployments where the
  * filesystem is not durable across releases.
@@ -592,7 +591,6 @@ export class MysqlSceneStore implements SceneStore {
       }
     })
   }
-
 
   async listSceneEvents(sceneId: string, opts: SceneEventListOptions = {}): Promise<SceneEvent[]> {
     const afterEventId = Math.max(0, opts.afterEventId ?? 0)

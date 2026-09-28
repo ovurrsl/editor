@@ -110,6 +110,7 @@
       "!**/dist",
       "!**/build",
       "!**/public",
+      "!**/viewer_dist",
       "!**/components/ui",
       "!**/next-env.d.ts",
       // Foreign trees copied in whole, not authored here and not shipped as

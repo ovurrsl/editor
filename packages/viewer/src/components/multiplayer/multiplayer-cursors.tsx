@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
-import * as THREE from 'three'
 import type { UserPresence } from '@pascal-app/core'
+import { Html } from '@react-three/drei'
+import { useFrame } from '@react-three/fiber'
+import { useRef } from 'react'
+import * as THREE from 'three'
 
 interface MultiplayerCursorsProps {
   presences: Map<number, UserPresence>
@@ -18,12 +18,7 @@ export function MultiplayerCursors({ presences, localClientId }: MultiplayerCurs
         if (clientId === localClientId || !presence.cursor?.worldPosition) {
           return null
         }
-        return (
-          <RemoteCursorItem
-            key={clientId}
-            presence={presence}
-          />
-        )
+        return <RemoteCursorItem key={clientId} presence={presence} />
       })}
     </group>
   )

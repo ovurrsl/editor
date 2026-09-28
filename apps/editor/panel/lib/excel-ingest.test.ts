@@ -1,23 +1,17 @@
-import { describe, expect, test, beforeEach } from 'bun:test'
+import { beforeEach, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
-import * as path from 'node:path'
+import type { PalletRackNode } from '@ovurrsl/plugin-warehouse'
 import * as XLSX from 'xlsx'
+import { getMemoryStore, setMemoryStore } from '../../app/api/locations/route'
 import {
-  parseWarehouseExcel,
-  parseWarehouseExcelBuffer,
-  parseWarehouseExcelFromBuffer,
   applyExcelLayoutToScene,
-  seedLocationsFromExcel,
   formatIndustrialAddress,
   generateBarcode,
   levelToLetter,
-  LEVEL_LETTERS,
-  type WarehouseLayoutResult,
-  type ParsedAisleRun,
-  type ParsedLocation,
+  parseWarehouseExcel,
+  parseWarehouseExcelFromBuffer,
+  seedLocationsFromExcel,
 } from './excel-ingest'
-import { getMemoryStore, setMemoryStore } from '../../app/api/locations/route'
-import type { PalletRackNode } from '@ovurrsl/plugin-warehouse'
 
 const REAL_EXCEL_PATH = 'C:/Users/resul.ovur/Desktop/Depo Layout 10.09.2026.xlsx'
 const REAL_SCENE_PATH = 'C:/Users/resul.ovur/Desktop/layout_2026-09-11.json'
@@ -219,102 +213,120 @@ describe('Excel Address Ingestion Engine (Milestone M1)', () => {
       expect(layout.siteName).toBe('Bursa Depo')
     })
 
-    test.skipIf(!hasRealExcel)('1.2 extracts exactly 103 active rack runs (102 aisle runs + 1 PL run)', () => {
-      const layout = parseWarehouseExcel(REAL_EXCEL_PATH)
-      expect(layout.runs).toHaveLength(103)
-      expect(layout.totalAisles).toBe(103)
+    test.skipIf(!hasRealExcel)(
+      '1.2 extracts exactly 103 active rack runs (102 aisle runs + 1 PL run)',
+      () => {
+        const layout = parseWarehouseExcel(REAL_EXCEL_PATH)
+        expect(layout.runs).toHaveLength(103)
+        expect(layout.totalAisles).toBe(103)
 
-      const plRun = layout.runs.find((r) => r.aisleCode === 'PL' || r.legacyCode === 'PL')
-      expect(plRun).toBeDefined()
-      expect(plRun?.modules).toBe(6)
-      expect(plRun?.levels).toBe(7)
-      expect(plRun?.totalPallets).toBe(126)
-      expect(plRun?.activeBays).toHaveLength(6)
+        const plRun = layout.runs.find((r) => r.aisleCode === 'PL' || r.legacyCode === 'PL')
+        expect(plRun).toBeDefined()
+        expect(plRun?.modules).toBe(6)
+        expect(plRun?.levels).toBe(7)
+        expect(plRun?.totalPallets).toBe(126)
+        expect(plRun?.activeBays).toHaveLength(6)
 
-      const aisleRuns = layout.runs.filter((r) => r.aisleCode !== 'PL' && r.legacyCode !== 'PL')
-      expect(aisleRuns).toHaveLength(102)
-    })
+        const aisleRuns = layout.runs.filter((r) => r.aisleCode !== 'PL' && r.legacyCode !== 'PL')
+        expect(aisleRuns).toHaveLength(102)
+      },
+    )
 
-    test.skipIf(!hasRealExcel)('1.3 verifies total pallet capacity invariant (active: 56,790, gross: 56,934)', () => {
-      const layout = parseWarehouseExcel(REAL_EXCEL_PATH)
-      expect(layout.grossPallets).toBe(56934)
-      expect(layout.totalPallets).toBe(56790)
+    test.skipIf(!hasRealExcel)(
+      '1.3 verifies total pallet capacity invariant (active: 56,790, gross: 56,934)',
+      () => {
+        const layout = parseWarehouseExcel(REAL_EXCEL_PATH)
+        expect(layout.grossPallets).toBe(56934)
+        expect(layout.totalPallets).toBe(56790)
 
-      const computedPallets = layout.runs.reduce((acc, r) => acc + r.totalPallets, 0)
-      expect(computedPallets).toBe(56790)
-    })
+        const computedPallets = layout.runs.reduce((acc, r) => acc + r.totalPallets, 0)
+        expect(computedPallets).toBe(56790)
+      },
+    )
 
-    test.skipIf(!hasRealExcel)('1.4 verifies correct zone breakdown (TCA: 11,694, Ambient + Pet Care: 45,096)', () => {
-      const layout = parseWarehouseExcel(REAL_EXCEL_PATH)
-      const tcaPallets = layout.runs
-        .filter((r) => r.zone === 'TCA')
-        .reduce((acc, r) => acc + r.totalPallets, 0)
-      expect(tcaPallets).toBe(11694)
+    test.skipIf(!hasRealExcel)(
+      '1.4 verifies correct zone breakdown (TCA: 11,694, Ambient + Pet Care: 45,096)',
+      () => {
+        const layout = parseWarehouseExcel(REAL_EXCEL_PATH)
+        const tcaPallets = layout.runs
+          .filter((r) => r.zone === 'TCA')
+          .reduce((acc, r) => acc + r.totalPallets, 0)
+        expect(tcaPallets).toBe(11694)
 
-      const ambientPallets = layout.runs
-        .filter((r) => r.zone === 'Ambient' || r.zone === 'Pet Care')
-        .reduce((acc, r) => acc + r.totalPallets, 0)
-      expect(ambientPallets).toBe(45096)
+        const ambientPallets = layout.runs
+          .filter((r) => r.zone === 'Ambient' || r.zone === 'Pet Care')
+          .reduce((acc, r) => acc + r.totalPallets, 0)
+        expect(ambientPallets).toBe(45096)
 
-      const petCareRun = layout.runs.find((r) => r.zone === 'Pet Care')
-      expect(petCareRun).toBeDefined()
-      expect(layout.summaryByZone.TCA).toBeDefined()
-      expect(layout.summaryByZone.TCA.pallets).toBe(11694)
-      expect(layout.summaryByZone['Pet Care']).toBeDefined()
-    })
+        const petCareRun = layout.runs.find((r) => r.zone === 'Pet Care')
+        expect(petCareRun).toBeDefined()
+        expect(layout.summaryByZone.TCA).toBeDefined()
+        expect(layout.summaryByZone.TCA.pallets).toBe(11694)
+        expect(layout.summaryByZone['Pet Care']).toBeDefined()
+      },
+    )
 
-    test.skipIf(!hasRealExcel)('1.5 verifies modern aisle labels (06L, 06R, 07L, 07R, TCL, TCR, 52R)', () => {
-      const layout = parseWarehouseExcel(REAL_EXCEL_PATH)
-      const codes = layout.runs.map((r) => r.aisleCode)
+    test.skipIf(!hasRealExcel)(
+      '1.5 verifies modern aisle labels (06L, 06R, 07L, 07R, TCL, TCR, 52R)',
+      () => {
+        const layout = parseWarehouseExcel(REAL_EXCEL_PATH)
+        const codes = layout.runs.map((r) => r.aisleCode)
 
-      expect(codes).toContain('06L')
-      expect(codes).toContain('06R')
-      expect(codes).toContain('07L')
-      expect(codes).toContain('07R')
-      expect(codes).toContain('TCL')
-      expect(codes).toContain('TCR')
-      expect(codes).toContain('52R')
+        expect(codes).toContain('06L')
+        expect(codes).toContain('06R')
+        expect(codes).toContain('07L')
+        expect(codes).toContain('07R')
+        expect(codes).toContain('TCL')
+        expect(codes).toContain('TCR')
+        expect(codes).toContain('52R')
 
-      // Legacy codes preserved in metadata
-      const tcl = layout.runs.find((r) => r.aisleCode === 'TCL')
-      expect(tcl?.legacyCode).toBe('8L')
-      const tcr = layout.runs.find((r) => r.aisleCode === 'TCR')
-      expect(tcr?.legacyCode).toBe('8R')
-    })
+        // Legacy codes preserved in metadata
+        const tcl = layout.runs.find((r) => r.aisleCode === 'TCL')
+        expect(tcl?.legacyCode).toBe('8L')
+        const tcr = layout.runs.find((r) => r.aisleCode === 'TCR')
+        expect(tcr?.legacyCode).toBe('8R')
+      },
+    )
 
-    test.skipIf(!hasRealExcel)('1.6 extracts rack types (A, B, C, D) and level counts (6, 8, 9, 7)', () => {
-      const layout = parseWarehouseExcel(REAL_EXCEL_PATH)
-      const typeA = layout.runs.find((r) => r.rackType === 'A')
-      expect(typeA).toBeDefined()
-      expect(typeA?.levels).toBe(6)
+    test.skipIf(!hasRealExcel)(
+      '1.6 extracts rack types (A, B, C, D) and level counts (6, 8, 9, 7)',
+      () => {
+        const layout = parseWarehouseExcel(REAL_EXCEL_PATH)
+        const typeA = layout.runs.find((r) => r.rackType === 'A')
+        expect(typeA).toBeDefined()
+        expect(typeA?.levels).toBe(6)
 
-      const typeB = layout.runs.find((r) => r.rackType === 'B')
-      expect(typeB).toBeDefined()
-      expect(typeB?.levels).toBe(8)
+        const typeB = layout.runs.find((r) => r.rackType === 'B')
+        expect(typeB).toBeDefined()
+        expect(typeB?.levels).toBe(8)
 
-      const typeC = layout.runs.find((r) => r.rackType === 'C')
-      expect(typeC).toBeDefined()
-      expect(typeC?.levels).toBe(9)
+        const typeC = layout.runs.find((r) => r.rackType === 'C')
+        expect(typeC).toBeDefined()
+        expect(typeC?.levels).toBe(9)
 
-      const pl = layout.runs.find((r) => r.aisleCode === 'PL' || r.legacyCode === 'PL')
-      expect(pl?.levels).toBe(7)
-    })
+        const pl = layout.runs.find((r) => r.aisleCode === 'PL' || r.legacyCode === 'PL')
+        expect(pl?.levels).toBe(7)
+      },
+    )
 
-    test.skipIf(!hasRealExcel)('1.7 matrix bay scanning maps active bays per run (1L: 32, 52R: 16, PL: 6)', () => {
-      const layout = parseWarehouseExcel(REAL_EXCEL_PATH)
-      const run1L = layout.runs.find((r) => r.aisleCode === '1L')
-      expect(run1L).toBeDefined()
-      expect(run1L?.activeBays).toHaveLength(32)
-      expect(run1L?.activeBays[0]).toBe(1)
-      expect(run1L?.activeBays[31]).toBe(32)
+    test.skipIf(!hasRealExcel)(
+      '1.7 matrix bay scanning maps active bays per run (1L: 32, 52R: 16, PL: 6)',
+      () => {
+        const layout = parseWarehouseExcel(REAL_EXCEL_PATH)
+        const run1L = layout.runs.find((r) => r.aisleCode === '1L')
+        expect(run1L).toBeDefined()
+        expect(run1L?.activeBays).toHaveLength(32)
+        expect(run1L?.activeBays[0]).toBe(1)
+        expect(run1L?.activeBays[31]).toBe(32)
 
-      const run52R = layout.runs.find((r) => r.aisleCode === '52R')
-      expect(run52R).toBeDefined()
-      expect(run52R?.activeBays).toHaveLength(16)
+        const run52R = layout.runs.find((r) => r.aisleCode === '52R')
+        expect(run52R).toBeDefined()
+        expect(run52R?.activeBays).toHaveLength(16)
 
-      const pl = layout.runs.find((r) => r.aisleCode === 'PL')
-      expect(pl?.activeBays).toHaveLength(6)
-    })
+        const pl = layout.runs.find((r) => r.aisleCode === 'PL')
+        expect(pl?.activeBays).toHaveLength(6)
+      },
+    )
   })
 
   // --------------------------------------------------------------------------
@@ -339,19 +351,37 @@ describe('Excel Address Ingestion Engine (Milestone M1)', () => {
     })
 
     test('2.3 generates correct address for renamed TCA aisle TCL', () => {
-      const addr = formatIndustrialAddress({ aisle: 'TCL', bay: 15, level: 2, position: 2, depth: 1 })
+      const addr = formatIndustrialAddress({
+        aisle: 'TCL',
+        bay: 15,
+        level: 2,
+        position: 2,
+        depth: 1,
+      })
       expect(addr).toBe('TCL-15-C2')
       expect(addr).toMatch(addressPattern)
     })
 
     test('2.4 generates correct address for padded aisle 06L', () => {
-      const addr = formatIndustrialAddress({ aisle: '06L', bay: 5, level: 1, position: 3, depth: 1 })
+      const addr = formatIndustrialAddress({
+        aisle: '06L',
+        bay: 5,
+        level: 1,
+        position: 3,
+        depth: 1,
+      })
       expect(addr).toBe('06L-05-B3')
       expect(addr).toMatch(addressPattern)
     })
 
     test('2.5 generates correct address for 9-level rack 52R (level 8 = I)', () => {
-      const addr = formatIndustrialAddress({ aisle: '52R', bay: 16, level: 8, position: 1, depth: 1 })
+      const addr = formatIndustrialAddress({
+        aisle: '52R',
+        bay: 16,
+        level: 8,
+        position: 1,
+        depth: 1,
+      })
       expect(addr).toBe('52R-16-I1')
       expect(addr).toMatch(addressPattern)
     })
@@ -363,10 +393,18 @@ describe('Excel Address Ingestion Engine (Milestone M1)', () => {
     })
 
     test('2.7 verifies zero-padding boundaries for bay numbers (01, 09, 10, 32)', () => {
-      expect(formatIndustrialAddress({ aisle: '1L', bay: 1, level: 0, position: 1, depth: 1 })).toBe('1L-01-A1')
-      expect(formatIndustrialAddress({ aisle: '1L', bay: 9, level: 0, position: 1, depth: 1 })).toBe('1L-09-A1')
-      expect(formatIndustrialAddress({ aisle: '1L', bay: 10, level: 0, position: 1, depth: 1 })).toBe('1L-10-A1')
-      expect(formatIndustrialAddress({ aisle: '1L', bay: 32, level: 0, position: 1, depth: 1 })).toBe('1L-32-A1')
+      expect(
+        formatIndustrialAddress({ aisle: '1L', bay: 1, level: 0, position: 1, depth: 1 }),
+      ).toBe('1L-01-A1')
+      expect(
+        formatIndustrialAddress({ aisle: '1L', bay: 9, level: 0, position: 1, depth: 1 }),
+      ).toBe('1L-09-A1')
+      expect(
+        formatIndustrialAddress({ aisle: '1L', bay: 10, level: 0, position: 1, depth: 1 }),
+      ).toBe('1L-10-A1')
+      expect(
+        formatIndustrialAddress({ aisle: '1L', bay: 32, level: 0, position: 1, depth: 1 }),
+      ).toBe('1L-32-A1')
     })
 
     test('2.8 verifies industrial level letter conversion across all tiers A-I', () => {
@@ -419,28 +457,28 @@ describe('Excel Address Ingestion Engine (Milestone M1)', () => {
       const buf = createSyntheticExcelBuffer({ includeAisleAnnotations: true })
       const layout = parseWarehouseExcelFromBuffer(buf)
       const invalidAisles = layout.runs.filter(
-        (r) => r.aisleCode.includes('Kuru') || r.aisleCode.includes('TOPLAMA')
+        (r) => r.aisleCode.includes('Kuru') || r.aisleCode.includes('TOPLAMA'),
       )
       expect(invalidAisles).toHaveLength(0)
     })
 
     test('3.4 throws descriptive error when Excel file does not exist', () => {
       expect(() => parseWarehouseExcel('C:/invalid/non_existent_depo.xlsx')).toThrow(
-        /file not found|no such file|ENOENT/i
+        /file not found|no such file|ENOENT/i,
       )
     })
 
     test('3.5 throws descriptive error when buffer is corrupted or invalid', () => {
       const corruptedBuffer = Buffer.from('NOT_A_VALID_EXCEL_STREAM')
       expect(() => parseWarehouseExcelFromBuffer(corruptedBuffer)).toThrow(
-        /unsupported file|invalid buffer|corrupt/i
+        /unsupported file|invalid buffer|corrupt/i,
       )
     })
 
     test('3.6 throws descriptive error when Sayfa1 worksheet is missing', () => {
       const invalidBuffer = createSyntheticExcelBuffer({ omitSayfa1: true })
       expect(() => parseWarehouseExcelFromBuffer(invalidBuffer)).toThrow(
-        /worksheet 'Sayfa1' not found|missing worksheet/i
+        /worksheet 'Sayfa1' not found|missing worksheet/i,
       )
     })
 
@@ -502,21 +540,24 @@ describe('Excel Address Ingestion Engine (Milestone M1)', () => {
       expect(nodes[sampleNodeId]!.uprightColor).toBe(originalColor)
     })
 
-    test.skipIf(!hasRealScene || !hasRealExcel)('4.4 maps all 2,325 racks in real Bursa layout with 0 unmapped nodes', () => {
-      const layout = parseWarehouseExcel(REAL_EXCEL_PATH)
-      const scene = JSON.parse(fs.readFileSync(REAL_SCENE_PATH, 'utf8'))
-      const result = applyExcelLayoutToScene(scene, layout)
+    test.skipIf(!hasRealScene || !hasRealExcel)(
+      '4.4 maps all 2,325 racks in real Bursa layout with 0 unmapped nodes',
+      () => {
+        const layout = parseWarehouseExcel(REAL_EXCEL_PATH)
+        const scene = JSON.parse(fs.readFileSync(REAL_SCENE_PATH, 'utf8'))
+        const result = applyExcelLayoutToScene(scene, layout)
 
-      expect(result.totalRacks).toBe(2325)
-      expect(result.updatedCount).toBe(2325)
-      expect(result.unmappedNodes).toBe(0)
-      expect(result.matchedAisles).toBe(103)
+        expect(result.totalRacks).toBe(2325)
+        expect(result.updatedCount).toBe(2325)
+        expect(result.unmappedNodes).toBe(0)
+        expect(result.matchedAisles).toBe(103)
 
-      const plNodes = result.nodes.filter((n: any) => n.rowLabel === 'PL')
-      expect(plNodes).toHaveLength(6)
-      expect(plNodes[0]?.levels).toBe(7)
-      expect(plNodes[0]?.zoneCode).toBe('TCA')
-    })
+        const plNodes = result.nodes.filter((n: any) => n.rowLabel === 'PL')
+        expect(plNodes).toHaveLength(6)
+        expect(plNodes[0]?.levels).toBe(7)
+        expect(plNodes[0]?.zoneCode).toBe('TCA')
+      },
+    )
   })
 
   // --------------------------------------------------------------------------

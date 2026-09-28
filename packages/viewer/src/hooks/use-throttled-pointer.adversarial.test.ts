@@ -1,10 +1,9 @@
 import { describe, expect, test } from 'bun:test'
-import { BoxGeometry, Matrix4, Mesh, MeshBasicMaterial, Ray, Vector3 } from 'three'
+import { BoxGeometry, Mesh, MeshBasicMaterial, Ray, Vector3 } from 'three'
 import {
   createThrottledPointerEvents,
   createThrottledPointerMoveHandler,
   getMeshWorldInverseMatrix,
-  getTriangleNormalDirect,
   intersectTriangleDirect,
 } from '../index'
 
@@ -151,13 +150,7 @@ describe('Adversarial Stress Test: Flush Semantics & Event Ordering Integrity', 
     throttler.flush()
     executionLog.push('click')
 
-    expect(executionLog).toEqual([
-      'move:500',
-      'pointerdown',
-      'move:1000',
-      'pointerup',
-      'click',
-    ])
+    expect(executionLog).toEqual(['move:500', 'pointerdown', 'move:1000', 'pointerup', 'click'])
   })
 
   test('Flush and Cancel idempotency under edge cases', () => {
@@ -229,9 +222,15 @@ describe('Adversarial Precision Oracle: intersectTriangleDirect vs Three.js Ray.
 
     for (let i = 0; i < NUM_SAMPLES; i++) {
       // Generate randomized triangle vertices
-      const ax = randRange(-50, 50), ay = randRange(-50, 50), az = randRange(-50, 50)
-      const bx = randRange(-50, 50), by = randRange(-50, 50), bz = randRange(-50, 50)
-      const cx = randRange(-50, 50), cy = randRange(-50, 50), cz = randRange(-50, 50)
+      const ax = randRange(-50, 50),
+        ay = randRange(-50, 50),
+        az = randRange(-50, 50)
+      const bx = randRange(-50, 50),
+        by = randRange(-50, 50),
+        bz = randRange(-50, 50)
+      const cx = randRange(-50, 50),
+        cy = randRange(-50, 50),
+        cz = randRange(-50, 50)
 
       const positions = new Float32Array([ax, ay, az, bx, by, bz, cx, cy, cz])
       vA.fromArray(positions, 0)
@@ -239,7 +238,11 @@ describe('Adversarial Precision Oracle: intersectTriangleDirect vs Three.js Ray.
       vC.fromArray(positions, 6)
 
       // Generate ray: 50% aimed directly at the triangle, 50% random in space
-      const rayOrigin = new Vector3(randRange(-100, 100), randRange(-100, 100), randRange(-100, 100))
+      const rayOrigin = new Vector3(
+        randRange(-100, 100),
+        randRange(-100, 100),
+        randRange(-100, 100),
+      )
       const rayDirection = new Vector3()
 
       if (rand() > 0.5) {
@@ -262,7 +265,15 @@ describe('Adversarial Precision Oracle: intersectTriangleDirect vs Three.js Ray.
       const ray = new Ray(rayOrigin, rayDirection)
       const backfaceCulling = rand() > 0.5
 
-      const hitDirect = intersectTriangleDirect(ray, positions, 0, 1, 2, backfaceCulling, targetDirect)
+      const hitDirect = intersectTriangleDirect(
+        ray,
+        positions,
+        0,
+        1,
+        2,
+        backfaceCulling,
+        targetDirect,
+      )
       const hitThree = ray.intersectTriangle(vA, vB, vC, backfaceCulling, targetThree)
 
       totalComparisons++
@@ -299,7 +310,15 @@ describe('Adversarial Precision Oracle: intersectTriangleDirect vs Three.js Ray.
     const degenPoint = new Float32Array([0, 0, 0, 0, 0, 0, 0, 0, 0])
     const ray1 = new Ray(new Vector3(0, 0, 10), new Vector3(0, 0, -1))
     expect(intersectTriangleDirect(ray1, degenPoint, 0, 1, 2, false, targetDirect)).toBeNull()
-    expect(ray1.intersectTriangle(new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), false, targetThree)).toBeNull()
+    expect(
+      ray1.intersectTriangle(
+        new Vector3(0, 0, 0),
+        new Vector3(0, 0, 0),
+        new Vector3(0, 0, 0),
+        false,
+        targetThree,
+      ),
+    ).toBeNull()
 
     // 2. Degenerate collinear line triangle
     const degenLine = new Float32Array([0, 0, 0, 5, 0, 0, 10, 0, 0])
@@ -313,13 +332,27 @@ describe('Adversarial Precision Oracle: intersectTriangleDirect vs Three.js Ray.
     // 4. Ray pointing away from triangle (t < 0)
     const reverseRay = new Ray(new Vector3(2, 2, 10), new Vector3(0, 0, 1)) // Points +Z away from plane at Z=0
     expect(intersectTriangleDirect(reverseRay, tri, 0, 1, 2, false, targetDirect)).toBeNull()
-    expect(reverseRay.intersectTriangle(new Vector3(0, 0, 0), new Vector3(10, 0, 0), new Vector3(0, 10, 0), false, targetThree)).toBeNull()
+    expect(
+      reverseRay.intersectTriangle(
+        new Vector3(0, 0, 0),
+        new Vector3(10, 0, 0),
+        new Vector3(0, 10, 0),
+        false,
+        targetThree,
+      ),
+    ).toBeNull()
 
     // 5. Extreme numeric scale (large scale 10,000 units)
     const largeTri = new Float32Array([0, 0, 0, 10000, 0, 0, 0, 10000, 0])
     const largeRay = new Ray(new Vector3(2000, 2000, 5000), new Vector3(0, 0, -1))
     const hitDirect = intersectTriangleDirect(largeRay, largeTri, 0, 1, 2, true, targetDirect)
-    const hitThree = largeRay.intersectTriangle(new Vector3(0, 0, 0), new Vector3(10000, 0, 0), new Vector3(0, 10000, 0), true, targetThree)
+    const hitThree = largeRay.intersectTriangle(
+      new Vector3(0, 0, 0),
+      new Vector3(10000, 0, 0),
+      new Vector3(0, 10000, 0),
+      true,
+      targetThree,
+    )
     expect(hitDirect).not.toBeNull()
     expect(hitThree).not.toBeNull()
     expect(hitDirect!.distanceTo(hitThree!)).toBeLessThan(1e-4)

@@ -114,4 +114,3 @@ export function disposeObject3DResources(root: Object3D): void {
     if (!isCachedMaterial(material)) material.dispose()
   }
 }
-

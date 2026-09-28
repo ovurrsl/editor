@@ -73,7 +73,10 @@ export function healSceneCycles(
       } while (w && w !== v)
 
       const firstSccNode = scc[0]
-      if (scc.length > 1 || (scc.length === 1 && firstSccNode && nodes[firstSccNode]?.parentId === firstSccNode)) {
+      if (
+        scc.length > 1 ||
+        (scc.length === 1 && firstSccNode && nodes[firstSccNode]?.parentId === firstSccNode)
+      ) {
         sccs.push(scc)
       }
     }

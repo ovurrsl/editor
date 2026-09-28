@@ -1,15 +1,15 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, expect, it } from 'bun:test'
 import * as Y from 'yjs'
+import type { AnyNode } from '../../schema/types'
+import type { SceneSnapshot } from '../../store/history-control'
 import {
   initializeSceneDoc,
-  writeNodeToYMap,
   readNodeFromYMap,
   reconcileYArray,
   snapshotToYDoc,
+  writeNodeToYMap,
   yDocToSnapshot,
 } from '../crdt-schema'
-import type { AnyNode } from '../../schema/types'
-import type { SceneSnapshot } from '../../store/history-control'
 
 describe('CRDT Schema & Serialization', () => {
   it('should initialize typed CRDT structures on a Y.Doc', () => {
@@ -154,10 +154,10 @@ describe('CRDT Schema & Serialization', () => {
       },
       rootNodeIds: ['site_1' as any],
       materials: {
-        'mat_1': { id: 'mat_1', name: 'Material 1', color: '#ff0000' } as any,
+        mat_1: { id: 'mat_1', name: 'Material 1', color: '#ff0000' } as any,
       },
       collections: {
-        'col_1': { id: 'col_1', name: 'Collection 1', nodeIds: ['site_1'] } as any,
+        col_1: { id: 'col_1', name: 'Collection 1', nodeIds: ['site_1'] } as any,
       },
       installedPlugins: ['plugin-warehouse'],
     }

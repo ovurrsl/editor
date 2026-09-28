@@ -1,4 +1,4 @@
-import { Database } from 'bun:sqlite'
+import type { Database } from 'bun:sqlite'
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
@@ -151,7 +151,9 @@ describe('Empirical Adversarial Stress Testing — Role Handoff (R3 Backend)', (
     await store.touchPresence(SCENE_ID, validViewer.id, validViewer.email, { claimEditor: false })
 
     // User in a different scene
-    await store.touchPresence(OTHER_SCENE, 'user_other_scene', 'other@test.com', { claimEditor: false })
+    await store.touchPresence(OTHER_SCENE, 'user_other_scene', 'other@test.com', {
+      claimEditor: false,
+    })
 
     // Subcase 3a: Non-existent target UUIDs
     const invalidTargetIds = [
@@ -180,7 +182,11 @@ describe('Empirical Adversarial Stress Testing — Role Handoff (R3 Backend)', (
       'INSERT INTO scene_presence (scene_id, user_id, email, last_seen, is_editor) VALUES (?, ?, ?, ?, ?)',
     ).run(SCENE_ID, 'user_stale_ghost', 'ghost@test.com', ancientTime, 0)
 
-    const staleTransferClaim = await store.transferPresenceEditor(SCENE_ID, editor.id, 'user_stale_ghost')
+    const staleTransferClaim = await store.transferPresenceEditor(
+      SCENE_ID,
+      editor.id,
+      'user_stale_ghost',
+    )
     expect(staleTransferClaim.isEditor).toBe(true)
     expect(staleTransferClaim.editorUserId).toBe(editor.id)
 
@@ -261,11 +267,15 @@ describe('Empirical Adversarial Stress Testing — Role Handoff (R3 Backend)', (
 
   test('stress 5b: massive concurrent multi-user transfer and heartbeat storm (100 parallel operations)', async () => {
     const userIds = Array.from({ length: 8 }, (_, i) => `user_${i}`)
-    
+
     // Seed presence
-    await store.touchPresence(SCENE_ID, userIds[0]!, `${userIds[0]}@test.com`, { claimEditor: true })
+    await store.touchPresence(SCENE_ID, userIds[0]!, `${userIds[0]}@test.com`, {
+      claimEditor: true,
+    })
     for (let i = 1; i < userIds.length; i++) {
-      await store.touchPresence(SCENE_ID, userIds[i]!, `${userIds[i]}@test.com`, { claimEditor: false })
+      await store.touchPresence(SCENE_ID, userIds[i]!, `${userIds[i]}@test.com`, {
+        claimEditor: false,
+      })
     }
 
     // Launch 100 concurrent interleaved operations (transfers and heartbeats)
@@ -273,14 +283,18 @@ describe('Empirical Adversarial Stress Testing — Role Handoff (R3 Backend)', (
     for (let i = 0; i < 100; i++) {
       const fromUser = userIds[Math.floor(Math.random() * userIds.length)]!
       const toUser = userIds[Math.floor(Math.random() * userIds.length)]!
-      
+
       if (i % 2 === 0) {
         // Transfer attempt
         ops.push(store.transferPresenceEditor(SCENE_ID, fromUser, toUser))
       } else {
         // Heartbeat attempt
         const wantsEdit = Math.random() > 0.5
-        ops.push(store.touchPresence(SCENE_ID, fromUser, `${fromUser}@test.com`, { claimEditor: wantsEdit }))
+        ops.push(
+          store.touchPresence(SCENE_ID, fromUser, `${fromUser}@test.com`, {
+            claimEditor: wantsEdit,
+          }),
+        )
       }
     }
 
@@ -320,7 +334,9 @@ describe('Empirical Adversarial Stress Testing — Role Handoff (R3 Backend)', (
     expect(presAfterA[0]!.isEditor).toBe(true)
 
     // Step 3: User B holds editor lease, User C heartbeats wanting edit -> rejected
-    const cClaimAttempt = await store.touchPresence(SCENE_ID, userC.id, userC.email, { claimEditor: true })
+    const cClaimAttempt = await store.touchPresence(SCENE_ID, userC.id, userC.email, {
+      claimEditor: true,
+    })
     expect(cClaimAttempt.isEditor).toBe(false)
     expect(cClaimAttempt.editorUserId).toBe(userB.id)
 
@@ -330,7 +346,9 @@ describe('Empirical Adversarial Stress Testing — Role Handoff (R3 Backend)', (
     expect(presAfterB.filter((p) => p.isEditor)).toHaveLength(0)
 
     // Step 5: User C heartbeats wanting edit -> successfully acquires vacant lease!
-    const cTakeover = await store.touchPresence(SCENE_ID, userC.id, userC.email, { claimEditor: true })
+    const cTakeover = await store.touchPresence(SCENE_ID, userC.id, userC.email, {
+      claimEditor: true,
+    })
     expect(cTakeover.isEditor).toBe(true)
     expect(cTakeover.editorUserId).toBe(userC.id)
 

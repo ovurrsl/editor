@@ -551,17 +551,20 @@ export const tr: Dictionary = {
   addrColStatus: 'Durum',
   addrColActions: 'İşlemler',
   addrSchematicTitle: '2B Yerleşim Şeması',
-  addrSchematicLead: 'Izgarayı filtrelemek için şemadan bir göz seçin veya rafını bulmak için bir satıra tıklayın.',
+  addrSchematicLead:
+    'Izgarayı filtrelemek için şemadan bir göz seçin veya rafını bulmak için bir satıra tıklayın.',
   addrZoomIn: 'Yakınlaştır',
   addrZoomOut: 'Uzaklaştır',
   addrZoomReset: 'Görünümü sıfırla',
   addrSelectedBay: 'Seçili göz: {bay}',
   addrNoLocations: 'Bu filtrelere uygun lokasyon bulunamadı.',
   addrSaved: 'Lokasyon güncellendi',
-  addrImportSuccess: '{count} lokasyon içe aktarıldı ({created} oluşturuldu, {updated} güncellendi)',
+  addrImportSuccess:
+    '{count} lokasyon içe aktarıldı ({created} oluşturuldu, {updated} güncellendi)',
   addrImportFailed: 'Lokasyonlar içe aktarılamadı',
   locTitle: 'Depo Konumları ve Adres Yönetimi',
-  locLead: 'Endüstriyel raf adresleri, kat filtreleme, barkodlar ve yerleşim planı adreslerini yönetin.',
+  locLead:
+    'Endüstriyel raf adresleri, kat filtreleme, barkodlar ve yerleşim planı adreslerini yönetin.',
   locSiteSelect: 'Depo / Saha seçin',
   locSearchPh: 'Adres, barkod veya göz ara...',
   locAisleFilter: 'Tüm koridorlar',
@@ -602,7 +605,8 @@ export const tr: Dictionary = {
     changelog: 'Sürüm notları',
     sites: 'Siteler ve Projeler',
     addresses: 'Depo Adresleri',
-    addressesLead: 'Tesisler genelinde raf lokasyonlarını, göz adreslerini, barkodları ve kapasiteleri yönetin.',
+    addressesLead:
+      'Tesisler genelinde raf lokasyonlarını, göz adreslerini, barkodları ve kapasiteleri yönetin.',
     scenes: 'Projeler',
     openEditor: 'Editör',
     locations: 'Adres Yönetimi',

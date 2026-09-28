@@ -12,11 +12,8 @@ import {
 } from 'three'
 import { acceleratedRaycast } from 'three-mesh-bvh'
 import { createFrameClock } from '../components/viewer/frame-limiter'
-import {
-  createSceneBvhMaintainer,
-  isSceneBvhExcluded,
-} from './scene-bvh-maintainer'
- 
+import { createSceneBvhMaintainer } from './scene-bvh-maintainer'
+
 describe('Adversarial Challenge: FrameLimiter & Monotonic Frame Clock', () => {
   describe('Clock Monotonicity under Chaotic & Irregular Frame Timing', () => {
     test('strictly preserves monotonicity across 10,000 randomized jittery frame intervals', () => {
@@ -173,7 +170,10 @@ describe('Adversarial Challenge: SceneBvhMaintainer & Memory Safety', () => {
       root.add(oneMesh)
 
       const twoVertexGeom = new BufferGeometry()
-      twoVertexGeom.setAttribute('position', new BufferAttribute(new Float32Array([0, 0, 0, 1, 1, 1]), 3))
+      twoVertexGeom.setAttribute(
+        'position',
+        new BufferAttribute(new Float32Array([0, 0, 0, 1, 1, 1]), 3),
+      )
       const twoMesh = new Mesh(twoVertexGeom, new MeshBasicMaterial())
       twoMesh.name = 'two_vertex'
       root.add(twoMesh)
@@ -277,66 +277,65 @@ describe('Adversarial Challenge: SceneBvhMaintainer & Memory Safety', () => {
       }
     })
   })
-    test('Ruthless scale test: 5,000 meshes scene graph traversal and budgeted indexing', () => {
-      const root = new Group()
-      const totalMeshes = 5000
-      const meshes = []
-      for (let i = 0; i < totalMeshes; i++) {
-        const m = new Mesh(new BoxGeometry(1, 1, 1), new MeshBasicMaterial())
-        meshes.push(m)
-        root.add(m)
-      }
+  test('Ruthless scale test: 5,000 meshes scene graph traversal and budgeted indexing', () => {
+    const root = new Group()
+    const totalMeshes = 5000
+    const meshes = []
+    for (let i = 0; i < totalMeshes; i++) {
+      const m = new Mesh(new BoxGeometry(1, 1, 1), new MeshBasicMaterial())
+      meshes.push(m)
+      root.add(m)
+    }
 
-      let tick = 0
-      const maintainer = createSceneBvhMaintainer(root, {
-        scanInterval: 15,
-        budgetMs: 4,
-        now: () => tick += 0.2,
-      })
-
-      // Run 200 maintenance steps
-      for (let s = 0; s < 200; s++) {
-        maintainer.step()
-      }
-
-      // Check indexing progress (a portion must be built every step without blocking)
-      const indexed = meshes.filter(m => !!m.geometry.boundsTree).length
-      expect(indexed).toBeGreaterThan(0)
+    let tick = 0
+    const maintainer = createSceneBvhMaintainer(root, {
+      scanInterval: 15,
+      budgetMs: 4,
+      now: () => (tick += 0.2),
     })
 
-    test('Raycasting safety while BVH build queue is partially processed', () => {
-      const root = new Group()
-      const mesh1 = new Mesh(new BoxGeometry(2, 2, 2), new MeshBasicMaterial())
-      const mesh2 = new Mesh(new BoxGeometry(2, 2, 2), new MeshBasicMaterial())
-      mesh1.position.set(0, 0, 0)
-      mesh2.position.set(5, 0, 0)
-      mesh1.updateMatrixWorld(true)
-      mesh2.updateMatrixWorld(true)
-      root.add(mesh1, mesh2)
+    // Run 200 maintenance steps
+    for (let s = 0; s < 200; s++) {
+      maintainer.step()
+    }
 
-      const maintainer = createSceneBvhMaintainer(root, {
-        scanInterval: 1,
-        budgetMs: 0, // only 1 mesh built per step
-      })
+    // Check indexing progress (a portion must be built every step without blocking)
+    const indexed = meshes.filter((m) => !!m.geometry.boundsTree).length
+    expect(indexed).toBeGreaterThan(0)
+  })
 
-      maintainer.step() // scans both, but only mesh1 gets boundsTree built on step 1
+  test('Raycasting safety while BVH build queue is partially processed', () => {
+    const root = new Group()
+    const mesh1 = new Mesh(new BoxGeometry(2, 2, 2), new MeshBasicMaterial())
+    const mesh2 = new Mesh(new BoxGeometry(2, 2, 2), new MeshBasicMaterial())
+    mesh1.position.set(0, 0, 0)
+    mesh2.position.set(5, 0, 0)
+    mesh1.updateMatrixWorld(true)
+    mesh2.updateMatrixWorld(true)
+    root.add(mesh1, mesh2)
 
-      expect(mesh1.geometry.boundsTree).toBeDefined()
-      expect(mesh1.raycast).toBe(acceleratedRaycast)
-      // mesh2 has acceleratedRaycast assigned, but boundsTree not yet built
-      expect(mesh2.raycast).toBe(acceleratedRaycast)
-      expect(mesh2.geometry.boundsTree).toBeUndefined()
-
-      // Raycast against both meshes: acceleratedRaycast falls back cleanly to stock raycasting if boundsTree is absent
-      const raycaster1 = new Raycaster(new Vector3(0, 0, 5), new Vector3(0, 0, -1))
-      const hits1 = []
-      mesh1.raycast(raycaster1, hits1)
-      expect(hits1.length).toBeGreaterThan(0)
-
-      const raycaster2 = new Raycaster(new Vector3(5, 0, 5), new Vector3(0, 0, -1))
-      const hits2 = []
-      mesh2.raycast(raycaster2, hits2)
-      expect(hits2.length).toBeGreaterThan(0)
+    const maintainer = createSceneBvhMaintainer(root, {
+      scanInterval: 1,
+      budgetMs: 0, // only 1 mesh built per step
     })
 
+    maintainer.step() // scans both, but only mesh1 gets boundsTree built on step 1
+
+    expect(mesh1.geometry.boundsTree).toBeDefined()
+    expect(mesh1.raycast).toBe(acceleratedRaycast)
+    // mesh2 has acceleratedRaycast assigned, but boundsTree not yet built
+    expect(mesh2.raycast).toBe(acceleratedRaycast)
+    expect(mesh2.geometry.boundsTree).toBeUndefined()
+
+    // Raycast against both meshes: acceleratedRaycast falls back cleanly to stock raycasting if boundsTree is absent
+    const raycaster1 = new Raycaster(new Vector3(0, 0, 5), new Vector3(0, 0, -1))
+    const hits1 = []
+    mesh1.raycast(raycaster1, hits1)
+    expect(hits1.length).toBeGreaterThan(0)
+
+    const raycaster2 = new Raycaster(new Vector3(5, 0, 5), new Vector3(0, 0, -1))
+    const hits2 = []
+    mesh2.raycast(raycaster2, hits2)
+    expect(hits2.length).toBeGreaterThan(0)
+  })
 })

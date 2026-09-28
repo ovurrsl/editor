@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { SceneLoader, type SceneMeta } from '@/components/scene-loader'
 import { authAvailable } from '@/lib/auth/db'
 import { authorizeSceneMutation } from '@/lib/auth/guard'
-import { canEdit, getSessionUser } from '@/lib/auth/session'
+import { getSessionUser } from '@/lib/auth/session'
 import { createViewerLaunchToken } from '@/lib/auth/viewer-token'
 import { getSceneOperations } from '@/lib/scene-store-server'
 

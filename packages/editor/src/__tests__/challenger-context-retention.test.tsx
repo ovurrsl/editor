@@ -21,24 +21,12 @@ if (typeof globalThis.window === 'undefined') {
 ;(globalThis as any).localStorage = mockStorage
 ;(globalThis.window as any).localStorage = mockStorage
 
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test'
-import React from 'react'
-import { renderToString } from 'react-dom/server'
-import {
-  type AnyNodeId,
-  BuildingNode,
-  LevelNode,
-  WallNode,
-  SlabNode,
-  ItemNode,
-  ZoneNode,
-  useScene,
-  useLiveTransforms,
-  useLiveNodeOverrides,
-} from '@pascal-app/core'
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test'
+import { LevelNode, useLiveTransforms, useScene } from '@pascal-app/core'
 import { useViewer } from '@pascal-app/viewer'
-import useEditor from '../store/use-editor'
+import { renderToString } from 'react-dom/server'
 import { EditorLayoutV2 } from '../components/editor/editor-layout-v2'
+import useEditor from '../store/use-editor'
 
 describe('Empirical Challenger Verification — WebGL Context Retention & State Integrity', () => {
   let originalWarn: typeof console.warn

@@ -1,9 +1,13 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import {
+  formatIndustrialAddress,
+  generateBarcode,
+  levelToLetter,
+} from '@panel/lib/addressing-utils'
 import { cn } from '@panel/lib/cn'
-import { formatIndustrialAddress, generateBarcode, levelToLetter } from '@panel/lib/addressing-utils'
 import type { LocationStatus, WarehouseLocation } from '@panel/lib/types'
+import { useEffect, useMemo, useState } from 'react'
 
 export interface PalletRackNodeShape {
   id: string
@@ -61,7 +65,10 @@ export function RackPropertyEditorCard({
     rack.palletsPerLevel != null && rack.palletsPerLevel > 0
       ? Math.min(3, Math.max(1, rack.palletsPerLevel))
       : locations.length > 0
-        ? Math.min(3, Math.max(1, Math.max(...locations.map((l) => parseInt(String(l.position), 10) || 1))))
+        ? Math.min(
+            3,
+            Math.max(1, Math.max(...locations.map((l) => parseInt(String(l.position), 10) || 1))),
+          )
         : (rack.bayClearWidth ?? 2.7) >= 2.5
           ? 3
           : (rack.bayClearWidth ?? 2.7) >= 1.6
@@ -70,7 +77,10 @@ export function RackPropertyEditorCard({
   const [positionsPerBay, setPositionsPerBay] = useState<number>(initialPositions)
   const initialLevels = Math.min(
     15,
-    Math.max(1, rack.levels ?? (locations.length > 0 ? Math.ceil(locations.length / initialPositions) : 6)),
+    Math.max(
+      1,
+      rack.levels ?? (locations.length > 0 ? Math.ceil(locations.length / initialPositions) : 6),
+    ),
   )
   const [levels, setLevels] = useState<number>(initialLevels)
   const [zoneCode, setZoneCode] = useState(rack.zoneCode ?? '')
@@ -100,7 +110,10 @@ export function RackPropertyEditorCard({
       rack.palletsPerLevel != null && rack.palletsPerLevel > 0
         ? Math.min(3, Math.max(1, rack.palletsPerLevel))
         : locations.length > 0
-          ? Math.min(3, Math.max(1, Math.max(...locations.map((l) => parseInt(String(l.position), 10) || 1))))
+          ? Math.min(
+              3,
+              Math.max(1, Math.max(...locations.map((l) => parseInt(String(l.position), 10) || 1))),
+            )
           : (rack.bayClearWidth ?? 2.7) >= 2.5
             ? 3
             : (rack.bayClearWidth ?? 2.7) >= 1.6
@@ -109,7 +122,10 @@ export function RackPropertyEditorCard({
 
     const curLevels = Math.min(
       15,
-      Math.max(1, rack.levels ?? (locations.length > 0 ? Math.ceil(locations.length / curPositions) : 6)),
+      Math.max(
+        1,
+        rack.levels ?? (locations.length > 0 ? Math.ceil(locations.length / curPositions) : 6),
+      ),
     )
 
     setRowLabel(curAisle)
@@ -130,9 +146,7 @@ export function RackPropertyEditorCard({
       for (let pos = 1; pos <= curPositions; pos++) {
         // Find if an existing location record matches
         const existingLoc = locations.find((l) => {
-          const matchLevel =
-            l.level.toUpperCase() === lvlLetter ||
-            l.level === String(lvl)
+          const matchLevel = l.level.toUpperCase() === lvlLetter || l.level === String(lvl)
           const matchPos = String(l.position) === String(pos)
           return matchLevel && matchPos
         })
@@ -355,10 +369,16 @@ export function RackPropertyEditorCard({
         palletsPerLevel: positionsPerBay,
         bayClearWidth:
           positionsPerBay === 1
-            ? (rack.bayClearWidth && rack.bayClearWidth <= 1.5 ? rack.bayClearWidth : 1.1)
+            ? rack.bayClearWidth && rack.bayClearWidth <= 1.5
+              ? rack.bayClearWidth
+              : 1.1
             : positionsPerBay === 2
-              ? (rack.bayClearWidth && rack.bayClearWidth > 1.5 && rack.bayClearWidth < 2.5 ? rack.bayClearWidth : 2.3)
-              : (rack.bayClearWidth && rack.bayClearWidth >= 2.5 ? rack.bayClearWidth : 2.73),
+              ? rack.bayClearWidth && rack.bayClearWidth > 1.5 && rack.bayClearWidth < 2.5
+                ? rack.bayClearWidth
+                : 2.3
+              : rack.bayClearWidth && rack.bayClearWidth >= 2.5
+                ? rack.bayClearWidth
+                : 2.73,
         zoneCode: zoneCode.trim(),
         accessMode,
         frontAisleLabel:
@@ -450,7 +470,14 @@ export function RackPropertyEditorCard({
           title="Kapat"
           className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
             <line x1="18" y1="6" x2="6" y2="18" />
             <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
@@ -511,7 +538,10 @@ export function RackPropertyEditorCard({
             <div className="grid grid-cols-3 gap-2.5">
               {/* Row / Aisle Label */}
               <div>
-                <label htmlFor="rack-field-rowLabel" className="block text-[11px] font-medium text-slate-300 mb-1">
+                <label
+                  htmlFor="rack-field-rowLabel"
+                  className="block text-[11px] font-medium text-slate-300 mb-1"
+                >
                   Sıra / Koridor *
                 </label>
                 <input
@@ -531,7 +561,10 @@ export function RackPropertyEditorCard({
 
               {/* Bay Index */}
               <div>
-                <label htmlFor="rack-field-bayIndex" className="block text-[11px] font-medium text-slate-300 mb-1">
+                <label
+                  htmlFor="rack-field-bayIndex"
+                  className="block text-[11px] font-medium text-slate-300 mb-1"
+                >
                   Göz No (Bay) *
                 </label>
                 <input
@@ -553,7 +586,10 @@ export function RackPropertyEditorCard({
 
               {/* Levels (Kat Sayısı) */}
               <div>
-                <label htmlFor="rack-field-levels" className="block text-[11px] font-medium text-slate-300 mb-1">
+                <label
+                  htmlFor="rack-field-levels"
+                  className="block text-[11px] font-medium text-slate-300 mb-1"
+                >
                   Kat Sayısı *
                 </label>
                 <div className="flex items-center gap-1">
@@ -649,7 +685,10 @@ export function RackPropertyEditorCard({
             <div className="grid grid-cols-2 gap-2.5">
               {/* Zone Code */}
               <div>
-                <label htmlFor="rack-field-zoneCode" className="block text-[11px] font-medium text-slate-300 mb-1">
+                <label
+                  htmlFor="rack-field-zoneCode"
+                  className="block text-[11px] font-medium text-slate-300 mb-1"
+                >
                   Bölge (Zone Code)
                 </label>
                 <input
@@ -666,7 +705,10 @@ export function RackPropertyEditorCard({
 
               {/* Access Mode */}
               <div>
-                <label htmlFor="rack-field-accessMode" className="block text-[11px] font-medium text-slate-300 mb-1">
+                <label
+                  htmlFor="rack-field-accessMode"
+                  className="block text-[11px] font-medium text-slate-300 mb-1"
+                >
                   Erişim Modu
                 </label>
                 <select
@@ -685,7 +727,10 @@ export function RackPropertyEditorCard({
 
             {/* Sign Mount Style */}
             <div>
-              <label htmlFor="rack-field-signMountStyle" className="block text-[11px] font-medium text-slate-300 mb-1">
+              <label
+                htmlFor="rack-field-signMountStyle"
+                className="block text-[11px] font-medium text-slate-300 mb-1"
+              >
                 Tabela Montaj Tipi
               </label>
               <select
@@ -705,7 +750,10 @@ export function RackPropertyEditorCard({
             {accessMode === 'dual-facing' && (
               <div className="grid grid-cols-2 gap-2.5 p-2.5 rounded-lg bg-slate-950/60 border border-slate-800">
                 <div>
-                  <label htmlFor="rack-field-frontAisleLabel" className="block text-[10px] text-slate-400 mb-1">
+                  <label
+                    htmlFor="rack-field-frontAisleLabel"
+                    className="block text-[10px] text-slate-400 mb-1"
+                  >
                     Ön Koridor
                   </label>
                   <input
@@ -720,7 +768,10 @@ export function RackPropertyEditorCard({
                   />
                 </div>
                 <div>
-                  <label htmlFor="rack-field-rearAisleLabel" className="block text-[10px] text-slate-400 mb-1">
+                  <label
+                    htmlFor="rack-field-rearAisleLabel"
+                    className="block text-[10px] text-slate-400 mb-1"
+                  >
                     Arka Koridor
                   </label>
                   <input
@@ -875,10 +926,16 @@ export function RackPropertyEditorCard({
                       </span>
                     </div>
 
-                    <div className={cn(
-                      'grid gap-2',
-                      positionsPerBay === 1 ? 'grid-cols-1 max-w-sm' : positionsPerBay === 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 md:grid-cols-3'
-                    )}>
+                    <div
+                      className={cn(
+                        'grid gap-2',
+                        positionsPerBay === 1
+                          ? 'grid-cols-1 max-w-sm'
+                          : positionsPerBay === 2
+                            ? 'grid-cols-1 sm:grid-cols-2'
+                            : 'grid-cols-1 md:grid-cols-3',
+                      )}
+                    >
                       {slots.map((slot) => (
                         <div
                           key={`${slot.level}-${slot.position}`}
@@ -940,7 +997,9 @@ export function RackPropertyEditorCard({
                             </div>
 
                             <div>
-                              <label className="block text-[9px] text-slate-400">Kapasite (kg)</label>
+                              <label className="block text-[9px] text-slate-400">
+                                Kapasite (kg)
+                              </label>
                               <input
                                 type="number"
                                 value={slot.maxWeight}
@@ -984,7 +1043,9 @@ export function RackPropertyEditorCard({
               >
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-amber-400">{preview.letter} Katı:</span>
-                  <span className="font-mono text-blue-300 font-bold">{preview.primaryAddress}</span>
+                  <span className="font-mono text-blue-300 font-bold">
+                    {preview.primaryAddress}
+                  </span>
                 </div>
                 <span className="text-[9px] font-mono text-slate-500 truncate mt-0.5">
                   {preview.secondaryAddress ? preview.secondaryAddress : ''}

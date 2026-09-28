@@ -167,25 +167,28 @@ describe('Zone BOM Export Action Wiring', () => {
     expect(bomA.totalPartsCount).toBeGreaterThan(0)
   })
 
-  testIfBom('generates valid printable sheets and HTML buffer from zone BOM without errors', async () => {
-    const contentIds = collectZoneObjectIds(sceneNodes, zoneA)
-    const bomA = calculateWarehouseBOM!(sceneNodes, {
-      filterNodeIds: contentIds,
-      zoneName: zoneA.name,
-      scopeLabel: `Zone ${zoneA.name}`,
-    })
+  testIfBom(
+    'generates valid printable sheets and HTML buffer from zone BOM without errors',
+    async () => {
+      const contentIds = collectZoneObjectIds(sceneNodes, zoneA)
+      const bomA = calculateWarehouseBOM!(sceneNodes, {
+        filterNodeIds: contentIds,
+        zoneName: zoneA.name,
+        scopeLabel: `Zone ${zoneA.name}`,
+      })
 
-    const sheets = generateWarehouseBomSheets!(bomA)
-    expect(sheets).toBeDefined()
-    expect(sheets.length).toBeGreaterThan(0)
-    expect(sheets[0]!.svg).toContain('Pallet Storage A')
+      const sheets = generateWarehouseBomSheets!(bomA)
+      expect(sheets).toBeDefined()
+      expect(sheets.length).toBeGreaterThan(0)
+      expect(sheets[0]!.svg).toContain('Pallet Storage A')
 
-    const html = generateWarehouseBomHtml!(sheets, { title: 'Zone BOM Export' })
-    expect(html).toBeDefined()
-    expect(html).toContain('Zone BOM Export')
-    expect(html).toContain('Pallet Storage A')
-    expect(html).toContain('<!doctype html>')
-  })
+      const html = generateWarehouseBomHtml!(sheets, { title: 'Zone BOM Export' })
+      expect(html).toBeDefined()
+      expect(html).toContain('Zone BOM Export')
+      expect(html).toContain('Pallet Storage A')
+      expect(html).toContain('<!doctype html>')
+    },
+  )
 
   testIfBom('calculates global warehouse BOM vs zone-scoped BOM', () => {
     const globalBom = calculateWarehouseBOM!(sceneNodes, {

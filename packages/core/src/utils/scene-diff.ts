@@ -1,17 +1,17 @@
-import type { SceneGraph } from './clone-scene-graph'
 import type { AnyNode, AnyNodeId } from '../schema'
 import type { Collection, CollectionId } from '../schema/collections'
 import type { SceneMaterial, SceneMaterialId } from '../schema/scene-material'
-import useScene, { type SceneState } from '../store/use-scene'
-import useLiveNodeOverrides from '../store/use-live-node-overrides'
-import useLiveTransforms from '../store/use-live-transforms'
 import {
+  areSceneSnapshotsEqual,
+  notifySceneCommit,
   pauseSceneHistory,
   resumeSceneHistory,
-  notifySceneCommit,
-  areSceneSnapshotsEqual,
   type SceneSnapshot,
 } from '../store/history-control'
+import useLiveNodeOverrides from '../store/use-live-node-overrides'
+import useLiveTransforms from '../store/use-live-transforms'
+import useScene from '../store/use-scene'
+import type { SceneGraph } from './clone-scene-graph'
 
 export type SceneGraphLike = {
   nodes?: Record<string, any>
@@ -48,7 +48,6 @@ export function computeSceneGraphDiff(
   target: SceneGraphLike,
   baseVersion?: number,
 ): SceneGraphPatch | null {
-
   const baseNodes = base.nodes ?? {}
   const targetNodes = target.nodes ?? {}
 
@@ -163,7 +162,6 @@ export function computeSceneGraphDiff(
 export function applySceneGraphPatch(base: SceneGraphLike, patch: SceneGraphPatch): SceneGraph {
   const nextNodes: Record<AnyNodeId, AnyNode> = { ...(base.nodes ?? {}) }
 
-
   if (patch.deletedNodeIds) {
     for (const id of patch.deletedNodeIds) {
       delete nextNodes[id as AnyNodeId]
@@ -262,10 +260,18 @@ export function applySceneGraphPatchToStore(patch: SceneGraphPatch): boolean {
 
   const hasRootChanges = Boolean(patch.rootNodeIds)
   const hasMaterialChanges = Boolean(patch.materials && Object.keys(patch.materials).length > 0)
-  const hasCollectionChanges = Boolean(patch.collections && Object.keys(patch.collections).length > 0)
+  const hasCollectionChanges = Boolean(
+    patch.collections && Object.keys(patch.collections).length > 0,
+  )
   const hasPluginChanges = Boolean(patch.installedPlugins)
 
-  if (!hasNodeChanges && !hasRootChanges && !hasMaterialChanges && !hasCollectionChanges && !hasPluginChanges) {
+  if (
+    !hasNodeChanges &&
+    !hasRootChanges &&
+    !hasMaterialChanges &&
+    !hasCollectionChanges &&
+    !hasPluginChanges
+  ) {
     return false
   }
 

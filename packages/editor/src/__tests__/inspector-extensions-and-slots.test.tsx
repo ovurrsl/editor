@@ -2,13 +2,13 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
 import {
   getInspectorExtensions,
   getRegistryVersion,
+  getZoneTakeoffExtensions,
   type InspectorExtension,
   loadPlugin,
   nodeRegistry,
   onRegistryChange,
   type Plugin,
   registerZoneTakeoffExtension,
-  getZoneTakeoffExtensions,
 } from '@pascal-app/core'
 import {
   type InspectorCardMode,

@@ -1,6 +1,6 @@
-import { type NextRequest, NextResponse } from 'next/server'
 import fs from 'node:fs'
 import path from 'node:path'
+import { type NextRequest, NextResponse } from 'next/server'
 import { getSceneOperations } from '@/lib/scene-store-server'
 
 export const dynamic = 'force-dynamic'
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
   // 1. Try to load live scene graph from database store
   const isGuzeller = ['6c5728d1aed7', '79d99be52799', '3d142606072b'].includes(id)
-  
+
   if (!isGuzeller) {
     try {
       const operations = await getSceneOperations()

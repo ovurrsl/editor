@@ -25,10 +25,7 @@ import { backdropGradient, deepSkyColor, horizonHazeColor } from './backdrop'
 import { type EdgeMode, edgeColorFor, edgeOpacityScaleFor } from './edge-style'
 import { inkedEdges } from './ink-edges'
 import { getSceneTheme } from './scene-themes'
-import {
-  encodeSnapshot,
-  type SnapshotEncodeRequest,
-} from './snapshot-encoder-client'
+import { encodeSnapshot, type SnapshotEncodeRequest } from './snapshot-encoder-client'
 import { packNormalToRGB, unpackRGBToNormal } from './tsl-compat'
 
 export const THUMBNAIL_WIDTH = 1920
@@ -135,23 +132,13 @@ export function computeSnapshotDimensions(
   if (captureMode === 'viewport') {
     const baseW = Math.round(domWidth * scale)
     const baseH = Math.round(domHeight * scale)
-    ;({ w: targetWidth, h: targetHeight } = clampSnapshotSize(
-      baseW,
-      baseH,
-      qualityMode,
-      maxEdge,
-    ))
+    ;({ w: targetWidth, h: targetHeight } = clampSnapshotSize(baseW, baseH, qualityMode, maxEdge))
     renderBaseW = targetWidth
     renderBaseH = targetHeight
   } else if (captureMode === 'area' && cropRegion) {
     const fullW = Math.round(domWidth * scale)
     const fullH = Math.round(domHeight * scale)
-    const clamped = clampSnapshotSize(
-      fullW,
-      fullH,
-      qualityMode,
-      maxEdge,
-    )
+    const clamped = clampSnapshotSize(fullW, fullH, qualityMode, maxEdge)
     renderBaseW = clamped.w
     renderBaseH = clamped.h
     targetWidth = Math.max(1, Math.round(cropRegion.width * clamped.w))
@@ -187,7 +174,6 @@ export function computeSnapshotDimensions(
     ssaaScale,
   }
 }
-
 
 export type SnapshotPipeline = {
   applyEnvironment: ({
@@ -371,13 +357,8 @@ export async function createSnapshotPipeline({
         const domWidth = renderer.domElement.width || 1920
         const domHeight = renderer.domElement.height || 1080
 
-        const {
-          targetWidth,
-          targetHeight,
-          renderWidth,
-          renderHeight,
-          ssaaScale,
-        } = computeSnapshotDimensions(domWidth, domHeight, options)
+        const { targetWidth, targetHeight, renderWidth, renderHeight, ssaaScale } =
+          computeSnapshotDimensions(domWidth, domHeight, options)
 
         // Switch anti-aliasing output node:
         // In Quality mode, bypass FXAA node to maintain crisp ink lines and fine geometric detail

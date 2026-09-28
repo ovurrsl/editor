@@ -94,7 +94,10 @@ export const POST = handler(async (request: Request) => {
   if (!email && username) {
     email = `${username}${WORK_DOMAIN}`
   } else if (email && !username) {
-    const prefix = email.split('@')[0]!.replace(/[^a-z0-9._-]/g, '').slice(0, 64)
+    const prefix = email
+      .split('@')[0]!
+      .replace(/[^a-z0-9._-]/g, '')
+      .slice(0, 64)
     username = prefix || `user_${Date.now().toString(36)}`
   }
 

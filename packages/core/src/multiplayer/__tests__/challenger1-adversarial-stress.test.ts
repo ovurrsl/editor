@@ -1,17 +1,17 @@
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import * as Y from 'yjs'
+import { WallNode } from '../../schema/nodes/wall'
+import type { AnyNode, AnyNodeId } from '../../schema/types'
+import useScene from '../../store/use-scene'
+import { writeNodeToYMap } from '../crdt-schema'
+import { bindZustandToYjs } from '../yjs-bridge'
 import {
   createMultiplayerTestHarness,
+  healSceneCycles,
   type MultiplayerTestHarness,
   type SimulatedMultiplayerClient,
-  healSceneCycles,
   yDocToSnapshot,
 } from './multiplayer-test-harness'
-import { bindZustandToYjs } from '../yjs-bridge'
-import { writeNodeToYMap } from '../crdt-schema'
-import { WallNode } from '../../schema/nodes/wall'
-import useScene, { type SceneOperationPatch } from '../../store/use-scene'
-import type { AnyNode, AnyNodeId } from '../../schema/types'
 
 describe('Challenger 1: Adversarial Stress & Extreme Concurrency Suite', () => {
   let harness: MultiplayerTestHarness
@@ -77,7 +77,9 @@ describe('Challenger 1: Adversarial Stress & Extreme Concurrency Suite', () => {
       await harness.syncAll(10000)
       const duration = Date.now() - startTime
 
-      console.log(`[Adversarial 1.1] 500 nodes created across 10 clients and synchronized in ${duration}ms`)
+      console.log(
+        `[Adversarial 1.1] 500 nodes created across 10 clients and synchronized in ${duration}ms`,
+      )
 
       // Verify all 10 clients have exactly 500 nodes
       const baseSnapshot = harness.editor.getSnapshot()
@@ -187,7 +189,9 @@ describe('Challenger 1: Adversarial Stress & Extreme Concurrency Suite', () => {
       await harness.syncAll(10000)
 
       const duration = Date.now() - startTime
-      console.log(`[Adversarial 1.2] 500 nodes mutated and reparented across 10 clients in ${duration}ms`)
+      console.log(
+        `[Adversarial 1.2] 500 nodes mutated and reparented across 10 clients in ${duration}ms`,
+      )
 
       // Verify convergence across all 10 clients
       const snap0 = harness.editor.getSnapshot()
@@ -201,7 +205,8 @@ describe('Challenger 1: Adversarial Stress & Extreme Concurrency Suite', () => {
         const node = snap0.nodes[`work-node-${i}`]
         expect(node).toBeDefined()
         expect(node.position).toEqual([i * 2, 3.5, Math.floor(i / 50) * 10])
-        const expectedAuthor = Math.floor(i / 50) === 0 ? 'editor-primary' : `stress-editor-${Math.floor(i / 50) + 1}`
+        const expectedAuthor =
+          Math.floor(i / 50) === 0 ? 'editor-primary' : `stress-editor-${Math.floor(i / 50) + 1}`
         expect(node.name).toBe(`Updated by ${expectedAuthor}`)
       }
     }, 20000)
@@ -272,7 +277,12 @@ describe('Challenger 1: Adversarial Stress & Extreme Concurrency Suite', () => {
         sub_door_1: { id: 'sub_door_1', type: 'door', parentId: 'sub_wall_1', children: [] } as any,
 
         // Subtree attached to cyc_5
-        sub_column_1: { id: 'sub_column_1', type: 'column', parentId: 'cyc_5', children: [] } as any,
+        sub_column_1: {
+          id: 'sub_column_1',
+          type: 'column',
+          parentId: 'cyc_5',
+          children: [],
+        } as any,
       }
 
       const result = healSceneCycles(nodes, null)
@@ -330,10 +340,34 @@ describe('Challenger 1: Adversarial Stress & Extreme Concurrency Suite', () => {
       const p4 = await harness.createClient('editor', 'peer-4')
 
       // Create initial 4 building nodes in linear hierarchy: A -> B -> C -> D
-      p1.addNode({ id: 'race_a', type: 'building', object: 'node', parentId: null, children: [] } as any)
-      p1.addNode({ id: 'race_b', type: 'building', object: 'node', parentId: 'race_a', children: [] } as any)
-      p1.addNode({ id: 'race_c', type: 'building', object: 'node', parentId: 'race_b', children: [] } as any)
-      p1.addNode({ id: 'race_d', type: 'building', object: 'node', parentId: 'race_c', children: [] } as any)
+      p1.addNode({
+        id: 'race_a',
+        type: 'building',
+        object: 'node',
+        parentId: null,
+        children: [],
+      } as any)
+      p1.addNode({
+        id: 'race_b',
+        type: 'building',
+        object: 'node',
+        parentId: 'race_a',
+        children: [],
+      } as any)
+      p1.addNode({
+        id: 'race_c',
+        type: 'building',
+        object: 'node',
+        parentId: 'race_b',
+        children: [],
+      } as any)
+      p1.addNode({
+        id: 'race_d',
+        type: 'building',
+        object: 'node',
+        parentId: 'race_c',
+        children: [],
+      } as any)
 
       await harness.syncAll()
 
@@ -465,9 +499,27 @@ describe('Challenger 1: Adversarial Stress & Extreme Concurrency Suite', () => {
       } as any)
 
       // Remote clients create their own nodes
-      client2.addNode({ id: 'client2_item', type: 'furniture', object: 'node', position: [10, 0, 0], parentId: null } as any)
-      client3.addNode({ id: 'client3_item', type: 'column', object: 'node', position: [20, 0, 0], parentId: null } as any)
-      client4.addNode({ id: 'client4_item', type: 'door', object: 'node', position: [30, 0, 0], parentId: null } as any)
+      client2.addNode({
+        id: 'client2_item',
+        type: 'furniture',
+        object: 'node',
+        position: [10, 0, 0],
+        parentId: null,
+      } as any)
+      client3.addNode({
+        id: 'client3_item',
+        type: 'column',
+        object: 'node',
+        position: [20, 0, 0],
+        parentId: null,
+      } as any)
+      client4.addNode({
+        id: 'client4_item',
+        type: 'door',
+        object: 'node',
+        position: [30, 0, 0],
+        parentId: null,
+      } as any)
 
       await harness.syncAll()
 
@@ -577,8 +629,20 @@ describe('Challenger 1: Adversarial Stress & Extreme Concurrency Suite', () => {
       const c1 = harness.editor
       const c2 = await harness.createClient('editor', 'c2-worker')
 
-      c1.addNode({ id: 'c1_node', type: 'slab', object: 'node', position: [0, 0, 0], parentId: null } as any)
-      c2.addNode({ id: 'c2_node', type: 'slab', object: 'node', position: [100, 0, 0], parentId: null } as any)
+      c1.addNode({
+        id: 'c1_node',
+        type: 'slab',
+        object: 'node',
+        position: [0, 0, 0],
+        parentId: null,
+      } as any)
+      c2.addNode({
+        id: 'c2_node',
+        type: 'slab',
+        object: 'node',
+        position: [100, 0, 0],
+        parentId: null,
+      } as any)
       await harness.syncAll()
 
       // c1 performs 10 modifications
@@ -650,7 +714,10 @@ describe('Challenger 1: Adversarial Stress & Extreme Concurrency Suite', () => {
       c1.updateNode('shared_wall', { slots: { interior: 'mat-gold' } as any })
       c2.updateNode('shared_wall', { slots: { exterior: 'mat-stone' } as any })
       c3.updateNode('shared_wall', { metadata: { cost: 999 } as any })
-      c4.updateNode('shared_wall', { name: 'Wall Masterpiece', metadata: { author: 'Leonardo' } as any })
+      c4.updateNode('shared_wall', {
+        name: 'Wall Masterpiece',
+        metadata: { author: 'Leonardo' } as any,
+      })
 
       await harness.syncAll()
       await harness.assertConvergence()
@@ -703,7 +770,17 @@ describe('Challenger 1: Adversarial Stress & Extreme Concurrency Suite', () => {
       }
 
       // Add heterogeneous node types: wall, slab, door, window, column, roof, site, building, level
-      const types = ['wall', 'slab', 'door', 'window', 'column', 'roof', 'site', 'building', 'level']
+      const types = [
+        'wall',
+        'slab',
+        'door',
+        'window',
+        'column',
+        'roof',
+        'site',
+        'building',
+        'level',
+      ]
       for (let i = 0; i < types.length; i++) {
         const client = clients[i % clients.length]!
         client.addNode({
@@ -772,7 +849,9 @@ describe('Challenger 1: Adversarial Stress & Extreme Concurrency Suite', () => {
         }, 'remote-peer')
 
         // Verify useScene ingested the remote update
-        expect(useScene.getState().nodes['wall_stress_0' as AnyNodeId]?.name).toBe('Remotely Renamed Wall 0')
+        expect(useScene.getState().nodes['wall_stress_0' as AnyNodeId]?.name).toBe(
+          'Remotely Renamed Wall 0',
+        )
 
         // Clean up added test nodes
         for (let i = 0; i < 20; i++) {

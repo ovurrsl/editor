@@ -29,7 +29,8 @@ let POST_RESTORE: typeof import('../revisions/restore/route')['POST']
 let GET_EVENTS: typeof import('./route')['GET']
 let restoreEnv: () => void
 
-let currentSessionUser: { id: string; email: string; role: 'admin' | 'editor' | 'viewer' } | null = null
+let currentSessionUser: { id: string; email: string; role: 'admin' | 'editor' | 'viewer' } | null =
+  null
 let mockAuthAvailable = false
 
 beforeAll(async () => {
@@ -175,10 +176,7 @@ describe('R1: Live Synchronization Backend & SSE Events', () => {
     const operations = await storeServer.getSceneOperations()
 
     // Version 1 had 1 node (wallA)
-    const restoreRes = await POST_RESTORE(
-      restoreRequest(SCENE_ID, 1),
-      paramsFor(SCENE_ID),
-    )
+    const restoreRes = await POST_RESTORE(restoreRequest(SCENE_ID, 1), paramsFor(SCENE_ID))
     expect(restoreRes.status).toBe(200)
     const restoreData = (await restoreRes.json()) as { ok: boolean; version: number }
     expect(restoreData.ok).toBe(true)

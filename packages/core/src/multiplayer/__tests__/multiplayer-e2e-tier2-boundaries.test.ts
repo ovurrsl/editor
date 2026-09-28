@@ -1,13 +1,11 @@
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test'
-import {
-  createMultiplayerTestHarness,
-  type MultiplayerTestHarness,
-  healSceneCycles,
-  snapshotToYDoc,
-  yDocToSnapshot,
-} from './multiplayer-test-harness'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import type { AnyNode, AnyNodeId } from '../../schema/types'
 import type { SceneSnapshot } from '../../store/history-control'
+import {
+  createMultiplayerTestHarness,
+  healSceneCycles,
+  type MultiplayerTestHarness,
+} from './multiplayer-test-harness'
 
 describe('Tier 2: Boundary & Corner Cases E2E Suite', () => {
   let harness: MultiplayerTestHarness

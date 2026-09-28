@@ -1,10 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import { OrthographicCamera, PerspectiveCamera } from 'three'
-import {
-  createFrameClock,
-  hasCameraTransformChanged,
-  shouldPauseForIdle,
-} from './frame-limiter'
+import { createFrameClock, hasCameraTransformChanged, shouldPauseForIdle } from './frame-limiter'
 
 describe('createFrameClock Monotonic Clock & Frame Limiting', () => {
   test('uses the first rAF sample only as a wall-time baseline without advancing time', () => {
@@ -211,4 +207,3 @@ describe('createFrameClock Monotonic Clock & Frame Limiting', () => {
     expect(shouldPauseForIdle(lastActive, 100_000, Number.NaN, false)).toBe(false)
   })
 })
-

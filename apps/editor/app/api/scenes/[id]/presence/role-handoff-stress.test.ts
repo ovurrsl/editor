@@ -20,7 +20,8 @@ let POST: typeof import('./route')['POST']
 let DELETE: typeof import('./route')['DELETE']
 let restoreEnv: () => void
 
-let currentSessionUser: { id: string; email: string; role: 'admin' | 'editor' | 'viewer' } | null = null
+let currentSessionUser: { id: string; email: string; role: 'admin' | 'editor' | 'viewer' } | null =
+  null
 let mockAuthAvailable = true
 
 beforeAll(async () => {
@@ -171,7 +172,10 @@ describe('API Route Empirical Stress Testing — Role Handoff (R3 API)', () => {
 
         // Target user heartbeats and confirms isEditor = true
         currentSessionUser = toUser
-        const hbRes = await POST(presencePostRequest(SCENE_ID, { wantsEdit: true }), paramsFor(SCENE_ID))
+        const hbRes = await POST(
+          presencePostRequest(SCENE_ID, { wantsEdit: true }),
+          paramsFor(SCENE_ID),
+        )
         const hbData = (await hbRes.json()) as { isEditor: boolean; editor: { userId: string } }
         expect(hbData.isEditor).toBe(true)
         expect(hbData.editor.userId).toBe(toUser.id)

@@ -14,11 +14,7 @@ export interface MultiplayerUndoManagerOptions {
 export class MultiplayerUndoManager {
   private undoManager: Y.UndoManager
 
-  constructor({
-    doc,
-    trackedTypes,
-    captureTimeout = 500,
-  }: MultiplayerUndoManagerOptions) {
+  constructor({ doc, trackedTypes, captureTimeout = 500 }: MultiplayerUndoManagerOptions) {
     const defaultTypes: Y.AbstractType<any>[] = [
       doc.getMap('nodes'),
       doc.getArray('rootNodeIds'),

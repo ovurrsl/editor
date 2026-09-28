@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'bun:test'
 import {
-  MathAllocPool,
   _box,
   _box3,
   _e1,
@@ -23,6 +22,7 @@ import {
   _v2_2,
   _v3,
   _v4,
+  MathAllocPool,
 } from './math-pool'
 
 describe('Viewer MathAllocPool', () => {

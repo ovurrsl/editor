@@ -50,7 +50,10 @@ describe('AssetUrl', () => {
       ['data:image/Svg+Xml,<svg onload=alert(1)>', 'mixed case SVG data URL'],
       ['data:IMAGE/SVG+XML;base64,PHN2Z248L3N2Zz4=', 'uppercase MIME and SVG data URL'],
       ['DATA:IMAGE/SVG+XML;base64,PHN2Z248L3N2Z24=', 'uppercase DATA scheme SVG data URL'],
-      ['data:image/svg+xml;charset=utf-8,<svg><script>alert(1)</script></svg>', 'SVG data URL with charset parameter'],
+      [
+        'data:image/svg+xml;charset=utf-8,<svg><script>alert(1)</script></svg>',
+        'SVG data URL with charset parameter',
+      ],
       ['data:text/html,<script>alert(1)</script>', 'data text/html'],
       ['data:application/javascript,alert(1)', 'data application/javascript'],
       ['data:text/plain,hi', 'data text/plain'],

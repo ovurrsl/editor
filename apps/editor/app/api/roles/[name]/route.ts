@@ -41,12 +41,7 @@ export const PUT = handler(async (request: Request, ctx: { params: Promise<{ nam
     `INSERT INTO roles (name, permissions, is_system)
      VALUES (?, CAST(? AS JSON), ?)
      ON DUPLICATE KEY UPDATE permissions = CAST(? AS JSON)`,
-    [
-      role.name,
-      JSON.stringify(permissions),
-      role.isSystem ? 1 : 0,
-      JSON.stringify(permissions),
-    ],
+    [role.name, JSON.stringify(permissions), role.isSystem ? 1 : 0, JSON.stringify(permissions)],
   )
   invalidateRolesCache()
 

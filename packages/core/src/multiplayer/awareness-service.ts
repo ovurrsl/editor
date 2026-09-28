@@ -1,12 +1,6 @@
-import * as awarenessProtocol from 'y-protocols/awareness'
+import type * as awarenessProtocol from 'y-protocols/awareness'
 import useLiveTransforms from '../store/use-live-transforms'
-import type {
-  UserPresence,
-  UserCursor,
-  UserSelection,
-  UserActiveDrag,
-  AwarenessChange,
-} from './types'
+import type { AwarenessChange, UserActiveDrag, UserCursor, UserPresence } from './types'
 
 export interface AwarenessServiceOptions {
   awareness: awarenessProtocol.Awareness

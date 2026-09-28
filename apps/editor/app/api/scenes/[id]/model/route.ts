@@ -1,8 +1,8 @@
-import { type NextRequest, NextResponse } from 'next/server'
 import fs from 'node:fs'
 import path from 'node:path'
-import { getSceneOperations } from '@/lib/scene-store-server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { bakeModelToDisk } from '@/lib/bake-model-server'
+import { getSceneOperations } from '@/lib/scene-store-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,11 +50,8 @@ function resolveModelFilePath(id: string): string | null {
     id === '01JM1SITE00000000000000002' ||
     id === '0312b44c083a' ||
     id === 'default'
-    
-  const isGuzeller =
-    id === '6c5728d1aed7' ||
-    id === '79d99be52799' ||
-    id === '3d142606072b'
+
+  const isGuzeller = id === '6c5728d1aed7' || id === '79d99be52799' || id === '3d142606072b'
 
   for (const base of searchBases) {
     candidates.push(path.join(base, 'public/assets/model', `model_${id}.glb`))
@@ -106,7 +103,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const stat = fs.statSync(filePath)
     const fileStream = fs.createReadStream(filePath)
-    
+
     // Convert Node ReadStream to Web ReadableStream
     const readable = new ReadableStream({
       start(controller) {
@@ -134,4 +131,3 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return withViewerCors(request, res)
   }
 }
-

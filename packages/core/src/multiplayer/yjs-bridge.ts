@@ -1,18 +1,15 @@
 import * as Y from 'yjs'
-import type { UseBoundStore, StoreApi } from 'zustand'
+import type { StoreApi, UseBoundStore } from 'zustand'
+import type { SceneMaterial, SceneMaterialId } from '../schema/scene-material'
+import type { AnyNode, AnyNodeId } from '../schema/types'
+import { type SceneCommit, subscribeSceneCommits } from '../store/history-control'
 import useScene, {
   applySceneOperationPatch,
-  type SceneState,
-  type SceneOperationPatch,
   type SceneNodeStructuralPatch,
+  type SceneOperationPatch,
+  type SceneState,
 } from '../store/use-scene'
-import {
-  subscribeSceneCommits,
-  type SceneCommit,
-} from '../store/history-control'
-import type { AnyNode, AnyNodeId } from '../schema/types'
-import type { SceneMaterial, SceneMaterialId } from '../schema/scene-material'
-import { writeNodeToYMap, readNodeFromYMap, reconcileYArray } from './crdt-schema'
+import { readNodeFromYMap, reconcileYArray, writeNodeToYMap } from './crdt-schema'
 
 export interface YjsBridgeOptions {
   doc: Y.Doc
@@ -156,7 +153,10 @@ export function bindZustandToYjs({
             } else {
               const yMat = yMaterials.get(key)
               if (yMat instanceof Y.Map) {
-                materialChanges.push({ id: key as SceneMaterialId, material: yMat.toJSON() as SceneMaterial })
+                materialChanges.push({
+                  id: key as SceneMaterialId,
+                  material: yMat.toJSON() as SceneMaterial,
+                })
               }
             }
           })
@@ -171,9 +171,10 @@ export function bindZustandToYjs({
           // Node Deleted remotely
           const parentId = (localNode.parentId as AnyNodeId | null | undefined) ?? null
           const parent = parentId ? state.nodes[parentId] : null
-          const siblings: AnyNodeId[] = parent && 'children' in parent && Array.isArray(parent.children)
-            ? (parent.children as AnyNodeId[])
-            : state.rootNodeIds
+          const siblings: AnyNodeId[] =
+            parent && 'children' in parent && Array.isArray(parent.children)
+              ? (parent.children as AnyNodeId[])
+              : state.rootNodeIds
 
           const position = siblings.indexOf(nodeId)
           if (position !== -1) {
@@ -193,7 +194,9 @@ export function bindZustandToYjs({
             const rootIdx = yRootNodeIds.toArray().indexOf(nodeId)
             position = rootIdx !== -1 ? rootIdx : state.rootNodeIds.length
           } else {
-            const parentNode = state.nodes[parentId] ?? (yNodes.get(parentId) ? readNodeFromYMap(yNodes.get(parentId)!) : null)
+            const parentNode =
+              state.nodes[parentId] ??
+              (yNodes.get(parentId) ? readNodeFromYMap(yNodes.get(parentId)!) : null)
             if (parentNode && 'children' in parentNode && Array.isArray(parentNode.children)) {
               const childIdx = (parentNode.children as string[]).indexOf(nodeId)
               position = childIdx !== -1 ? childIdx : parentNode.children.length

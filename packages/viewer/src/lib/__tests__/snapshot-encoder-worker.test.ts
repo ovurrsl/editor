@@ -1,7 +1,7 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 import {
-  encodeRgbaToPng,
   processSnapshotRequest as actualProcessSnapshotRequest,
+  encodeRgbaToPng,
 } from '../snapshot-encoder.worker'
 import { computeSnapshotDimensions } from '../snapshot-pipeline'
 
@@ -108,16 +108,32 @@ export function downsampleSSAA2x(
 
       // Average R, G, B, A across 4 source samples
       dstPixels[dstIdx + 0] = Math.round(
-        (srcPixels[idx00 + 0] + srcPixels[idx01 + 0] + srcPixels[idx10 + 0] + srcPixels[idx11 + 0]) / 4,
+        (srcPixels[idx00 + 0] +
+          srcPixels[idx01 + 0] +
+          srcPixels[idx10 + 0] +
+          srcPixels[idx11 + 0]) /
+          4,
       )
       dstPixels[dstIdx + 1] = Math.round(
-        (srcPixels[idx00 + 1] + srcPixels[idx01 + 1] + srcPixels[idx10 + 1] + srcPixels[idx11 + 1]) / 4,
+        (srcPixels[idx00 + 1] +
+          srcPixels[idx01 + 1] +
+          srcPixels[idx10 + 1] +
+          srcPixels[idx11 + 1]) /
+          4,
       )
       dstPixels[dstIdx + 2] = Math.round(
-        (srcPixels[idx00 + 2] + srcPixels[idx01 + 2] + srcPixels[idx10 + 2] + srcPixels[idx11 + 2]) / 4,
+        (srcPixels[idx00 + 2] +
+          srcPixels[idx01 + 2] +
+          srcPixels[idx10 + 2] +
+          srcPixels[idx11 + 2]) /
+          4,
       )
       dstPixels[dstIdx + 3] = Math.round(
-        (srcPixels[idx00 + 3] + srcPixels[idx01 + 3] + srcPixels[idx10 + 3] + srcPixels[idx11 + 3]) / 4,
+        (srcPixels[idx00 + 3] +
+          srcPixels[idx01 + 3] +
+          srcPixels[idx10 + 3] +
+          srcPixels[idx11 + 3]) /
+          4,
       )
     }
   }
@@ -242,9 +258,30 @@ describe('SnapshotEncoder Worker & Client Pipeline Suite (F7)', () => {
       // Row 1 (middle in WebGL): green
       // Row 2 (top in WebGL): blue
       const bottomUp = new Uint8Array([
-        255, 0, 0, 255, 255, 0, 0, 255, // row 0: red
-        0, 255, 0, 255, 0, 255, 0, 255, // row 1: green
-        0, 0, 255, 255, 0, 0, 255, 255, // row 2: blue
+        255,
+        0,
+        0,
+        255,
+        255,
+        0,
+        0,
+        255, // row 0: red
+        0,
+        255,
+        0,
+        255,
+        0,
+        255,
+        0,
+        255, // row 1: green
+        0,
+        0,
+        255,
+        255,
+        0,
+        0,
+        255,
+        255, // row 2: blue
       ])
 
       const flipped = flipWebGL2Rows(bottomUp, width, height)
@@ -285,7 +322,11 @@ describe('SnapshotEncoder Worker & Client Pipeline Suite (F7)', () => {
       setPixel(0, 1, 300, 0, 0, 255)
       setPixel(1, 1, 400, 0, 0, 255)
 
-      const { pixels: dstPixels, width: dstW, height: dstH } = downsampleSSAA2x(srcPixels, srcW, srcH)
+      const {
+        pixels: dstPixels,
+        width: dstW,
+        height: dstH,
+      } = downsampleSSAA2x(srcPixels, srcW, srcH)
       expect(dstW).toBe(2)
       expect(dstH).toBe(2)
 
@@ -328,10 +369,7 @@ describe('SnapshotEncoder Worker & Client Pipeline Suite (F7)', () => {
       const srcW = 2
       const srcH = 2
       const transparentPixels = new Uint8Array([
-        255, 100, 50, 0,
-        255, 100, 50, 0,
-        255, 100, 50, 0,
-        255, 100, 50, 0,
+        255, 100, 50, 0, 255, 100, 50, 0, 255, 100, 50, 0, 255, 100, 50, 0,
       ])
 
       const { pixels } = downsampleSSAA2x(transparentPixels, srcW, srcH)
@@ -583,4 +621,3 @@ describe('SnapshotEncoder Worker & Client Pipeline Suite (F7)', () => {
     })
   })
 })
-

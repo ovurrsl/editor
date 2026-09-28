@@ -1,3 +1,4 @@
+import { query, type RowDataPacket } from '@panel/lib/db'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { IfcImportButton } from '@/components/ifc-import-button'
@@ -9,7 +10,6 @@ import { authAvailable } from '@/lib/auth/db'
 import { getSessionUser, type SessionUser } from '@/lib/auth/session'
 import { createViewerLaunchToken } from '@/lib/auth/viewer-token'
 import { getSceneOperations } from '@/lib/scene-store-server'
-import { query, type RowDataPacket } from '@panel/lib/db'
 
 export const dynamic = 'force-dynamic'
 
@@ -136,7 +136,10 @@ export default async function ScenesPage() {
           existingIds.add(targetId)
 
           const roleLower = (row.role || '').toLowerCase()
-          if ((roleLower === 'editor' || roleLower === 'admin') && !editableSceneIds.includes(targetId)) {
+          if (
+            (roleLower === 'editor' || roleLower === 'admin') &&
+            !editableSceneIds.includes(targetId)
+          ) {
             editableSceneIds.push(targetId)
           }
         }

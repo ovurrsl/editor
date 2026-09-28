@@ -29,27 +29,26 @@ if (typeof globalThis.window === 'undefined') {
 ;(globalThis as any).cancelAnimationFrame = () => {}
 
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test'
-import React, { Profiler, type ProfilerOnRenderCallback } from 'react'
-import { renderToString } from 'react-dom/server'
 import {
   type AnyNodeId,
-  BuildingNode,
-  LevelNode,
-  WallNode,
-  SlabNode,
-  ItemNode,
-  ZoneNode,
-  useScene,
-  useLiveTransforms,
-  useLiveNodeOverrides,
-  spatialGridManager,
-  initSpatialGridSync,
   acquireSceneReadOnlyLease,
+  BuildingNode,
+  ItemNode,
+  initSpatialGridSync,
+  LevelNode,
   MultiplayerAwarenessService,
+  SlabNode,
+  spatialGridManager,
+  useLiveNodeOverrides,
+  useLiveTransforms,
+  useScene,
+  WallNode,
 } from '@pascal-app/core'
 import { useViewer } from '@pascal-app/viewer'
-import * as Y from 'yjs'
+import { Profiler, type ProfilerOnRenderCallback } from 'react'
+import { renderToString } from 'react-dom/server'
 import * as awarenessProtocol from 'y-protocols/awareness'
+import * as Y from 'yjs'
 import useEditor from '../store/use-editor'
 
 // Maximum allowable continuous main thread blocking time (<50ms SLA)
@@ -84,7 +83,10 @@ function createHeavySyntheticScene(targetNodeCount: number = 500) {
 
   const buildingsCount = Math.max(1, Math.floor(targetNodeCount / 100))
   const levelsPerBuilding = 2
-  const nodesPerLevel = Math.ceil((targetNodeCount - buildingsCount * (1 + levelsPerBuilding)) / (buildingsCount * levelsPerBuilding))
+  const nodesPerLevel = Math.ceil(
+    (targetNodeCount - buildingsCount * (1 + levelsPerBuilding)) /
+      (buildingsCount * levelsPerBuilding),
+  )
 
   let currentCount = 0
 
@@ -276,7 +278,9 @@ describe('Challenger Adversarial Stress & Chaos Verification Suite (<50ms SLA)',
     const { nodes, rootNodeIds } = createHeavySyntheticScene(500)
     useScene.setState({ nodes, rootNodeIds, dirtyNodes: new Set() } as never)
 
-    const wallKeys = Object.keys(nodes).filter((k) => k.startsWith('wall_chaos_')).slice(0, 25)
+    const wallKeys = Object.keys(nodes)
+      .filter((k) => k.startsWith('wall_chaos_'))
+      .slice(0, 25)
 
     const metrics = measureExecutionTime(() => {
       // 1. Role handoff
@@ -308,7 +312,9 @@ describe('Challenger Adversarial Stress & Chaos Verification Suite (<50ms SLA)',
     const { nodes, rootNodeIds } = createHeavySyntheticScene(500)
     useScene.setState({ nodes, rootNodeIds, dirtyNodes: new Set() } as never)
 
-    const wallKeys = Object.keys(nodes).filter((k) => k.startsWith('wall_chaos_')).slice(0, 100)
+    const wallKeys = Object.keys(nodes)
+      .filter((k) => k.startsWith('wall_chaos_'))
+      .slice(0, 100)
     const batchUpdates = wallKeys.map((k) => ({
       id: k as AnyNodeId,
       data: {

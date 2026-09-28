@@ -2466,134 +2466,134 @@ describe('cabinet handles', () => {
     expect(visibleHandles.some((handle) => handle.kind === 'arc-resize')).toBe(true)
   })
 
-  test.each([
-    'left',
-    'right',
-  ] as const)('source depth on an L %s changes only the source leg', (side) => {
-    const { depthHandles, leg, sceneApi, source, sourceModule } = generatedL(side)
-    const handle = depthHandles.find((candidate) => candidate.axis === 'z')!
-    const initialSourcePosition = [...source.position]
-    const initialLegPosition = [...leg.position]
-    const initialSourceBack = sourceModule.position[2] - sourceModule.depth / 2
-    const patch = handle.apply(source, 0.78, sceneApi as never)
+  test.each(['left', 'right'] as const)(
+    'source depth on an L %s changes only the source leg',
+    (side) => {
+      const { depthHandles, leg, sceneApi, source, sourceModule } = generatedL(side)
+      const handle = depthHandles.find((candidate) => candidate.axis === 'z')!
+      const initialSourcePosition = [...source.position]
+      const initialLegPosition = [...leg.position]
+      const initialSourceBack = sourceModule.position[2] - sourceModule.depth / 2
+      const patch = handle.apply(source, 0.78, sceneApi as never)
 
-    expect(patch.position).toBeUndefined()
-    handle.commit?.(source, patch, sceneApi as never)
+      expect(patch.position).toBeUndefined()
+      handle.commit?.(source, patch, sceneApi as never)
 
-    expect(sceneApi.get<CabinetNode>(source.id)?.depth).toBeCloseTo(0.78)
-    expect(sceneApi.get<CabinetNode>(source.id)?.position).toEqual(initialSourcePosition)
-    const resizedSourceModule = sceneApi.get<CabinetModuleNode>(sourceModule.id)!
-    expect(resizedSourceModule.position[2] - resizedSourceModule.depth / 2).toBeCloseTo(
-      initialSourceBack,
-    )
-    expect(sceneApi.get<CabinetNode>(leg.id)?.depth).toBeCloseTo(leg.depth)
-    expect(sceneApi.get<CabinetNode>(leg.id)?.position).toEqual(initialLegPosition)
-  })
+      expect(sceneApi.get<CabinetNode>(source.id)?.depth).toBeCloseTo(0.78)
+      expect(sceneApi.get<CabinetNode>(source.id)?.position).toEqual(initialSourcePosition)
+      const resizedSourceModule = sceneApi.get<CabinetModuleNode>(sourceModule.id)!
+      expect(resizedSourceModule.position[2] - resizedSourceModule.depth / 2).toBeCloseTo(
+        initialSourceBack,
+      )
+      expect(sceneApi.get<CabinetNode>(leg.id)?.depth).toBeCloseTo(leg.depth)
+      expect(sceneApi.get<CabinetNode>(leg.id)?.position).toEqual(initialLegPosition)
+    },
+  )
 
-  test.each([
-    'left',
-    'right',
-  ] as const)('perpendicular depth on an L %s changes only the derived leg', (side) => {
-    const { depthHandles, leg, legModule, sceneApi, source } = generatedL(side)
-    const handle = depthHandles.find((candidate) => candidate.axis === 'x')!
-    const initialSourcePosition = [...source.position]
-    const initialLegPosition = [...leg.position]
-    const initialLegBack = legModule.position[2] - legModule.depth / 2
-    const cornerWallFiller = Object.values(sceneApi.nodes()).find(
-      (node): node is CabinetModuleNode =>
-        node.type === 'cabinet-module' && node.name === 'Corner Wall Filler',
-    )!
-    const initialCornerWallWorld = resolveCabinetWorldTransform(
-      cornerWallFiller,
-      sceneApi.nodes() as Record<AnyNodeId, AnyNode>,
-    )
-    const patch = handle.apply(source, 0.48, sceneApi as never)
-
-    handle.commit?.(source, patch, sceneApi as never)
-
-    expect(sceneApi.get<CabinetNode>(leg.id)?.depth).toBeCloseTo(0.48)
-    expect(sceneApi.get<CabinetNode>(leg.id)?.position).toEqual(initialLegPosition)
-    const resizedLegModule = sceneApi.get<CabinetModuleNode>(legModule.id)!
-    expect(resizedLegModule.position[2] - resizedLegModule.depth / 2).toBeCloseTo(initialLegBack)
-    expect(sceneApi.get<CabinetNode>(source.id)?.depth).toBeCloseTo(source.depth)
-    expect(sceneApi.get<CabinetNode>(source.id)?.position).toEqual(initialSourcePosition)
-    const resizedCornerWallWorld = resolveCabinetWorldTransform(
-      sceneApi.get<CabinetModuleNode>(cornerWallFiller.id)!,
-      sceneApi.nodes() as Record<AnyNodeId, AnyNode>,
-    )
-    expect(resizedCornerWallWorld.position[0]).toBeCloseTo(initialCornerWallWorld.position[0])
-    expect(resizedCornerWallWorld.position[2]).toBeCloseTo(initialCornerWallWorld.position[2])
-  })
-
-  test.each([
-    'left',
-    'right',
-  ] as const)('chained L %s groups expose one centered depth arrow per run', (side) => {
-    const { depthHandles, leg, sceneApi, source, thirdRun } = generatedU(side)
-    const runs = [source, leg, thirdRun]
-    const sourceWorld = resolveCabinetWorldTransform(
-      source,
-      sceneApi.nodes() as Record<AnyNodeId, AnyNode>,
-    )
-    const sourceCos = Math.cos(sourceWorld.rotation)
-    const sourceSin = Math.sin(sourceWorld.rotation)
-    const targetIds = depthHandles.map(
-      (handle) => handle.overrideTarget?.(source, sceneApi as never) ?? source.id,
-    )
-
-    expect(new Set(targetIds)).toEqual(new Set(runs.map((run) => run.id)))
-    expect(depthHandles).toHaveLength(3)
-
-    for (const run of runs) {
-      const modules = run.children
-        .map((id) => sceneApi.get(id as AnyNodeId))
-        .filter((node): node is CabinetModuleNode => node?.type === 'cabinet-module')
-      const centerX =
-        (Math.min(...modules.map((module) => module.position[0] - module.width / 2)) +
-          Math.max(...modules.map((module) => module.position[0] + module.width / 2))) /
-        2
-      const frontZ = Math.max(...modules.map((module) => module.position[2] + module.depth / 2))
-      const runWorld = resolveCabinetWorldTransform(
-        run,
+  test.each(['left', 'right'] as const)(
+    'perpendicular depth on an L %s changes only the derived leg',
+    (side) => {
+      const { depthHandles, leg, legModule, sceneApi, source } = generatedL(side)
+      const handle = depthHandles.find((candidate) => candidate.axis === 'x')!
+      const initialSourcePosition = [...source.position]
+      const initialLegPosition = [...leg.position]
+      const initialLegBack = legModule.position[2] - legModule.depth / 2
+      const cornerWallFiller = Object.values(sceneApi.nodes()).find(
+        (node): node is CabinetModuleNode =>
+          node.type === 'cabinet-module' && node.name === 'Corner Wall Filler',
+      )!
+      const initialCornerWallWorld = resolveCabinetWorldTransform(
+        cornerWallFiller,
         sceneApi.nodes() as Record<AnyNodeId, AnyNode>,
       )
-      const frontWorld = localPointToWorld(runWorld, [centerX, 0, frontZ + 0.18])
-      const dx = frontWorld[0] - sourceWorld.position[0]
-      const dz = frontWorld[2] - sourceWorld.position[2]
-      const expectedX = sourceCos * dx - sourceSin * dz
-      const expectedZ = sourceSin * dx + sourceCos * dz
+      const patch = handle.apply(source, 0.48, sceneApi as never)
+
+      handle.commit?.(source, patch, sceneApi as never)
+
+      expect(sceneApi.get<CabinetNode>(leg.id)?.depth).toBeCloseTo(0.48)
+      expect(sceneApi.get<CabinetNode>(leg.id)?.position).toEqual(initialLegPosition)
+      const resizedLegModule = sceneApi.get<CabinetModuleNode>(legModule.id)!
+      expect(resizedLegModule.position[2] - resizedLegModule.depth / 2).toBeCloseTo(initialLegBack)
+      expect(sceneApi.get<CabinetNode>(source.id)?.depth).toBeCloseTo(source.depth)
+      expect(sceneApi.get<CabinetNode>(source.id)?.position).toEqual(initialSourcePosition)
+      const resizedCornerWallWorld = resolveCabinetWorldTransform(
+        sceneApi.get<CabinetModuleNode>(cornerWallFiller.id)!,
+        sceneApi.nodes() as Record<AnyNodeId, AnyNode>,
+      )
+      expect(resizedCornerWallWorld.position[0]).toBeCloseTo(initialCornerWallWorld.position[0])
+      expect(resizedCornerWallWorld.position[2]).toBeCloseTo(initialCornerWallWorld.position[2])
+    },
+  )
+
+  test.each(['left', 'right'] as const)(
+    'chained L %s groups expose one centered depth arrow per run',
+    (side) => {
+      const { depthHandles, leg, sceneApi, source, thirdRun } = generatedU(side)
+      const runs = [source, leg, thirdRun]
+      const sourceWorld = resolveCabinetWorldTransform(
+        source,
+        sceneApi.nodes() as Record<AnyNodeId, AnyNode>,
+      )
+      const sourceCos = Math.cos(sourceWorld.rotation)
+      const sourceSin = Math.sin(sourceWorld.rotation)
+      const targetIds = depthHandles.map(
+        (handle) => handle.overrideTarget?.(source, sceneApi as never) ?? source.id,
+      )
+
+      expect(new Set(targetIds)).toEqual(new Set(runs.map((run) => run.id)))
+      expect(depthHandles).toHaveLength(3)
+
+      for (const run of runs) {
+        const modules = run.children
+          .map((id) => sceneApi.get(id as AnyNodeId))
+          .filter((node): node is CabinetModuleNode => node?.type === 'cabinet-module')
+        const centerX =
+          (Math.min(...modules.map((module) => module.position[0] - module.width / 2)) +
+            Math.max(...modules.map((module) => module.position[0] + module.width / 2))) /
+          2
+        const frontZ = Math.max(...modules.map((module) => module.position[2] + module.depth / 2))
+        const runWorld = resolveCabinetWorldTransform(
+          run,
+          sceneApi.nodes() as Record<AnyNodeId, AnyNode>,
+        )
+        const frontWorld = localPointToWorld(runWorld, [centerX, 0, frontZ + 0.18])
+        const dx = frontWorld[0] - sourceWorld.position[0]
+        const dz = frontWorld[2] - sourceWorld.position[2]
+        const expectedX = sourceCos * dx - sourceSin * dz
+        const expectedZ = sourceSin * dx + sourceCos * dz
+        const handle = depthHandles.find(
+          (candidate) =>
+            (candidate.overrideTarget?.(source, sceneApi as never) ?? source.id) === run.id,
+        )!
+        const position = handle.placement.position(source, sceneApi as never)
+
+        expect(position[0]).toBeCloseTo(expectedX)
+        expect(position[2]).toBeCloseTo(expectedZ)
+      }
+    },
+  )
+
+  test.each(['left', 'right'] as const)(
+    'depth resize on a chained L %s updates the connected corner width',
+    (side) => {
+      const { depthHandles, leg, sceneApi, source, thirdRun } = generatedU(side)
       const handle = depthHandles.find(
         (candidate) =>
-          (candidate.overrideTarget?.(source, sceneApi as never) ?? source.id) === run.id,
+          (candidate.overrideTarget?.(source, sceneApi as never) ?? source.id) === leg.id,
       )!
-      const position = handle.placement.position(source, sceneApi as never)
+      const patch = handle.apply(source, 0.78, sceneApi as never)
 
-      expect(position[0]).toBeCloseTo(expectedX)
-      expect(position[2]).toBeCloseTo(expectedZ)
-    }
-  })
+      handle.commit?.(source, patch, sceneApi as never)
 
-  test.each([
-    'left',
-    'right',
-  ] as const)('depth resize on a chained L %s updates the connected corner width', (side) => {
-    const { depthHandles, leg, sceneApi, source, thirdRun } = generatedU(side)
-    const handle = depthHandles.find(
-      (candidate) =>
-        (candidate.overrideTarget?.(source, sceneApi as never) ?? source.id) === leg.id,
-    )!
-    const patch = handle.apply(source, 0.78, sceneApi as never)
-
-    handle.commit?.(source, patch, sceneApi as never)
-
-    const connectedFiller = thirdRun.children
-      .map((id) => sceneApi.get(id as AnyNodeId))
-      .find(
-        (node): node is CabinetModuleNode =>
-          node?.type === 'cabinet-module' && node.name === 'Corner Filler',
-      )!
-    expect(connectedFiller.width).toBeCloseTo(0.78)
-  })
+      const connectedFiller = thirdRun.children
+        .map((id) => sceneApi.get(id as AnyNodeId))
+        .find(
+          (node): node is CabinetModuleNode =>
+            node?.type === 'cabinet-module' && node.name === 'Corner Filler',
+        )!
+      expect(connectedFiller.width).toBeCloseTo(0.78)
+    },
+  )
 
   test('run rotation keeps the cabinet bounding-box center fixed', () => {
     const run = CabinetNode.parse({

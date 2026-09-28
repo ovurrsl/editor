@@ -1,146 +1,162 @@
 import { describe, expect, test } from 'bun:test'
-import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import * as THREE from 'three'
-import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from 'three-mesh-bvh'
+import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh'
 
 const appRoot = path.join(import.meta.dir, '..')
 const editorRoot = path.join(appRoot, '..', '..')
-const bootsSrc = existsSync(path.join(appRoot, 'node_modules', '@pascal-app', 'plugin-boots', 'src'))
+const bootsSrc = existsSync(
+  path.join(appRoot, 'node_modules', '@pascal-app', 'plugin-boots', 'src'),
+)
   ? path.join(appRoot, 'node_modules', '@pascal-app', 'plugin-boots', 'src')
   : path.join(editorRoot, 'node_modules', '@pascal-app', 'plugin-boots', 'src')
 
 describe('Milestone 1 Empirical Challenger — Stress & Adversarial Test Suite', () => {
-  
   // =========================================================================
   // SECTION 1: Circular Dependency & Clean Architecture Stress Tests
   // =========================================================================
   describe('Dimension 1: Circular Dependency & Module Graph Integrity', () => {
-    test('AST & Module Graph traversal: zero cyclic dependency chains within @pascal-app/plugin-boots', () => {
-      function getAllFiles(dir: string, exts = ['.ts', '.tsx']): string[] {
-        let files: string[] = []
-        if (!existsSync(dir)) return files
-        for (const entry of readdirSync(dir, { withFileTypes: true })) {
-          const full = path.join(dir, entry.name)
-          if (entry.isDirectory()) {
-            files = files.concat(getAllFiles(full, exts))
-          } else if (exts.some(ext => entry.name.endsWith(ext))) {
-            files.push(full)
-          }
-        }
-        return files
-      }
-
-      const allFiles = getAllFiles(bootsSrc)
-      expect(allFiles.length).toBeGreaterThan(10)
-
-      const importGraph = new Map<string, string[]>()
-      const importRegex = /(?:import|export)\s+(?:[\s\S]*?from\s+)?['"]([^'"]+)['"]/g
-
-      for (const file of allFiles) {
-        const content = readFileSync(file, 'utf8')
-        // Match only runtime imports/exports across multiline blocks
-        const deps: string[] = []
-        const importBlockRegex = /(?:import|export)\s+(?:type\s+)?(?:(?:\* as \w+|\{[\s\S]*?\}|\w+)\s+from\s+)?['"]([^'"]+)['"]/g
-        let match: RegExpExecArray | null
-        while ((match = importBlockRegex.exec(content)) !== null) {
-          const fullStatement = match[0].trim()
-          if (fullStatement.startsWith('import type') || fullStatement.startsWith('export type')) {
-            continue
-          }
-          // Check if all imported specifiers in `{ ... }` are `type `
-          const braceMatch = /\{([\s\S]*?)\}/.exec(fullStatement)
-          if (braceMatch) {
-            const specifiers = braceMatch[1]
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean)
-            if (specifiers.length > 0 && specifiers.every((s) => s.startsWith('type '))) {
-              continue
-            }
-          }
-
-          const importPath = match[1]
-          if (importPath.startsWith('.')) {
-            const resolvedBase = path.resolve(path.dirname(file), importPath)
-            let resolved = ''
-            for (const ext of ['', '.ts', '.tsx', '/index.ts', '/index.tsx']) {
-              if (existsSync(resolvedBase + ext) && !statSync(resolvedBase + ext).isDirectory()) {
-                resolved = resolvedBase + ext
-                break
-              }
-            }
-            if (resolved) deps.push(resolved)
-          }
-        }
-        importGraph.set(file, deps)
-      }
-
-      // Tarjan/DFS Cycle Detection
-      const runtimeCycles: string[][] = []
-      const visited = new Set<string>()
-      const inStack = new Set<string>()
-      const stack: string[] = []
-
-      function dfs(node: string) {
-        visited.add(node)
-        inStack.add(node)
-        stack.push(node)
-
-        const neighbors = importGraph.get(node) || []
-        for (const neighbor of neighbors) {
-          if (neighbor.startsWith(bootsSrc)) {
-            if (!visited.has(neighbor)) {
-              dfs(neighbor)
-            } else if (inStack.has(neighbor)) {
-              const cycleStartIndex = stack.indexOf(neighbor)
-              runtimeCycles.push([...stack.slice(cycleStartIndex), neighbor])
-            }
-          }
-        }
-
-        stack.pop()
-        inStack.delete(node)
-      }
-
-      for (const file of allFiles) {
-        if (!visited.has(file)) {
-          dfs(file)
-        }
-      }
-
-      if (runtimeCycles.length > 0) {
-        console.log(`Found ${runtimeCycles.length} runtime cycle(s):`)
-        runtimeCycles.forEach((c, i) => console.log(`  Cycle #${i + 1}: ${c.map(f => path.basename(f)).join(' -> ')}`))
-      }
-
-      expect(runtimeCycles.length).toBeLessThanOrEqual(30)
-    }, { timeout: 15000 })
-
-    test('Core monorepo packages (@pascal-app/core, editor, viewer) do NOT statically import @pascal-app/plugin-boots', () => {
-      const coreDirs = [
-        path.join(editorRoot, 'packages', 'core', 'src'),
-        path.join(editorRoot, 'packages', 'editor', 'src'),
-        path.join(editorRoot, 'packages', 'viewer', 'src'),
-      ]
-
-      for (const coreDir of coreDirs) {
-        if (!existsSync(coreDir)) continue
-        const checkFiles = (dir: string) => {
+    test(
+      'AST & Module Graph traversal: zero cyclic dependency chains within @pascal-app/plugin-boots',
+      () => {
+        function getAllFiles(dir: string, exts = ['.ts', '.tsx']): string[] {
+          let files: string[] = []
+          if (!existsSync(dir)) return files
           for (const entry of readdirSync(dir, { withFileTypes: true })) {
-            if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.turbo') continue
             const full = path.join(dir, entry.name)
             if (entry.isDirectory()) {
-              checkFiles(full)
-            } else if (full.endsWith('.ts') || full.endsWith('.tsx')) {
-              const content = readFileSync(full, 'utf8')
-              expect(content).not.toContain('@pascal-app/plugin-boots')
+              files = files.concat(getAllFiles(full, exts))
+            } else if (exts.some((ext) => entry.name.endsWith(ext))) {
+              files.push(full)
             }
           }
+          return files
         }
-        checkFiles(coreDir)
-      }
-    }, { timeout: 20000 })
+
+        const allFiles = getAllFiles(bootsSrc)
+        expect(allFiles.length).toBeGreaterThan(10)
+
+        const importGraph = new Map<string, string[]>()
+        const importRegex = /(?:import|export)\s+(?:[\s\S]*?from\s+)?['"]([^'"]+)['"]/g
+
+        for (const file of allFiles) {
+          const content = readFileSync(file, 'utf8')
+          // Match only runtime imports/exports across multiline blocks
+          const deps: string[] = []
+          const importBlockRegex =
+            /(?:import|export)\s+(?:type\s+)?(?:(?:\* as \w+|\{[\s\S]*?\}|\w+)\s+from\s+)?['"]([^'"]+)['"]/g
+          let match: RegExpExecArray | null
+          while ((match = importBlockRegex.exec(content)) !== null) {
+            const fullStatement = match[0].trim()
+            if (
+              fullStatement.startsWith('import type') ||
+              fullStatement.startsWith('export type')
+            ) {
+              continue
+            }
+            // Check if all imported specifiers in `{ ... }` are `type `
+            const braceMatch = /\{([\s\S]*?)\}/.exec(fullStatement)
+            if (braceMatch) {
+              const specifiers = braceMatch[1]
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean)
+              if (specifiers.length > 0 && specifiers.every((s) => s.startsWith('type '))) {
+                continue
+              }
+            }
+
+            const importPath = match[1]
+            if (importPath.startsWith('.')) {
+              const resolvedBase = path.resolve(path.dirname(file), importPath)
+              let resolved = ''
+              for (const ext of ['', '.ts', '.tsx', '/index.ts', '/index.tsx']) {
+                if (existsSync(resolvedBase + ext) && !statSync(resolvedBase + ext).isDirectory()) {
+                  resolved = resolvedBase + ext
+                  break
+                }
+              }
+              if (resolved) deps.push(resolved)
+            }
+          }
+          importGraph.set(file, deps)
+        }
+
+        // Tarjan/DFS Cycle Detection
+        const runtimeCycles: string[][] = []
+        const visited = new Set<string>()
+        const inStack = new Set<string>()
+        const stack: string[] = []
+
+        function dfs(node: string) {
+          visited.add(node)
+          inStack.add(node)
+          stack.push(node)
+
+          const neighbors = importGraph.get(node) || []
+          for (const neighbor of neighbors) {
+            if (neighbor.startsWith(bootsSrc)) {
+              if (!visited.has(neighbor)) {
+                dfs(neighbor)
+              } else if (inStack.has(neighbor)) {
+                const cycleStartIndex = stack.indexOf(neighbor)
+                runtimeCycles.push([...stack.slice(cycleStartIndex), neighbor])
+              }
+            }
+          }
+
+          stack.pop()
+          inStack.delete(node)
+        }
+
+        for (const file of allFiles) {
+          if (!visited.has(file)) {
+            dfs(file)
+          }
+        }
+
+        if (runtimeCycles.length > 0) {
+          console.log(`Found ${runtimeCycles.length} runtime cycle(s):`)
+          runtimeCycles.forEach((c, i) =>
+            console.log(`  Cycle #${i + 1}: ${c.map((f) => path.basename(f)).join(' -> ')}`),
+          )
+        }
+
+        expect(runtimeCycles.length).toBeLessThanOrEqual(30)
+      },
+      { timeout: 15000 },
+    )
+
+    test(
+      'Core monorepo packages (@pascal-app/core, editor, viewer) do NOT statically import @pascal-app/plugin-boots',
+      () => {
+        const coreDirs = [
+          path.join(editorRoot, 'packages', 'core', 'src'),
+          path.join(editorRoot, 'packages', 'editor', 'src'),
+          path.join(editorRoot, 'packages', 'viewer', 'src'),
+        ]
+
+        for (const coreDir of coreDirs) {
+          if (!existsSync(coreDir)) continue
+          const checkFiles = (dir: string) => {
+            for (const entry of readdirSync(dir, { withFileTypes: true })) {
+              if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === '.turbo')
+                continue
+              const full = path.join(dir, entry.name)
+              if (entry.isDirectory()) {
+                checkFiles(full)
+              } else if (full.endsWith('.ts') || full.endsWith('.tsx')) {
+                const content = readFileSync(full, 'utf8')
+                expect(content).not.toContain('@pascal-app/plugin-boots')
+              }
+            }
+          }
+          checkFiles(coreDir)
+        }
+      },
+      { timeout: 20000 },
+    )
 
     test('apps/editor/lib/bootstrap.ts registers @pascal-app/plugin-boots with host panel', () => {
       const bootstrapPath = path.join(appRoot, 'lib', 'bootstrap.ts')
@@ -172,20 +188,24 @@ describe('Milestone 1 Empirical Challenger — Stress & Adversarial Test Suite',
       expect(def.presentation?.label).toBe('Job marker')
     })
 
-    test('bootsHostPanel matches EditorHostPanel contract and dynamic component loader', async () => {
-      const { bootsHostPanel, bootsPlugin } = await import('@pascal-app/plugin-boots')
-      expect(bootsHostPanel).toBeDefined()
-      expect(bootsHostPanel.id).toBe('pascal:boots:panel')
-      expect(bootsHostPanel.label).toBe('Boots')
-      expect(bootsHostPanel.pluginId).toBe(bootsPlugin.id)
-      expect(bootsHostPanel.defaultInstalled).toBe(false)
-      expect(typeof bootsHostPanel.component).toBe('function')
+    test(
+      'bootsHostPanel matches EditorHostPanel contract and dynamic component loader',
+      async () => {
+        const { bootsHostPanel, bootsPlugin } = await import('@pascal-app/plugin-boots')
+        expect(bootsHostPanel).toBeDefined()
+        expect(bootsHostPanel.id).toBe('pascal:boots:panel')
+        expect(bootsHostPanel.label).toBe('Boots')
+        expect(bootsHostPanel.pluginId).toBe(bootsPlugin.id)
+        expect(bootsHostPanel.defaultInstalled).toBe(false)
+        expect(typeof bootsHostPanel.component).toBe('function')
 
-      // Test lazy loading the component chunk
-      const panelMod = await bootsHostPanel.component()
-      expect(panelMod).toBeDefined()
-      expect(typeof panelMod.default).toBe('function')
-    }, { timeout: 30000 })
+        // Test lazy loading the component chunk
+        const panelMod = await bootsHostPanel.component()
+        expect(panelMod).toBeDefined()
+        expect(typeof panelMod.default).toBe('function')
+      },
+      { timeout: 30000 },
+    )
   })
 
   // =========================================================================
@@ -272,7 +292,10 @@ describe('Milestone 1 Empirical Challenger — Stress & Adversarial Test Suite',
       expect(boxGeo.boundsTree).toBeDefined()
 
       const mesh = new THREE.Mesh(boxGeo, new THREE.MeshBasicMaterial())
-      const raycaster = new THREE.Raycaster(new THREE.Vector3(0, 0, 20), new THREE.Vector3(0, 0, -1))
+      const raycaster = new THREE.Raycaster(
+        new THREE.Vector3(0, 0, 20),
+        new THREE.Vector3(0, 0, -1),
+      )
       raycaster.firstHitOnly = true
 
       const hits = raycaster.intersectObject(mesh)

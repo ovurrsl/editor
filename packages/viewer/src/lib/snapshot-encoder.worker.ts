@@ -112,16 +112,32 @@ export function downsampleSSAA2x(
       const dstIdx = (y * dstW + x) * 4
 
       dstPixels[dstIdx + 0] = Math.round(
-        (srcPixels[idx00 + 0] + srcPixels[idx01 + 0] + srcPixels[idx10 + 0] + srcPixels[idx11 + 0]) / 4,
+        (srcPixels[idx00 + 0] +
+          srcPixels[idx01 + 0] +
+          srcPixels[idx10 + 0] +
+          srcPixels[idx11 + 0]) /
+          4,
       )
       dstPixels[dstIdx + 1] = Math.round(
-        (srcPixels[idx00 + 1] + srcPixels[idx01 + 1] + srcPixels[idx10 + 1] + srcPixels[idx11 + 1]) / 4,
+        (srcPixels[idx00 + 1] +
+          srcPixels[idx01 + 1] +
+          srcPixels[idx10 + 1] +
+          srcPixels[idx11 + 1]) /
+          4,
       )
       dstPixels[dstIdx + 2] = Math.round(
-        (srcPixels[idx00 + 2] + srcPixels[idx01 + 2] + srcPixels[idx10 + 2] + srcPixels[idx11 + 2]) / 4,
+        (srcPixels[idx00 + 2] +
+          srcPixels[idx01 + 2] +
+          srcPixels[idx10 + 2] +
+          srcPixels[idx11 + 2]) /
+          4,
       )
       dstPixels[dstIdx + 3] = Math.round(
-        (srcPixels[idx00 + 3] + srcPixels[idx01 + 3] + srcPixels[idx10 + 3] + srcPixels[idx11 + 3]) / 4,
+        (srcPixels[idx00 + 3] +
+          srcPixels[idx01 + 3] +
+          srcPixels[idx10 + 3] +
+          srcPixels[idx11 + 3]) /
+          4,
       )
     }
   }

@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 import { NextRequest } from 'next/server'
 import { createViewerLaunchToken } from '@/lib/auth/viewer-token'
 
@@ -27,7 +27,7 @@ describe('Viewer Session & Role-Based Authorization Enforcement', () => {
     // Admin must have Bursa Başköy available
     const hasBursa = data.allowedSites.some(
       (s: { id: string; sceneId?: string }) =>
-        s.id === '01JM1SITE00000000000000002' || s.sceneId === 'bursa_baskoy'
+        s.id === '01JM1SITE00000000000000002' || s.sceneId === 'bursa_baskoy',
     )
     expect(hasBursa).toBe(true)
   })

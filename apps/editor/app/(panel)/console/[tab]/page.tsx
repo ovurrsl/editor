@@ -33,8 +33,16 @@ export default async function ConsoleTabPage({ params }: { params: Promise<{ tab
   }
 
   // Permission is re-checked here: a hand-typed URL to a tab the role cannot see lands on fallback
-  if (required && !session.user.permissions.includes(required) && !session.user.permissions.includes('admin_access')) {
-    redirect(session.user.permissions.includes('view_warehouse_addresses') ? '/console/locations' : '/console/overview')
+  if (
+    required &&
+    !session.user.permissions.includes(required) &&
+    !session.user.permissions.includes('admin_access')
+  ) {
+    redirect(
+      session.user.permissions.includes('view_warehouse_addresses')
+        ? '/console/locations'
+        : '/console/overview',
+    )
   }
 
   return (
