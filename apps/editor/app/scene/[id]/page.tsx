@@ -65,7 +65,7 @@ export default async function ScenePage({ params }: { params: Promise<{ id: stri
     const auth = await authorizeSceneMutation(id, scene.ownerId)
     if (!auth.ok) {
       const launchToken = viewer ? createViewerLaunchToken(viewer, { sceneId: id }) : undefined
-      const viewerUrl = process.env.NEXT_PUBLIC_VIEWER_URL || 'https://viewer.opex.help'
+      const viewerUrl = process.env.NEXT_PUBLIC_VIEWER_URL || '/viewer/index.html'
       const target = launchToken
         ? `${viewerUrl}/?launch_token=${encodeURIComponent(launchToken)}&sceneId=${encodeURIComponent(id)}`
         : `${viewerUrl}/?sceneId=${encodeURIComponent(id)}`

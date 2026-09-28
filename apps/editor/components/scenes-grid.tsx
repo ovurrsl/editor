@@ -40,7 +40,7 @@ export function SceneGrid({
   userRole = 'viewer',
   editableSceneIds,
   launchToken,
-  viewerUrl = 'https://viewer.opex.help',
+  viewerUrl = '/viewer/index.html',
 }: {
   scenes: SceneMeta[]
   currentUserId: string | null

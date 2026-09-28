@@ -46,7 +46,7 @@ export default async function ScenesPage() {
   const isAdmin = user?.role === 'admin'
   const scenes = await fetchScenes(isAdmin ? undefined : user?.id)
   const launchToken = user ? createViewerLaunchToken(user) : undefined
-  const viewerUrl = process.env.NEXT_PUBLIC_VIEWER_URL || 'https://viewer.opex.help'
+  const viewerUrl = process.env.NEXT_PUBLIC_VIEWER_URL || '/viewer/index.html'
 
   const editableSceneIds: string[] = []
   if (user && user.role !== 'viewer') {
