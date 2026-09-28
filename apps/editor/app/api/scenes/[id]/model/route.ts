@@ -127,7 +127,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       'Content-Type': 'model/gltf-binary',
       'Content-Length': stat.size.toString(),
       'Accept-Ranges': 'bytes',
-      'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+      'Cache-Control': 'public, max-age=0, must-revalidate',
     })
 
     const res = new NextResponse(readable, { status: 200, headers })

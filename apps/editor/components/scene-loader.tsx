@@ -200,6 +200,13 @@ export function SceneLoader({ initialScene, meta, readOnly = false }: SceneLoade
       }
 
       try {
+        const modelExport = useEditor.getState().modelExport
+        let glbBlob = null;
+        if (modelExport) {
+           const result = await modelExport('glb', { download: false })
+           if (result && result.blob) glbBlob = result.blob
+        }
+
         const response = await fetch(`/api/scenes/${meta.id}`, {
           method: 'PATCH',
           headers: {
