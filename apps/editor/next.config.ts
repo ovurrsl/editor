@@ -40,6 +40,8 @@ const nextConfig: NextConfig = {
     '@webxr/plugin',
     '@pascal-app/plugin-environment',
     '@dgreenheck/ez-tree',
+    '@pascal-app/plugin-roof',
+    '@pascal-app/plugin-utilities',
   ],
   turbopack: {
     resolveAlias: {
