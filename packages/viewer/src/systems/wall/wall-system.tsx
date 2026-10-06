@@ -1196,6 +1196,13 @@ function updateWallGeometry(
   )
   const renderedGeo =
     geometryAdapter?.buildGeometry?.(node, builtGeo, prepared.renderChildren) ?? builtGeo
+
+  if (node.tilt) {
+    // Apply shear directly to the geometry so bounding boxes and CSG read the sheared vertices.
+    const shearMatrix = new THREE.Matrix4().makeShear(0, 0, 0, 0, 0, Math.tan(node.tilt))
+    renderedGeo.applyMatrix4(shearMatrix)
+  }
+
   const newGeo = applyWorldPlanarWallUVs(renderedGeo, wallWorldMatrix)
 
   mesh.geometry.dispose()
@@ -1218,13 +1225,17 @@ function updateWallGeometry(
       terrainBottomAt,
       slabSupport.faceDatum,
     )
+    if (node.tilt) {
+      collisionGeo.applyMatrix4(new THREE.Matrix4().makeShear(0, 0, 0, 0, 0, Math.tan(node.tilt)))
+    }
     collisionMesh.geometry.dispose()
     collisionMesh.geometry = collisionGeo
   }
 
   mesh.position.set(node.start[0], slabElevation, node.start[1])
   const angle = Math.atan2(node.end[1] - node.start[1], node.end[0] - node.start[0])
-  mesh.rotation.y = -angle
+  mesh.rotation.set(0, -angle, 0)
+  mesh.matrixAutoUpdate = true
 
   const offsets = getWallFaceOffsets(node)
   const frameKey = `${offsets.a}:${offsets.b}`
