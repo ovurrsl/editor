@@ -1,5 +1,9 @@
 import { type AnyNode, bakePolicyOf, sceneRegistry } from '@pascal-app/core'
-import { buildIfcExport, type IfcMeshPart } from '@pascal-app/ifc-converter/export'
+import {
+  buildIfcExport,
+  type IfcBoundingBoxFilter,
+  type IfcMeshPart,
+} from '@pascal-app/ifc-converter/export'
 import { SCENE_LAYER } from '@pascal-app/viewer'
 import * as THREE from 'three'
 
@@ -134,6 +138,7 @@ export function exportPreparedSceneToIfc(
     projectName?: string
     onlyVisible?: boolean
     excludedNodeTypes?: readonly string[]
+    boundingBox?: IfcBoundingBoxFilter
   },
 ): { data: string; warnings: string[] } {
   const { meshes, renderedNodeIds } = collectIfcMeshes(root, nodes)
@@ -144,6 +149,7 @@ export function exportPreparedSceneToIfc(
     // Same default as scene preparation, which already pruned hidden meshes.
     onlyVisible: options.onlyVisible ?? true,
     excludedNodeTypes: options.excludedNodeTypes,
+    boundingBox: options.boundingBox,
   })
   // Report everything that is on screen yet did not reach the file; markers
   // that draw nothing (spawn point, camera shots) are skipped silently.

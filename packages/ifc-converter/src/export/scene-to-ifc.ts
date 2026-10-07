@@ -21,6 +21,7 @@ import {
   type ImportedMeshNode,
   intersection,
   isCurvedWall,
+  type LevelElevation,
   type LevelNode,
   liftedManualSlab,
   prepareSlabPolygonContext,
@@ -67,6 +68,22 @@ export interface IfcMeshPart {
   opacity?: number
 }
 
+/**
+ * Spatial bounding box filter in world coordinates (metres, Y-up).
+ */
+export interface IfcBoundingBoxFilter {
+  /** Minimum world coordinates [minX, minY, minZ] in metres (Y-up). */
+  min: [number, number, number]
+  /** Maximum world coordinates [maxX, maxY, maxZ] in metres (Y-up). */
+  max: [number, number, number]
+  /**
+   * Spatial test mode:
+   * - 'intersects' (default): Include elements whose 3D bounds touch or overlap the box.
+   * - 'contains': Include only elements whose 3D bounds are completely inside the box.
+   */
+  mode?: 'intersects' | 'contains'
+}
+
 export interface IfcExportInput {
   nodes: Record<string, AnyNode>
   /** Rendered geometry keyed by node id; required for everything that is not a native IFC element. */
@@ -80,6 +97,8 @@ export interface IfcExportInput {
   onlyVisible?: boolean
   /** Node kinds left out entirely, with their descendants. */
   excludedNodeTypes?: readonly string[]
+  /** Optional spatial bounding box filter in world coordinates (metres, Y-up). */
+  boundingBox?: IfcBoundingBoxFilter
 }
 
 export interface IfcExportSkip {
@@ -293,6 +312,328 @@ function buildingWorldToLocal(transform: BuildingTransform, baseY: number): (p: 
   }
 }
 
+interface BoundingBox3D {
+  min: Vec3
+  max: Vec3
+}
+
+const EPSILON = 1e-7
+
+function normalizeFilter(filter: IfcBoundingBoxFilter): {
+  min: Vec3
+  max: Vec3
+  mode: 'intersects' | 'contains'
+} {
+  return {
+    min: [
+      Math.min(filter.min[0], filter.max[0]),
+      Math.min(filter.min[1], filter.max[1]),
+      Math.min(filter.min[2], filter.max[2]),
+    ],
+    max: [
+      Math.max(filter.min[0], filter.max[0]),
+      Math.max(filter.min[1], filter.max[1]),
+      Math.max(filter.min[2], filter.max[2]),
+    ],
+    mode: filter.mode ?? 'intersects',
+  }
+}
+
+function matchesBoundingBox(
+  aabb: BoundingBox3D,
+  filter: { min: Vec3; max: Vec3; mode: 'intersects' | 'contains' },
+): boolean {
+  if (filter.mode === 'contains') {
+    return (
+      aabb.min[0] >= filter.min[0] - EPSILON &&
+      aabb.max[0] <= filter.max[0] + EPSILON &&
+      aabb.min[1] >= filter.min[1] - EPSILON &&
+      aabb.max[1] <= filter.max[1] + EPSILON &&
+      aabb.min[2] >= filter.min[2] - EPSILON &&
+      aabb.max[2] <= filter.max[2] + EPSILON
+    )
+  }
+  return (
+    aabb.min[0] <= filter.max[0] + EPSILON &&
+    aabb.max[0] >= filter.min[0] - EPSILON &&
+    aabb.min[1] <= filter.max[1] + EPSILON &&
+    aabb.max[1] >= filter.min[1] - EPSILON &&
+    aabb.min[2] <= filter.max[2] + EPSILON &&
+    aabb.max[2] >= filter.min[2] - EPSILON
+  )
+}
+
+function computeMeshWorldAABB(parts: readonly IfcMeshPart[]): BoundingBox3D | null {
+  let minX = Infinity
+  let minY = Infinity
+  let minZ = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  let maxZ = -Infinity
+  let count = 0
+  for (const part of parts) {
+    const pos = part.positions
+    for (let i = 0; i + 2 < pos.length; i += 3) {
+      const x = pos[i]!
+      const y = pos[i + 1]!
+      const z = pos[i + 2]!
+      if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) continue
+      if (x < minX) minX = x
+      if (x > maxX) maxX = x
+      if (y < minY) minY = y
+      if (y > maxY) maxY = y
+      if (z < minZ) minZ = z
+      if (z > maxZ) maxZ = z
+      count++
+    }
+  }
+  return count > 0 ? { min: [minX, minY, minZ], max: [maxX, maxY, maxZ] } : null
+}
+
+function computeNodeWorldBounds(
+  node: AnyNode,
+  nodes: Record<string, AnyNode>,
+  meshes: ReadonlyMap<string, IfcMeshPart[]>,
+  elevations: Map<string, LevelElevation>,
+): BoundingBox3D | null {
+  const rendered = meshes.get(node.id)
+  if (rendered && rendered.length > 0) {
+    const meshAABB = computeMeshWorldAABB(rendered)
+    if (meshAABB) return meshAABB
+  }
+
+  const parentOf = (n: AnyNode): AnyNode | undefined => (n.parentId ? nodes[n.parentId] : undefined)
+  const ancestorOfType = <T extends AnyNode>(n: AnyNode, type: T['type']): T | undefined => {
+    let current: AnyNode | undefined = n
+    for (let guard = 0; current && guard < 64; guard++) {
+      if (current.type === type) return current as T
+      current = parentOf(current)
+    }
+    return undefined
+  }
+
+  const level = ancestorOfType<LevelNode>(node, 'level')
+  const buildingId = level ? (elevations.get(level.id)?.buildingId ?? level.parentId) : undefined
+  const building =
+    (buildingId && nodes[buildingId]?.type === 'building'
+      ? (nodes[buildingId] as BuildingNode)
+      : undefined) ?? ancestorOfType<BuildingNode>(node, 'building')
+
+  const bx = building?.position[0] ?? 0
+  const by = building?.position[1] ?? 0
+  const bz = building?.position[2] ?? 0
+  const yaw = building ? (building.rotation[1] ?? 0) : 0
+  const baseY = level ? (elevations.get(level.id)?.baseY ?? 0) : 0
+  const cos = Math.cos(yaw)
+  const sin = Math.sin(yaw)
+
+  const toWorld = (lx: number, ly: number, lz: number): Vec3 => [
+    bx + cos * lx + sin * lz,
+    by + baseY + ly,
+    bz - sin * lx + cos * lz,
+  ]
+
+  let minX = Infinity,
+    minY = Infinity,
+    minZ = Infinity
+  let maxX = -Infinity,
+    maxY = -Infinity,
+    maxZ = -Infinity
+  let pointCount = 0
+
+  const addWorldPoint = (wx: number, wy: number, wz: number) => {
+    if (!Number.isFinite(wx) || !Number.isFinite(wy) || !Number.isFinite(wz)) return
+    if (wx < minX) minX = wx
+    if (wx > maxX) maxX = wx
+    if (wy < minY) minY = wy
+    if (wy > maxY) maxY = wy
+    if (wz < minZ) minZ = wz
+    if (wz > maxZ) maxZ = wz
+    pointCount++
+  }
+
+  const addLocalPoint = (lx: number, ly: number, lz: number) => {
+    const [wx, wy, wz] = toWorld(lx, ly, lz)
+    addWorldPoint(wx, wy, wz)
+  }
+
+  switch (node.type) {
+    case 'wall': {
+      const wall = node as WallNode
+      const levelId = wall.parentId ?? ''
+      const support = wallSupportForNodes(wall, nodes)
+      const base = support.elevation
+      const top = resolveWallTop(
+        wall,
+        getWallPlaneTop(wall, levelId, nodes as Record<AnyNodeId, AnyNode>),
+        base,
+      )
+      const thickness = wall.thickness ?? DEFAULT_WALL_THICKNESS
+      const halfThickness = thickness / 2
+
+      if (isCurvedWall(wall)) {
+        const samples = sampleWallCenterline(wall, 24)
+        for (const pt of samples) {
+          for (const dx of [-halfThickness, halfThickness]) {
+            for (const dz of [-halfThickness, halfThickness]) {
+              addLocalPoint(pt.x + dx, base, pt.y + dz)
+              addLocalPoint(pt.x + dx, top, pt.y + dz)
+            }
+          }
+        }
+      } else {
+        const dx = wall.end[0] - wall.start[0]
+        const dz = wall.end[1] - wall.start[1]
+        const len = Math.hypot(dx, dz)
+        let nx = 0,
+          nz = 0
+        if (len > 1e-6) {
+          nx = -dz / len
+          nz = dx / len
+        }
+        const corners: [number, number][] = [
+          [wall.start[0] + nx * halfThickness, wall.start[1] + nz * halfThickness],
+          [wall.start[0] - nx * halfThickness, wall.start[1] - nz * halfThickness],
+          [wall.end[0] + nx * halfThickness, wall.end[1] + nz * halfThickness],
+          [wall.end[0] - nx * halfThickness, wall.end[1] - nz * halfThickness],
+        ]
+        for (const [x, z] of corners) {
+          addLocalPoint(x, base, z)
+          addLocalPoint(x, top, z)
+        }
+      }
+      break
+    }
+    case 'door':
+    case 'window': {
+      const opening = node as DoorNode | WindowNode
+      const hostId = opening.wallId ?? opening.parentId
+      const host = hostId ? nodes[hostId] : undefined
+      if (host?.type === 'wall') {
+        const wall = host as WallNode
+        const support = wallSupportForNodes(wall, nodes)
+        const base = support.elevation
+        let cut: ReturnType<typeof getOpeningWallCut> | null = null
+        try {
+          cut = getOpeningWallCut(wall, opening, nodes, support)
+        } catch {
+          cut = null
+        }
+        const datum = cut?.datum ?? base
+        const nominalBottom = datum + opening.position[1] - opening.height / 2
+        const bottom = cut?.bottom ?? nominalBottom
+        const top = cut?.top ?? nominalBottom + opening.height
+        const wallLength = Math.hypot(wall.end[0] - wall.start[0], wall.end[1] - wall.start[1])
+        const t = wallLength > 0 ? Math.max(0, Math.min(1, opening.position[0] / wallLength)) : 0
+        const curve = getWallCurveFrameAt(wall, t)
+        const halfWidth = opening.width / 2
+        const halfThick = (wall.thickness ?? DEFAULT_WALL_THICKNESS) / 2
+        for (const sw of [-halfWidth, halfWidth]) {
+          for (const st of [-halfThick, halfThick]) {
+            const px = curve.point.x + curve.tangent.x * sw + curve.normal.x * st
+            const pz = curve.point.y + curve.tangent.y * sw + curve.normal.y * st
+            addLocalPoint(px, bottom, pz)
+            addLocalPoint(px, top, pz)
+          }
+        }
+      } else {
+        const pos = (opening as { position?: readonly number[] }).position ?? [0, 0, 0]
+        const hw = (opening.width ?? 1) / 2
+        const hh = (opening.height ?? 2) / 2
+        for (const dx of [-hw, hw]) {
+          for (const dy of [-hh, hh]) {
+            addLocalPoint(pos[0]! + dx, pos[1]! + dy, pos[2] ?? 0)
+          }
+        }
+      }
+      break
+    }
+    case 'slab': {
+      const slab = node as SlabNode
+      const body = liftedManualSlab(nodes, slab)
+      const polygon = slab.polygon ?? []
+      const thickness = body.thickness ?? 0.05
+      const top = body.elevation ?? 0.05
+      const bottom = top - thickness
+      for (const pt of polygon) {
+        addLocalPoint(pt[0], bottom, pt[1])
+        addLocalPoint(pt[0], top, pt[1])
+      }
+      break
+    }
+    case 'zone': {
+      const zone = node as ZoneNode
+      const polygon = zone.polygon ?? []
+      const floor = zone.floor?.elevation ?? 0
+      const height = Math.max(0.1, zone.ceilingHeight ?? 2.8)
+      const top = floor + height
+      for (const pt of polygon) {
+        addLocalPoint(pt[0], floor, pt[1])
+        addLocalPoint(pt[0], top, pt[1])
+      }
+      break
+    }
+    case 'ceiling': {
+      const ceiling = node as CeilingNode
+      const polygon = ceiling.polygon ?? []
+      const height = resolveCeilingHeight(ceiling, nodes as Record<AnyNodeId, AnyNode>)
+      const top = height + 0.01
+      for (const pt of polygon) {
+        addLocalPoint(pt[0], height, pt[1])
+        addLocalPoint(pt[0], top, pt[1])
+      }
+      break
+    }
+    case 'column': {
+      const column = node as ColumnNode
+      const [cx, cy, cz] = column.position
+      const height = column.height
+      const hw = (column.width ?? 0.3) / 2
+      const hd =
+        ((column.crossSection === 'square' ? column.width : column.depth) ?? column.radius ?? 0.3) /
+        2
+      for (const dx of [-hw, hw]) {
+        for (const dz of [-hd, hd]) {
+          addLocalPoint(cx + dx, cy, cz + dz)
+          addLocalPoint(cx + dx, cy + height, cz + dz)
+        }
+      }
+      break
+    }
+    case 'imported-mesh': {
+      const mesh = node as ImportedMeshNode
+      const rotate = eulerXYZ(mesh.rotation ?? [0, 0, 0])
+      const [px, py, pz] = mesh.position ?? [0, 0, 0]
+      for (const primitive of mesh.primitives) {
+        const pos = primitive.positions
+        for (let i = 0; i + 2 < pos.length; i += 3) {
+          const [rx, ry, rz] = rotate([pos[i]!, pos[i + 1]!, pos[i + 2]!])
+          addLocalPoint(rx + px, ry + py, rz + pz)
+        }
+      }
+      break
+    }
+    default: {
+      const pos = (node as { position?: readonly number[] }).position
+      if (Array.isArray(pos) && pos.length >= 3) {
+        const w = (node as { width?: number }).width ?? 0.5
+        const h = (node as { height?: number }).height ?? 0.5
+        const d = (node as { depth?: number }).depth ?? 0.5
+        for (const dx of [-w / 2, w / 2]) {
+          for (const dy of [0, h]) {
+            for (const dz of [-d / 2, d / 2]) {
+              addLocalPoint(pos[0]! + dx, pos[1]! + dy, pos[2]! + dz)
+            }
+          }
+        }
+      }
+      break
+    }
+  }
+
+  return pointCount > 0 ? { min: [minX, minY, minZ], max: [maxX, maxY, maxZ] } : null
+}
+
 /** Serialize a Pascal scene graph as an IFC4 STEP file plus an export report. */
 export function buildIfcExport(input: IfcExportInput): IfcExportResult {
   const nodes = input.nodes
@@ -328,9 +669,6 @@ export function buildIfcExport(input: IfcExportInput): IfcExportResult {
     typeExcludedCache.set(node.id, result)
     return result
   }
-  const isExcluded = (node: AnyNode) =>
-    isTypeExcluded(node) || (input.onlyVisible === true && isHidden(node))
-
   const ancestorOfType = <T extends AnyNode>(node: AnyNode, type: T['type']): T | undefined => {
     let current: AnyNode | undefined = node
     for (let guard = 0; current && guard < 64; guard++) {
@@ -344,6 +682,96 @@ export function buildIfcExport(input: IfcExportInput): IfcExportResult {
   const nodesByType = new Map<string, AnyNode[]>()
   for (const node of sortedNodes) pushTo(nodesByType, node.type, node)
   const ofType = <T extends AnyNode>(type: T['type']) => (nodesByType.get(type) ?? []) as T[]
+
+  const elevations = getLevelElevations(nodes as Record<AnyNodeId, AnyNode>)
+
+  const spatiallyIncludedIds = new Set<string>()
+  if (input.boundingBox) {
+    const filter = normalizeFilter(input.boundingBox)
+
+    // Pass 1: All physical elements except hosted openings
+    for (const node of sortedNodes) {
+      if (node.type === 'door' || node.type === 'window') continue
+      if (
+        node.type === 'site' ||
+        node.type === 'building' ||
+        node.type === 'level' ||
+        node.type === 'unit'
+      ) {
+        continue
+      }
+      const aabb = computeNodeWorldBounds(node, nodes, meshes, elevations)
+      if (aabb && matchesBoundingBox(aabb, filter)) {
+        spatiallyIncludedIds.add(node.id)
+      }
+    }
+
+    // Pass 2: Hosted openings (doors and windows)
+    for (const opening of [...ofType<DoorNode>('door'), ...ofType<WindowNode>('window')]) {
+      const hostId = opening.wallId ?? opening.parentId
+      const host = hostId ? nodes[hostId] : undefined
+      // Hosted openings on excluded walls must be excluded
+      if (host?.type === 'wall') {
+        if (
+          !spatiallyIncludedIds.has(host.id) ||
+          isTypeExcluded(host) ||
+          (input.onlyVisible === true && isHidden(host))
+        ) {
+          continue
+        }
+      }
+      const aabb = computeNodeWorldBounds(opening, nodes, meshes, elevations)
+      if (aabb && matchesBoundingBox(aabb, filter)) {
+        spatiallyIncludedIds.add(opening.id)
+      }
+    }
+
+    // Pass 3: Container aggregates (roofs and stairs)
+    for (const roof of ofType('roof')) {
+      const segments = ofType('roof-segment').filter(
+        (s) => ancestorOfType(s, 'roof')?.id === roof.id,
+      )
+      if (segments.some((s) => spatiallyIncludedIds.has(s.id))) {
+        spatiallyIncludedIds.add(roof.id)
+      }
+    }
+    for (const stair of ofType('stair')) {
+      const segments = ofType('stair-segment').filter(
+        (s) => ancestorOfType(s, 'stair')?.id === stair.id,
+      )
+      if (segments.some((s) => spatiallyIncludedIds.has(s.id))) {
+        spatiallyIncludedIds.add(stair.id)
+      }
+    }
+  }
+
+  const levelsWithElements = new Set<string>()
+  if (input.boundingBox) {
+    for (const id of spatiallyIncludedIds) {
+      const node = nodes[id]
+      if (!node) continue
+      if (isTypeExcluded(node) || (input.onlyVisible === true && isHidden(node))) continue
+      const level = ancestorOfType<LevelNode>(node, 'level')
+      if (level) levelsWithElements.add(level.id)
+    }
+  }
+
+  const isSpatialExcluded = (node: AnyNode): boolean => {
+    if (!input.boundingBox) return false
+    if (
+      node.type === 'site' ||
+      node.type === 'building' ||
+      node.type === 'level' ||
+      node.type === 'unit'
+    ) {
+      return false
+    }
+    return !spatiallyIncludedIds.has(node.id)
+  }
+  const isExcluded = (node: AnyNode) =>
+    isTypeExcluded(node) ||
+    (input.onlyVisible === true && isHidden(node)) ||
+    isSpatialExcluded(node)
 
   // ── Project, units, contexts ──────────────────────────────────────────
   // Sites are spatial containers only (their ground is not exported), so a
@@ -506,10 +934,10 @@ export function buildIfcExport(input: IfcExportInput): IfcExportResult {
     ...[...siteContexts.values()].map((context) => context.ref),
   ])
 
-  const elevations = getLevelElevations(nodes as Record<AnyNodeId, AnyNode>)
   const buildingContexts = new Map<string, SpatialContext & { transform: BuildingTransform }>()
   const levelsByBuilding = new Map<string, LevelNode[]>()
   for (const level of levels) {
+    if (input.boundingBox && !levelsWithElements.has(level.id)) continue
     const buildingId = elevations.get(level.id)?.buildingId ?? level.parentId
     const key =
       buildingId && buildings.some((building) => building.id === buildingId)
