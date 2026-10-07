@@ -11,6 +11,7 @@ import { levelBaseElevationAt } from '../lib/terrain-support-query'
 import { nodeRegistry } from '../registry/registry'
 import { getBlockFaceFrame } from '../schema/nodes/block'
 import type { ItemNode } from '../schema/nodes/item'
+import type { RoofSegmentNode } from '../schema/nodes/roof-segment'
 import { getRoofWallFaceFrame, roofFacePointToSegment } from '../schema/nodes/roof-segment-walls'
 import type { SlabNode } from '../schema/nodes/slab'
 import type { WallNode } from '../schema/nodes/wall'
@@ -19,7 +20,8 @@ import { resolveCeilingHeight } from '../services/level-height'
 import { getStoredLevelHeight } from '../services/storey'
 import { surfaceRegionContainsPoint } from '../services/surface-region'
 import { computeWallSlabSupport } from '../systems/slab/slab-support'
-import { getWallLocalFaceZ } from '../systems/wall/wall-frame'
+import { getWallCurveFrameAt, getWallCurveLength, isCurvedWall } from '../systems/wall/wall-curve'
+import { getWallBodyCenterOffset, getWallLocalFaceZ } from '../systems/wall/wall-frame'
 import type { ProceduralItemNode } from './node'
 import { evaluateRecipe, type Surface, type Vec3 } from './recipe'
 import {
@@ -252,7 +254,9 @@ function resolveNodeLevelFrame(
       node.type === 'item' ||
       node.type === 'shelf' ||
       node.type === 'cabinet' ||
-      node.type === 'cabinet-module'
+      node.type === 'cabinet-module' ||
+      node.type === 'door' ||
+      node.type === 'window'
     )
   ) {
     const transform = node as { position?: Vec3; rotation?: Vec3 | number }
@@ -277,14 +281,29 @@ function resolveNodeLevelFrame(
       }
   const parent = node.parentId ? nodes[node.parentId] : undefined
   if (!node.parentId) return frame(pose.position, pose.rotation)
-  if (node.type === 'item' && parent?.type === 'roof-segment' && node.roofFace) {
-    const face = getRoofWallFaceFrame(parent, node.roofFace)
-    const local = frame(roofFacePointToSegment(parent, node.roofFace, pose.position), pose.rotation)
+  if (parent?.type === 'wall') {
+    return wallMountedChildLevelFrame(node, parent, pose, nodes, seen, options)
+  }
+  const roofSegmentHost =
+    parent?.type === 'roof-segment'
+      ? (parent as RoofSegmentNode)
+      : (node as { roofSegmentId?: string }).roofSegmentId
+        ? (nodes[(node as { roofSegmentId?: string }).roofSegmentId!] as
+            | RoofSegmentNode
+            | undefined)
+        : undefined
+  const roofFace = (node as { roofFace?: 'front' | 'back' | 'right' | 'left' }).roofFace
+  if (roofSegmentHost?.type === 'roof-segment' && roofFace) {
+    const face = getRoofWallFaceFrame(roofSegmentHost, roofFace)
+    const local = frame(
+      roofFacePointToSegment(roofSegmentHost, roofFace, pose.position),
+      pose.rotation,
+    )
     local.axes = composeFrames(
       frame([0, 0, 0], [0, face.yaw, 0]),
       frame([0, 0, 0], pose.rotation),
     ).axes
-    return composeFrames(nodeLevelFrame(parent.id, nodes, seen, options), local)
+    return composeFrames(nodeLevelFrame(roofSegmentHost.id, nodes, seen, options), local)
   }
   if (node.type === 'item' && parent?.type === 'block' && node.blockFaceId) {
     const face = getBlockFaceFrame(parent.topology, node.blockFaceId)
@@ -302,6 +321,47 @@ function resolveNodeLevelFrame(
   const parentFrame = nodeParentFrame(node, nodes, seen, options)
   if (parent?.type === 'level' && !options.planOnly) pose.position[1] += floorLift(node, nodes)
   return composeFrames(parentFrame, frame(pose.position, pose.rotation))
+}
+
+function wallMountedChildLevelFrame(
+  node: AnyNode | ProceduralItemNode,
+  wall: WallNode,
+  pose: { position: Vec3; rotation: Vec3 },
+  nodes: QueryNodes,
+  seen: Set<string>,
+  options: LevelFrameOptions,
+): Frame {
+  const wallFrame = nodeLevelFrame(wall.id, nodes, seen, options)
+  let across = getWallBodyCenterOffset(wall) + pose.position[2]
+  if (node.type === 'item') {
+    const item = node as ItemNode
+    if (item.asset?.attachTo === 'wall-side') {
+      across = getWallLocalFaceZ(wall, item.side === 'front' ? 'a' : 'b') + pose.position[2]
+    }
+  }
+
+  if (isCurvedWall(wall)) {
+    const curveLen = getWallCurveLength(wall)
+    const t = curveLen > 1e-6 ? Math.max(0, Math.min(1, pose.position[0] / curveLen)) : 0
+    const curveFrame = getWallCurveFrameAt(wall, t)
+    const deltaX = wallFrame.position[0] - wall.start[0]
+    const deltaZ = wallFrame.position[2] - wall.start[1]
+    const cx = curveFrame.point.x + curveFrame.normal.x * across + deltaX
+    const cz = curveFrame.point.y + curveFrame.normal.y * across + deltaZ
+    const elevation = wallFrame.position[1] + pose.position[1]
+    const baseFrame: Frame = {
+      position: [cx, elevation, cz],
+      axes: [
+        [curveFrame.tangent.x, 0, curveFrame.tangent.y],
+        [0, 1, 0],
+        [curveFrame.normal.x, 0, curveFrame.normal.y],
+      ],
+    }
+    return composeFrames(baseFrame, frame([0, 0, 0], pose.rotation))
+  }
+
+  const localChild = frame([pose.position[0], pose.position[1], across], pose.rotation)
+  return composeFrames(wallFrame, localChild)
 }
 function localBounds(node: ProceduralItemNode | ItemNode) {
   if (isProceduralItem(node)) return evaluateRecipe(node.recipe, node.parameters)

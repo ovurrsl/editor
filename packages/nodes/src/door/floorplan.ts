@@ -1,11 +1,20 @@
 import type {
+  AnyNodeId,
   DoorNode,
   FloorplanGeometry,
   FloorplanPoint,
   GeometryContext,
+  RoofNode,
+  RoofSegmentNode,
   WallNode,
 } from '@pascal-app/core'
-import { getWallBodyCenterOffset } from '@pascal-app/core'
+import {
+  getRoofWallFaceFrame,
+  getWallBodyCenterOffset,
+  getWallCurveFrameAt,
+  getWallCurveLength,
+  roofFacePointToSegment,
+} from '@pascal-app/core'
 import {
   readFloorplanContext,
   readFloorplanGeometryMetadata,
@@ -52,34 +61,123 @@ import { resolveOpeningPlanPlane } from '../shared/opening-plane-offset'
  * lines because their geometry sits above the horizontal plan cut.
  */
 export function buildDoorFloorplan(node: DoorNode, ctx: GeometryContext): FloorplanGeometry | null {
-  const wall = ctx.parent as WallNode | null
-  if (wall?.type !== 'wall') return null
+  let wall: WallNode | null = null
+  let roofSegment: RoofSegmentNode | null = null
+  let roof: RoofNode | null = null
 
-  const [x1, z1] = wall.start
-  const [x2, z2] = wall.end
-  const dx = x2 - x1
-  const dz = z2 - z1
-  const length = Math.sqrt(dx * dx + dz * dz)
-  if (length < 1e-9) return null
+  if (ctx.parent?.type === 'wall') {
+    wall = ctx.parent as WallNode
+  } else if (node.wallId) {
+    const resolvedWall = ctx.resolve?.(node.wallId as AnyNodeId)
+    if (resolvedWall?.type === 'wall') {
+      wall = resolvedWall as WallNode
+    }
+  }
 
-  const dirX = dx / length
-  const dirZ = dz / length
-  // Perpendicular unit normal (rotate 90° CCW).
-  const perpX = -dirZ
-  const perpZ = dirX
+  if (!wall) {
+    if (ctx.parent?.type === 'roof-segment') {
+      roofSegment = ctx.parent as RoofSegmentNode
+    } else if (node.roofSegmentId) {
+      const resolvedSeg = ctx.resolve?.(node.roofSegmentId as AnyNodeId)
+      if (resolvedSeg?.type === 'roof-segment') {
+        roofSegment = resolvedSeg as RoofSegmentNode
+      }
+    }
+    if (roofSegment) {
+      const resolvedRoof = roofSegment.parentId
+        ? (ctx.resolve?.(roofSegment.parentId as AnyNodeId) as RoofNode | undefined)
+        : undefined
+      if (resolvedRoof?.type === 'roof') {
+        roof = resolvedRoof as RoofNode
+      }
+    }
+  }
 
-  const distance = node.position[0]
+  if (!wall && !roofSegment) return null
+
+  let cx: number
+  let cz: number
+  let dirX: number
+  let dirZ: number
+  let perpX: number
+  let perpZ: number
+  let wallX: number
+  let wallZ: number
+  let wallDepth: number
+  let depth: number
+  let bodyOffset = 0
   const width = node.width
-  const wallDepth = wall.thickness ?? 0.1
-  const plane = resolveOpeningPlanPlane(node, wallDepth)
-  const depth = plane.depth
-  // The plane offset is measured from the body centre, which a justified wall
-  // sets off its reference line.
-  const bodyOffset = getWallBodyCenterOffset(wall)
-  const across = bodyOffset + plane.offset
-  const cx = x1 + dirX * distance + perpX * across
-  const cz = z1 + dirZ * distance + perpZ * across
   const halfWidth = width / 2
+
+  let plane: ReturnType<typeof resolveOpeningPlanPlane>
+
+  if (wall) {
+    const [x1, z1] = wall.start
+    const [x2, z2] = wall.end
+    const dx = x2 - x1
+    const dz = z2 - z1
+    const length = Math.sqrt(dx * dx + dz * dz)
+    if (length < 1e-9) return null
+
+    wallDepth = wall.thickness ?? 0.1
+    plane = resolveOpeningPlanPlane(node, wallDepth)
+    depth = plane.depth
+    bodyOffset = getWallBodyCenterOffset(wall)
+    const across = bodyOffset + plane.offset
+
+    const distance = node.position[0]
+    const curveLen = getWallCurveLength(wall)
+    const t = curveLen > 1e-6 ? Math.max(0, Math.min(1, distance / curveLen)) : 0
+    const curveFrame = getWallCurveFrameAt(wall, t)
+
+    dirX = curveFrame.tangent.x
+    dirZ = curveFrame.tangent.y
+    perpX = curveFrame.normal.x
+    perpZ = curveFrame.normal.y
+
+    cx = curveFrame.point.x + perpX * across
+    cz = curveFrame.point.y + perpZ * across
+    wallX = curveFrame.point.x + perpX * bodyOffset
+    wallZ = curveFrame.point.y + perpZ * bodyOffset
+  } else if (roofSegment) {
+    const roofFace = node.roofFace ?? 'front'
+    wallDepth = roofSegment.wallThickness ?? 0.1
+    plane = resolveOpeningPlanPlane(node, wallDepth)
+    depth = plane.depth
+    bodyOffset = 0
+    const across = plane.offset
+
+    const rotatePlan = (x: number, z: number, yaw: number): [number, number] => [
+      x * Math.cos(yaw) + z * Math.sin(yaw),
+      -x * Math.sin(yaw) + z * Math.cos(yaw),
+    ]
+
+    const faceFrame = getRoofWallFaceFrame(roofSegment, roofFace)
+    const segLocal = roofFacePointToSegment(roofSegment, roofFace, [
+      node.position[0],
+      node.position[1],
+      across,
+    ])
+    const [sx, sz] = rotatePlan(segLocal[0], segLocal[2], roofSegment.rotation ?? 0)
+    const segX = sx + roofSegment.position[0]
+    const segZ = sz + roofSegment.position[2]
+    const [rx, rz] = rotatePlan(segX, segZ, roof?.rotation ?? 0)
+    cx = rx + (roof?.position[0] ?? 0)
+    cz = rz + (roof?.position[2] ?? 0)
+    wallX = cx
+    wallZ = cz
+
+    const totalYaw = faceFrame.yaw + (roofSegment.rotation ?? 0) + (roof?.rotation ?? 0)
+    const [tX, tZ] = rotatePlan(1, 0, totalYaw)
+    const [nX, nZ] = rotatePlan(0, 1, totalYaw)
+    dirX = tX
+    dirZ = tZ
+    perpX = nX
+    perpZ = nZ
+  } else {
+    return null
+  }
+
   const halfDepth = depth / 2
 
   const isPlanFlipped = isOpeningPlanFlipped(node.rotation)
@@ -136,10 +234,7 @@ export function buildDoorFloorplan(node: DoorNode, ctx: GeometryContext): Floorp
       : [
           {
             kind: 'polygon' as const,
-            points: openingCutoutPoints(
-              x1 + dirX * distance + perpX * bodyOffset,
-              z1 + dirZ * distance + perpZ * bodyOffset,
-            ),
+            points: openingCutoutPoints(wallX, wallZ),
             fill: fillColor,
             stroke: accentMuted,
             strokeWidth: showSelectedChrome ? 2 : 1.25,
@@ -823,22 +918,24 @@ export function buildDoorFloorplan(node: DoorNode, ctx: GeometryContext): Floorp
   // Placement-measurement dimensions — distances to adjacent openings
   // (or wall ends) on each side. Only visible while actively moving
   // (the user clicked Move or grabbed the orange dot).
-  if (view?.moving && readFloorplanContext(ctx).automaticDimensions) {
+  if (view?.moving && readFloorplanContext(ctx).automaticDimensions && wall) {
     for (const dim of buildOpeningPlacementDimensions(node, ctx)) {
       children.push(dim)
     }
   }
 
-  const markAnnotation = buildOpeningMarkAnnotation(
-    node,
-    wall,
-    ctx.levelData as OpeningFloorplanLevelData | undefined,
-    {
-      preferredSide: swingSign === 1 ? -1 : 1,
-      stroke: showSelectedChrome ? '#f97316' : '#334155',
-      drafting: readFloorplanContext(ctx).drafting,
-    },
-  )
+  const markAnnotation = wall
+    ? buildOpeningMarkAnnotation(
+        node,
+        wall,
+        ctx.levelData as OpeningFloorplanLevelData | undefined,
+        {
+          preferredSide: swingSign === 1 ? -1 : 1,
+          stroke: showSelectedChrome ? '#f97316' : '#334155',
+          drafting: readFloorplanContext(ctx).drafting,
+        },
+      )
+    : null
   if (markAnnotation) children.push(markAnnotation)
 
   return { kind: 'group', children: children.map(markDoorPlanObstacle) }

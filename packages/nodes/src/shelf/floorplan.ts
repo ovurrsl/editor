@@ -30,7 +30,7 @@ export function buildShelfFloorplan(node: ShelfNode, ctx?: GeometryContext): Flo
   const shelf = sanitizeShelfDimensions(node)
   const parent = shelf.parentId ? ctx?.resolve(shelf.parentId as AnyNodeId) : undefined
   const hostedFrame =
-    ctx && parent?.type === 'procedural-item' && parent.attachments[shelf.id] !== undefined
+    ctx && shelf.parentId && parent && parent.type !== 'level'
       ? restingNodePlanFrame(shelf, ctx.resolve)
       : null
   const [px, , pz] = hostedFrame?.position ?? shelf.position

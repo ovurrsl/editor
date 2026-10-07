@@ -11,9 +11,11 @@ import {
   getWallBodyCenterOffset,
   getWallLocalFaceZ,
   type ItemNode,
+  isCurvedWall,
   type RoofSegmentNode,
   roofFacePointToSegment,
   useLiveTransforms,
+  type WallNode,
 } from '@pascal-app/core'
 import {
   formatLinearMeasurement,
@@ -60,6 +62,14 @@ function needsFullAncestorFrame(item: ItemNode, ctx: GeometryContext): boolean {
     visited.add(id)
     const parent = ctx.resolve(id as AnyNodeId)
     if (!parent || parent.type === 'level') break
+    if (parent.type === 'wall' && isCurvedWall(parent as WallNode)) return true
+    if (
+      (parent.type === 'shelf' || parent.type === 'cabinet' || parent.type === 'cabinet-module') &&
+      parent.parentId &&
+      ctx.resolve(parent.parentId as AnyNodeId)?.type !== 'level'
+    ) {
+      return true
+    }
     if (
       ![
         'wall',
@@ -124,23 +134,32 @@ export function resolveItemTransform(
     : undefined
 
   if (parentNode?.type === 'wall') {
-    // Wall-aligned: rotate item.position by wall's angle, anchor at wall.start.
-    const wall = parentNode as AnyNode & {
-      start: [number, number]
-      end: [number, number]
-      thickness?: number
-    }
-    const wallRotation = -Math.atan2(wall.end[1] - wall.start[1], wall.end[0] - wall.start[0])
-    const wallLocalZ =
-      item.asset.attachTo === 'wall-side'
-        ? getWallLocalFaceZ(parentNode, item.side === 'front' ? 'a' : 'b')
-        : item.position[2] +
-          (item.asset.attachTo === 'wall' ? getWallBodyCenterOffset(parentNode) : 0)
-    const [offsetX, offsetY] = rotateVec(item.position[0], wallLocalZ, wallRotation)
-    result = {
-      x: wall.start[0] + offsetX,
-      y: wall.start[1] + offsetY,
-      rotation: wallRotation + localRotation,
+    if (isCurvedWall(parentNode as WallNode)) {
+      const f = restingNodePlanFrame(item, ctx.resolve)
+      result = {
+        x: f.position[0],
+        y: f.position[2],
+        rotation: Math.atan2(f.axes[2][0], f.axes[2][2]),
+      }
+    } else {
+      // Wall-aligned: rotate item.position by wall's angle, anchor at wall.start.
+      const wall = parentNode as AnyNode & {
+        start: [number, number]
+        end: [number, number]
+        thickness?: number
+      }
+      const wallRotation = -Math.atan2(wall.end[1] - wall.start[1], wall.end[0] - wall.start[0])
+      const wallLocalZ =
+        item.asset.attachTo === 'wall-side'
+          ? getWallLocalFaceZ(parentNode, item.side === 'front' ? 'a' : 'b')
+          : item.position[2] +
+            (item.asset.attachTo === 'wall' ? getWallBodyCenterOffset(parentNode) : 0)
+      const [offsetX, offsetY] = rotateVec(item.position[0], wallLocalZ, wallRotation)
+      result = {
+        x: wall.start[0] + offsetX,
+        y: wall.start[1] + offsetY,
+        rotation: wallRotation + localRotation,
+      }
     }
   } else if (parentNode?.type === 'item') {
     // Nested item: recursively resolve parent's transform.
@@ -172,45 +191,30 @@ export function resolveItemTransform(
     // `else` below would treat shelf-local coords as level-local and
     // the item would render at the wrong spot whenever the shelf is
     // anywhere other than (0, 0, 0).
-    //
-    // We also check `useLiveTransforms` for the shelf — if the shelf is
-    // mid-move (3D or 2D), its scene-state `position` is still at the
-    // pre-move spot but the live transform carries the cursor-tracked
-    // position. Reading the live value here keeps the hosted item
-    // following the shelf in 2D throughout the drag, mirroring how the
-    // shelf's own entry follows via the layer's effectiveNode override.
     const shelf = parentNode as AnyNode & {
+      parentId: string | null
       position: [number, number, number]
       rotation: [number, number, number]
     }
-    const live = useLiveTransforms.getState().get(shelf.id as AnyNodeId)
-    if (
-      shelf.parentId &&
-      ['item', 'shelf', 'cabinet', 'cabinet-module', 'procedural-item'].includes(
-        ctx.resolve(shelf.parentId as AnyNodeId)?.type ?? '',
-      )
-    ) {
-      const parentT = resolveItemTransform(
-        {
-          ...shelf,
-          position: live?.position ?? shelf.position,
-          rotation: [0, live?.rotation ?? shelf.rotation[1], 0],
-        } as ItemNode,
-        ctx,
-        cache,
-      )
-      if (!parentT) return null
-      const [x, y] = rotateVec(item.position[0], item.position[2], parentT.rotation)
-      return { x: parentT.x + x, y: parentT.y + y, rotation: parentT.rotation + localRotation }
-    }
-    const shelfX = live?.position[0] ?? shelf.position[0]
-    const shelfZ = live?.position[2] ?? shelf.position[2]
-    const shelfRotationY = live?.rotation ?? shelf.rotation[1] ?? 0
-    const [offsetX, offsetY] = rotateVec(item.position[0], item.position[2], shelfRotationY)
-    result = {
-      x: shelfX + offsetX,
-      y: shelfZ + offsetY,
-      rotation: shelfRotationY + localRotation,
+    const shelfParent = shelf.parentId ? ctx.resolve(shelf.parentId as AnyNodeId) : undefined
+    if (shelfParent && shelfParent.type !== 'level') {
+      const f = restingNodePlanFrame(item, ctx.resolve)
+      result = {
+        x: f.position[0],
+        y: f.position[2],
+        rotation: Math.atan2(f.axes[2][0], f.axes[2][2]),
+      }
+    } else {
+      const live = useLiveTransforms.getState().get(shelf.id as AnyNodeId)
+      const shelfX = live?.position[0] ?? shelf.position[0]
+      const shelfZ = live?.position[2] ?? shelf.position[2]
+      const shelfRotationY = live?.rotation ?? shelf.rotation[1] ?? 0
+      const [offsetX, offsetY] = rotateVec(item.position[0], item.position[2], shelfRotationY)
+      result = {
+        x: shelfX + offsetX,
+        y: shelfZ + offsetY,
+        rotation: shelfRotationY + localRotation,
+      }
     }
   } else if (parentNode?.type === 'roof-segment') {
     // Roof-hosted wall item: FACE-LOCAL position mapped through the face

@@ -7,6 +7,7 @@ import type {
   GeometryContext,
 } from '@pascal-app/core'
 import { floorplanGeometryMetadata, readFloorplanContext } from '@pascal-app/editor'
+import { restingNodePlanFrame } from '../shared/resting-surface-plan'
 import { GAS_HOB_BURNER_RADIUS, gasHobBurners, inductionZones } from './geometry/cooktop'
 import { FAUCET_SETBACK, sinkBowls } from './geometry/sink'
 import { getRunSpanEnds, getRunSpans } from './run-layout'
@@ -196,13 +197,26 @@ function resolveCabinetParent(
 }
 
 function resolveCabinetWorldPose(
-  node: Pick<CabinetNode | CabinetModuleNode, 'position' | 'rotation' | 'parentId'>,
+  node: Pick<CabinetNode | CabinetModuleNode, 'position' | 'rotation' | 'parentId'> & {
+    id?: string
+  },
   ctx: GeometryContext,
 ): { position: [number, number, number]; rotation: number } {
   const parent = resolveCabinetParent(node.parentId as AnyNodeId | undefined, ctx)
   if (parent) {
     const worldParent = resolveCabinetWorldPose(parent, ctx)
     return composeChild(worldParent.position, worldParent.rotation, node.position, node.rotation)
+  }
+  if (node.parentId && node.id) {
+    const nonCabinetParent = ctx.resolve(node.parentId as AnyNodeId)
+    if (nonCabinetParent && nonCabinetParent.type !== 'level') {
+      const f = restingNodePlanFrame(node as any, ctx.resolve)
+      const ry = Math.atan2(f.axes[2][0], f.axes[2][2])
+      return {
+        position: f.position,
+        rotation: ry,
+      }
+    }
   }
   return {
     position: [...node.position] as [number, number, number],
