@@ -242,6 +242,18 @@ export function assertPatchKeepsIdentity(
             `update cannot move "${patch.id}" under ${JSON.stringify(data.parentId)}: ${newParent ? `a ${newParent.type} holds no children` : 'no such node'}.`,
           )
         }
+        let ancestor = newParent
+        while (ancestor) {
+          if (ancestor.id === patch.id) {
+            throw new PatchRefusedError(
+              'invalid_parent',
+              index,
+              patch.id,
+              `update cannot move "${patch.id}" under "${newParent.id}" because it creates a cyclic hierarchy.`,
+            )
+          }
+          ancestor = ancestor.parentId ? at(ancestor.parentId) : undefined
+        }
         const before = { ...scene.nodes }
         const oldParent = current.parentId ? at(current.parentId) : undefined
         if (oldParent) put(withoutChild(oldParent, patch.id))
