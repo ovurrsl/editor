@@ -38,6 +38,19 @@ const nextConfig: NextConfig = {
   },
   // MCP / package metadata returns `/editor/<id>` (hosted route). This open-source
   // app serves saved scenes at `/scene/<id>` — redirect so links and bookmarks work.
+  
+  async rewrites() {
+    return [
+      {
+        source: '/viewer',
+        destination: '/viewer/index.html',
+      },
+      {
+        source: '/viewer/',
+        destination: '/viewer/index.html',
+      }
+    ];
+  },
   async redirects() {
     return [
       {
