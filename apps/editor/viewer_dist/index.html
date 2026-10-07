@@ -32,12 +32,8 @@
         var hasStoredSession = Boolean(sessionStorage.getItem('dt_viewer_session'));
         var hasCookie = document.cookie.indexOf('dt_session=') !== -1;
 
-        if (!hasToken && !hasStoredSession && !hasCookie) {
-          document.documentElement.style.display = 'none';
-          var returnUrl = encodeURIComponent(window.location.href);
-          window.location.replace(panelUrl + '?redirect=' + returnUrl);
-          return;
-        }
+        // Bypass authentication redirect for kiosk mode
+      /* if (!hasToken && !hasStoredSession && !hasCookie) { window.location.replace... } */
 
         var targetSceneId = params.get('sceneId') || params.get('site');
         if (!targetSceneId) {
@@ -48,7 +44,7 @@
       }
     })();
   </script>
-  <script type="module" crossorigin src="./assets/index-CKQ7Gniv.js"></script>
+  <script type="module" crossorigin src="./assets/index-CR_vlNPB.js"></script>
   <link rel="modulepreload" crossorigin href="./assets/config-C3kMKXDf.js">
   <link rel="modulepreload" crossorigin href="./assets/three.webgpu-GwCC1aPf.js">
   <link rel="stylesheet" crossorigin href="./assets/index-Dlww0O_1.css">
