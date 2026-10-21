@@ -1,9 +1,10 @@
 import { sceneRegistry, useScene } from '@pascal-app/core'
 import { useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
-import { type Group, MathUtils, type Mesh } from 'three'
+import type { Group, Mesh } from 'three'
 import type { MeshBasicNodeMaterial } from 'three/webgpu'
 import useViewer from '../../store/use-viewer'
+import { stepZoneOpacity } from './zone-opacity'
 
 const TRANSITION_DURATION = 400 // ms
 const EXIT_DEBOUNCE_MS = 50 // ignore rapid exit→re-enter within this window
@@ -68,9 +69,6 @@ export const ZoneSystem = () => {
       isTransitioningRef.current = false
     }
 
-    // Lerp speed: complete transition in ~400ms
-    const lerpSpeed = 10 * delta
-
     sceneRegistry.byType.zone!.forEach((zoneId) => {
       const zone = sceneRegistry.nodes.get(zoneId)
       if (!zone) return
@@ -82,14 +80,14 @@ export const ZoneSystem = () => {
       if (walls) {
         const material = walls.material as MeshBasicNodeMaterial
         const currentOpacity = material.userData.uOpacity.value
-        material.userData.uOpacity.value = MathUtils.lerp(currentOpacity, targetOpacity, lerpSpeed)
+        material.userData.uOpacity.value = stepZoneOpacity(currentOpacity, targetOpacity, delta)
       }
 
       const floor = (zone as Group).getObjectByName('floor') as Mesh | undefined
       if (floor) {
         const material = floor.material as MeshBasicNodeMaterial
         const currentOpacity = material.userData.uOpacity.value
-        material.userData.uOpacity.value = MathUtils.lerp(currentOpacity, targetOpacity, lerpSpeed)
+        material.userData.uOpacity.value = stepZoneOpacity(currentOpacity, targetOpacity, delta)
       }
     })
   })
