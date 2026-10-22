@@ -13,6 +13,7 @@ import { useGLTFKTX2 } from '../../hooks/use-gltf-ktx2'
 import { ZONE_LAYER } from '../../lib/layers'
 import { createSurfaceRoleMaterial } from '../../lib/materials'
 import { applyShadowOnly, clearShadowOnly } from '../../lib/shadow-only'
+import { smoothToward } from '../../math/smooth-toward'
 import useViewer from '../../store/use-viewer'
 import { GlbInteractive, type GlbInteractiveItem } from './glb-interactive'
 import { GlbReferenceNodes } from './glb-reference-nodes'
@@ -599,7 +600,12 @@ export function GlbScene({
       const targetY = baseY + (exploded ? index * EXPLODED_GAP : 0)
       // Snap (not lerp) in walkthrough so the first-person collider, built from
       // these world positions, matches the stacked building immediately.
-      node.position.y = walkthroughMode ? targetY : lerp(node.position.y, targetY, delta * 12)
+      // Clamped (like LevelSystem): an unclamped `delta * 12` overshoots on a
+      // slow frame (idle loop resuming, tab switch, slow GPU) and diverges past
+      // ~166 ms, flinging floors off-screen; clamped it snaps exactly instead.
+      node.position.y = walkthroughMode
+        ? targetY
+        : smoothToward(node.position.y, targetY, delta, 12)
       // Solo: hidden levels above the soloed one keep casting shadows
       // (shadow-caster-only); below-levels can't block the sun, so plain-hide.
       const hidden =
